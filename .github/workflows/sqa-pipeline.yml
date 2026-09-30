@@ -15,10 +15,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up JDK 17
+      - name: Set up JDK 21
         uses: actions/setup-java@v3
         with:
-          java-version: '17'
+          java-version: '21'
           distribution: 'temurin'
 
       - name: Cache SonarCloud packages
@@ -65,3 +65,6 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
           projectBaseDir: huellitas-frontend
+          args: >
+            -Dsonar.projectKey=StefaniaH016_Huellitas-Cafeteras-Frontend
+            -Dsonar.organization=stefaniah016
