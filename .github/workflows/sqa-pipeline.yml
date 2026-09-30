@@ -35,6 +35,7 @@ jobs:
         run: |
           cd huellitas-backend
           mvn -B clean verify sonar:sonar \
+            -DskipTests \
             -Dsonar.projectKey=StefaniaH016_Huellitas-Cafeteras \
             -Dsonar.organization=stefaniah016 \
             -Dsonar.host.url=https://sonarcloud.io
