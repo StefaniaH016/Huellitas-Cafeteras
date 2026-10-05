@@ -1,0 +1,15 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist/huellitas-frontend/browser",
+  "framework": "angular",
+  "env": {
+    "ANGULAR_ENVIRONMENT": "production"
+  },
+  "routes": [
+    {
+      "src": "/(.*)",
+      "destination": "/index.html",
+      "status": 200
+    }
+  ]
+}

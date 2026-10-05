@@ -1,0 +1,15 @@
+node_modules
+npm-debug.log
+.git
+.gitignore
+.vscode
+.idea
+*.iml
+.DS_Store
+src/
+angular.json
+tsconfig*.json
+karma.conf.js
+*.spec.ts
+.angular/
+coverage/
