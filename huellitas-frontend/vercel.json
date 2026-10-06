@@ -1,15 +1,23 @@
 {
   "buildCommand": "npm run build",
-  "outputDirectory": "dist/huellitas-frontend/browser",
+  "outputDirectory": "./dist/huellitas-frontend/browser",
   "framework": "angular",
-  "env": {
-    "ANGULAR_ENVIRONMENT": "production"
-  },
   "routes": [
     {
+      "src": "^/index\\.html$",
+      "headers": {
+        "Cache-Control": "public, max-age=0, must-revalidate"
+      }
+    },
+    {
+      "src": "^/.*\\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$",
+      "headers": {
+        "Cache-Control": "public, max-age=31536000, immutable"
+      }
+    },
+    {
       "src": "/(.*)",
-      "destination": "/index.html",
-      "status": 200
+      "destination": "/index.html"
     }
   ]
 }
