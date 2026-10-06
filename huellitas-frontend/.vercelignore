@@ -7,7 +7,6 @@ npm-debug.log
 *.iml
 .DS_Store
 src/
-angular.json
 tsconfig*.json
 karma.conf.js
 *.spec.ts
