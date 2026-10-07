@@ -1,5 +1,6 @@
-name: SQA Pipeline (Quality & Security)
+name: SQA Pipeline - Quality & Security
 
+# Se ejecuta en push a main/develop y en cada Pull Request
 on:
   push:
     branches: [ main, develop ]
@@ -7,59 +8,107 @@ on:
     branches: [ main, develop ]
 
 jobs:
+  # =============================================
+  # BACKEND - Pruebas + Checkstyle + SonarCloud
+  # =============================================
   backend-quality:
-    name: Backend - Checkstyle & SonarCloud
+    name: Backend - Tests + Checkstyle + SonarCloud
     runs-on: ubuntu-latest
+    
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0  # Necesario para análisis SonarCloud
 
-      - name: Set up JDK 21
-        uses: actions/setup-java@v3
+      # Configurar Java 21
+      - name: Setup JDK 21
+        uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
+          cache: maven
 
-      - name: Cache SonarCloud packages
-        uses: actions/cache@v3
-        with:
-          path: ~/.sonar/cache
-          key: ${{ runner.os }}-sonar
-          restore-keys: ${{ runner.os }}-sonar
-
-      - name: Run Checkstyle & SonarCloud Analysis
+      # Ejecutar pruebas + Checkstyle + Generar cobertura JaCoCo
+      # Los tests se ejecutan SOLO si hay credenciales de Railway
+      - name: Run backend tests + Checkstyle + JaCoCo
+        working-directory: huellitas-backend
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Variables de Railway PostgreSQL (se configuran en GitHub Secrets)
+          DATABASE_URL: ${{ secrets.RAILWAY_DATABASE_URL || '' }}
+          DATABASE_USER: ${{ secrets.RAILWAY_DATABASE_USER || '' }}
+          DATABASE_PASSWORD: ${{ secrets.RAILWAY_DATABASE_PASSWORD || '' }}
+          DATABASE_DRIVER: org.postgresql.Driver
+          # Flag para saltar tests si no hay BD configurada
+          SKIP_DB_TESTS: ${{ !secrets.RAILWAY_DATABASE_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "⚠️  DATABASE_URL no configurado. Saltando tests de BD."
+            echo "Una vez que configures Railway, los tests se ejecutarán automáticamente."
+            mvn -B clean compile
+          else
+            echo "✅ Ejecutando tests con PostgreSQL de Railway..."
+            mvn -B clean verify
+          fi
+
+      # Análisis SonarCloud
+      - name: SonarCloud scan (Backend)
+        uses: SonarSource/sonarqube-scan-action@v5
+        env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-          cd huellitas-backend
-          mvn -B clean verify sonar:sonar \
-            -DskipTests \
-            -Dsonar.projectKey=StefaniaH016_Huellitas-Cafeteras \
-            -Dsonar.organization=stefaniah016 \
-            -Dsonar.host.url=https://sonarcloud.io
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectBaseDir: huellitas-backend
+          args: >
+            -Dsonar.projectKey=StefaniaH016_Huellitas-Cafeteras-Backend
+            -Dsonar.organization=stefaniah016
+            -Dsonar.sources=src/main
+            -Dsonar.tests=src/test
+            -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
 
+  # =============================================
+  # FRONTEND - Pruebas + ESLint + Cobertura
+  # =============================================
   frontend-quality:
-    name: Frontend - ESLint & SonarCloud
+    name: Frontend - ESLint + Tests + SonarCloud
     runs-on: ubuntu-latest
+    
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0  # Necesario para análisis SonarCloud
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
+      # Configurar Node.js 22
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: huellitas-frontend/package-lock.json
 
-      - name: Install dependencies & Run ESLint
+      # Instalar dependencias
+      - name: Install npm dependencies
+        working-directory: huellitas-frontend
+        run: npm ci
+
+      # Ejecutar ESLint y generar reporte JSON
+      - name: Run ESLint
+        working-directory: huellitas-frontend
         run: |
-          cd huellitas-frontend
-          npm ci
           npm run lint
+          npm run lint:report
 
-      - name: SonarCloud Scan (Frontend)
+      # Ejecutar pruebas con cobertura
+      - name: Run tests with coverage (Vitest)
+        working-directory: huellitas-frontend
+        run: npm run test:coverage
+
+      # Validar formateo Prettier (sin corregir)
+      - name: Check Prettier formatting
+        working-directory: huellitas-frontend
+        run: npm run prettier:check
+
+      # Análisis SonarCloud
+      - name: SonarCloud scan (Frontend)
         uses: SonarSource/sonarcloud-github-action@master
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -69,3 +118,8 @@ jobs:
           args: >
             -Dsonar.projectKey=StefaniaH016_Huellitas-Cafeteras-Frontend
             -Dsonar.organization=stefaniah016
+            -Dsonar.sources=src
+            -Dsonar.tests=src
+            -Dsonar.exclusions=**/*.spec.ts,**/*.test.ts
+            -Dsonar.test.inclusions=**/*.spec.ts,**/*.test.ts
+            -Dsonar.javascript.lcov.reportPaths=coverage/huellitas-frontend/lcov.info
