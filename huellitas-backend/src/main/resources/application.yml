@@ -1,0 +1,68 @@
+spring:
+  application:
+    name: huellitas
+
+  # ── Base de datos ──────────────────────────────────────────────
+  datasource:
+    url: jdbc:postgresql://localhost:5432/${POSTGRES_DB:huellitas_db}
+    username: ${POSTGRES_USER:postgres}
+    password: ${POSTGRES_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+
+  # ── JPA / Hibernate ────────────────────────────────────────────
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+    open-in-view: false
+
+  # ── Docker Compose (dev local) ─────────────────────────────────
+  docker:
+    compose:
+      lifecycle-management: start_only
+
+# ── Servidor ───────────────────────────────────────────────────
+server:
+  port: 8080
+  servlet:
+    context-path: /
+
+# ── JWT ────────────────────────────────────────────────────────
+jwt:
+  secret: ${JWT_SECRET:cGxhY2Vob2xkZXJfc2VjcmV0X2tleV9odWVsbGl0YXNfY2FmZXRlcmFzXzIwMjU=}
+  expiration: ${JWT_EXPIRATION:86400000}
+
+# ── Cloudinary ─────────────────────────────────────────────────
+cloudinary:
+  cloud-name: ${CLOUDINARY_CLOUD_NAME:your_cloud_name}
+  api-key: ${CLOUDINARY_API_KEY:your_api_key}
+  api-secret: ${CLOUDINARY_API_SECRET:your_api_secret}
+
+# ── Actuator ───────────────────────────────────────────────────
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when-authorized
+
+# ── SpringDoc / Swagger UI ──────────────────────────────────────
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+
+# ── Logging ────────────────────────────────────────────────────
+logging:
+  level:
+    co.edu.uniquindio.huellitas: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.springframework.security: INFO
