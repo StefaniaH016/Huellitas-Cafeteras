@@ -4,6 +4,7 @@ import co.edu.uniquindio.huellitas.entity.enums.EstadoVerificacion;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.time.Instant;
 
