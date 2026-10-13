@@ -29,6 +29,7 @@ public class Seguimiento {
     @Column(nullable = false)
     private Instant fecha;
 
+    @Builder.Default
     private boolean visible = true;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

@@ -24,6 +24,7 @@ public class BitacoraMedica {
     @Column(nullable = false)
     private Instant fechaApertura;
 
+    @Builder.Default
     private boolean altaMedica = false;
 
     private Instant fechaAlta;

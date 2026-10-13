@@ -22,6 +22,7 @@ public class Foto {
     @Column(length = 200)
     private String publicId;
 
+    @Builder.Default
     private boolean principal = false;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

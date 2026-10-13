@@ -36,11 +36,14 @@ public class Usuario {
     @Column(nullable = false, length = 20)
     private Rol rol;
 
+    @Builder.Default
     @Column(nullable = false)
     private boolean activo = true;
 
+    @Builder.Default
     private boolean disponibleRescate = false;
 
+    @Builder.Default
     @Column(nullable = false)
     private boolean aceptoTratamientoDatos = false;
 

@@ -50,6 +50,7 @@ public class Caso {
     private Instant fechaCustodia;
     private Instant fechaArchivado;
 
+    @Builder.Default
     private boolean visible = true;
 
     @Column(columnDefinition = "TEXT")
