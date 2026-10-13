@@ -8,9 +8,9 @@ spring:
 
   # ── Base de datos PostgreSQL (Railway) ─────────────────────────
   datasource:
-    url: ${DATABASE_URL}
-    username: ${DATABASE_USER}
-    password: ${DATABASE_PASSWORD}
+    url: jdbc:postgresql://${PGHOST}:${PGPORT}/${PGDATABASE}
+    username: ${PGUSER}
+    password: ${PGPASSWORD}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 10
@@ -21,7 +21,7 @@ spring:
   # ── JPA / Hibernate ────────────────────────────────────────────
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
     show-sql: false
     properties:
       hibernate:
@@ -71,6 +71,13 @@ management:
   endpoint:
     health:
       show-details: when-authorized
+      livenessState:
+        enabled: true
+      readinessState:
+        enabled: true
+  health:
+    db:
+      enabled: true
 
 # ── Logging (debug para HTTP requests) ──────────────────────────
 logging:
