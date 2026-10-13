@@ -53,14 +53,14 @@ server:
 
 # ── JWT ────────────────────────────────────────────────────────
 jwt:
-  secret: ${JWT_SECRET:cGxhY2Vob2xkZXJfc2VjcmV0X2tleV9odWVsbGl0YXNfY2FmZXRlcmFzXzIwMjU=}
-  expiration: ${JWT_EXPIRATION:86400000}
+  secret: ${JWT_SECRET}
+  expiration: ${JWT_EXPIRATION}
 
 # ── Cloudinary ─────────────────────────────────────────────────
 cloudinary:
-  cloud-name: ${CLOUDINARY_CLOUD_NAME:}
-  api-key: ${CLOUDINARY_API_KEY:}
-  api-secret: ${CLOUDINARY_API_SECRET:}
+  cloud-name: ${CLOUDINARY_CLOUD_NAME}
+  api-key: ${CLOUDINARY_API_KEY}
+  api-secret: ${CLOUDINARY_API_SECRET}
 
 # ── Actuator ───────────────────────────────────────────────────
 management:
