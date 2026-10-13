@@ -29,22 +29,19 @@ jobs:
           cache: maven
 
       # Ejecutar pruebas + Checkstyle + Generar cobertura JaCoCo
-      # Los tests se ejecutan SOLO si hay credenciales de Railway
+      # Los tests se ejecutan SOLO si hay credenciales de Railway configuradas
       - name: Run backend tests + Checkstyle + JaCoCo
         working-directory: huellitas-backend
         env:
-          # Variables de Railway PostgreSQL (se configuran en GitHub Secrets)
-          DATABASE_URL: ${{ secrets.RAILWAY_DATABASE_URL || '' }}
-          DATABASE_USER: ${{ secrets.RAILWAY_DATABASE_USER || '' }}
-          DATABASE_PASSWORD: ${{ secrets.RAILWAY_DATABASE_PASSWORD || '' }}
-          DATABASE_DRIVER: org.postgresql.Driver
-          # Flag para saltar tests si no hay BD configurada
-          SKIP_DB_TESTS: ${{ !secrets.RAILWAY_DATABASE_URL }}
+          # Variables de Railway PostgreSQL (configuradas en GitHub Secrets)
+          DATABASE_URL: ${{ secrets.RAILWAY_DATABASE_URL }}
+          DATABASE_USER: ${{ secrets.RAILWAY_DATABASE_USER }}
+          DATABASE_PASSWORD: ${{ secrets.RAILWAY_DATABASE_PASSWORD }}
         run: |
           if [ -z "$DATABASE_URL" ]; then
             echo "⚠️  DATABASE_URL no configurado. Saltando tests de BD."
-            echo "Una vez que configures Railway, los tests se ejecutarán automáticamente."
-            mvn -B clean compile
+            echo "Una vez que configures los secretos, los tests se ejecutarán automáticamente."
+            mvn -B clean compile jacoco:report
           else
             echo "✅ Ejecutando tests con PostgreSQL de Railway..."
             mvn -B clean verify

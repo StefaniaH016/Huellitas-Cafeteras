@@ -1,35 +1,55 @@
+# ========================================
+# Configuración - Railway
+# ========================================
+
 spring:
   application:
     name: huellitas
 
-  # ── Base de datos ──────────────────────────────────────────────
+  # ── Base de datos PostgreSQL (Railway) ─────────────────────────
   datasource:
-    url: jdbc:postgresql://localhost:5432/${POSTGRES_DB:huellitas_db}
-    username: ${POSTGRES_USER:postgres}
-    password: ${POSTGRES_PASSWORD:postgres}
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USER}
+    password: ${DATABASE_PASSWORD}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      idle-timeout: 600000
+      max-lifetime: 1800000
 
   # ── JPA / Hibernate ────────────────────────────────────────────
   jpa:
     hibernate:
-      ddl-auto: update
-    show-sql: true
+      ddl-auto: validate
+    show-sql: false
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
-        format_sql: true
+        format_sql: false
     open-in-view: false
 
-  # ── Docker Compose (dev local) ─────────────────────────────────
+  # ── Docker Compose ────────────────────────────────────────────
   docker:
     compose:
-      lifecycle-management: start_only
+      lifecycle-management: none
+
+  # ── CORS - Permitir requests desde Postman y frontend ─────────
+  web:
+    cors:
+      allowed-origins: "*"
+      allowed-methods: GET,POST,PUT,DELETE,OPTIONS,PATCH
+      allowed-headers: "*"
+      allow-credentials: false
+      max-age: 3600
 
 # ── Servidor ───────────────────────────────────────────────────
 server:
   port: 8080
   servlet:
-    context-path: /
+    context-path: /api
+  http2:
+    enabled: true
 
 # ── JWT ────────────────────────────────────────────────────────
 jwt:
@@ -38,31 +58,26 @@ jwt:
 
 # ── Cloudinary ─────────────────────────────────────────────────
 cloudinary:
-  cloud-name: ${CLOUDINARY_CLOUD_NAME:your_cloud_name}
-  api-key: ${CLOUDINARY_API_KEY:your_api_key}
-  api-secret: ${CLOUDINARY_API_SECRET:your_api_secret}
+  cloud-name: ${CLOUDINARY_CLOUD_NAME:}
+  api-key: ${CLOUDINARY_API_KEY:}
+  api-secret: ${CLOUDINARY_API_SECRET:}
 
 # ── Actuator ───────────────────────────────────────────────────
 management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,metrics
   endpoint:
     health:
       show-details: when-authorized
 
-# ── SpringDoc / Swagger UI ──────────────────────────────────────
-springdoc:
-  api-docs:
-    path: /api-docs
-  swagger-ui:
-    path: /swagger-ui.html
-    operations-sorter: method
-
-# ── Logging ────────────────────────────────────────────────────
+# ── Logging (debug para HTTP requests) ──────────────────────────
 logging:
   level:
-    co.edu.uniquindio.huellitas: DEBUG
-    org.hibernate.SQL: DEBUG
+    root: INFO
+    co.edu.uniquindio.huellitas: INFO
+    org.hibernate.SQL: WARN
     org.springframework.security: INFO
+    org.springframework.web: DEBUG
+    org.springframework.security.web.FilterChainProxy: DEBUG
