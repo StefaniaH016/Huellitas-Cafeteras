@@ -29,8 +29,13 @@
 
 	<properties>
 		<java.version>21</java.version>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<maven.compiler.source>21</maven.compiler.source>
+		<maven.compiler.target>21</maven.compiler.target>
+		<maven.compiler.release>21</maven.compiler.release>
 		<jjwt.version>0.12.6</jjwt.version>
 		<cloudinary.version>1.39.0</cloudinary.version>
+		<lombok.version>1.18.34</lombok.version>
 	</properties>
 
 	<dependencies>
@@ -96,6 +101,7 @@
 		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
+			<version>${lombok.version}</version>
 			<optional>true</optional>
 		</dependency>
 
@@ -191,10 +197,19 @@
 				<configuration>
 					<source>21</source>
 					<target>21</target>
+					<release>21</release>
+					<compilerArgs>
+						<!-- Habilitar preview features de Java 21 -->
+						<arg>--enable-preview</arg>
+						<!-- Warnings -->
+						<arg>-Xlint:all</arg>
+						<arg>-Xlint:-processing</arg>
+					</compilerArgs>
 					<annotationProcessorPaths>
 						<path>
 							<groupId>org.projectlombok</groupId>
 							<artifactId>lombok</artifactId>
+							<version>${lombok.version}</version>
 						</path>
 					</annotationProcessorPaths>
 				</configuration>
