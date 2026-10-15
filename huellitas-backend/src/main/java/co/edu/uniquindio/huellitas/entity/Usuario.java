@@ -24,17 +24,21 @@ public class Usuario {
     private String nombre;
 
     @Column(nullable = false, unique = true, length = 150)
-    private String email;
+    private String correo;
 
     @Column(nullable = false)
-    private String passwordHash;
+    private String contrasena;
 
     @Column(length = 20)
     private String telefono;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(nullable = false, length = 30)
     private Rol rol;
+
+    @Builder.Default
+    @Column(nullable = false)
+    private boolean verificado = false;
 
     @Builder.Default
     @Column(nullable = false)
@@ -58,4 +62,9 @@ public class Usuario {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "municipio_interes_id")
     private Municipio municipioInteres;
+
+    /** Barrio de residencia o referencia del usuario. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "barrio_id")
+    private Barrio barrio;
 }

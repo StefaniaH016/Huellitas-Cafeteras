@@ -8,20 +8,18 @@ public record RegistroUsuarioDTO(
         @Size(max = 150)
         String nombre,
 
-        @Email(message = "Debe ser un email válido")
-        @NotBlank(message = "El email es obligatorio")
-        String email,
+        @Email(message = "Debe ser un correo válido")
+        @NotBlank(message = "El correo es obligatorio")
+        String correo,
 
         @NotBlank(message = "La contraseña es obligatoria")
         @Size(min = 8, message = "La contraseña debe tener al menos 8 caracteres")
-        String password,
+        String contrasena,
 
         @Pattern(regexp = "^[0-9+\\-\\s]{7,20}$", message = "Teléfono inválido")
         String telefono,
 
-        /** Rol solicitado; el backend lo valida y puede sobreescribirlo. */
-        Rol rol,
+        Long barrioId,
 
-        @AssertTrue(message = "Debe aceptar el tratamiento de datos personales")
-        boolean aceptoTratamientoDatos
+        Rol rol
 ) {}

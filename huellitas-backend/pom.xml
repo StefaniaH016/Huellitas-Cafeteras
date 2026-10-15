@@ -119,6 +119,13 @@
 			<optional>true</optional>
 		</dependency>
 
+		<!-- ===== PDF (OpenPDF) ===== -->
+		<dependency>
+			<groupId>com.github.librepdf</groupId>
+			<artifactId>openpdf</artifactId>
+			<version>2.0.3</version>
+		</dependency>
+
 		<!-- ===== TEST ===== -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -128,6 +135,11 @@
 		<dependency>
 			<groupId>org.springframework.security</groupId>
 			<artifactId>spring-security-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.h2database</groupId>
+			<artifactId>h2</artifactId>
 			<scope>test</scope>
 		</dependency>
 

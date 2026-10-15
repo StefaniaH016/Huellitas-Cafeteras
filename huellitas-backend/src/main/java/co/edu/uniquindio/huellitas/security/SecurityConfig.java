@@ -41,10 +41,14 @@ public class SecurityConfig {
             .sessionManagement(session ->
                     session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                // Auth pública
-                .requestMatchers("/api/v1/auth/**").permitAll()
-                // Ubicaciones: solo lectura pública
-                .requestMatchers(HttpMethod.GET, "/api/v1/ubicaciones/**").permitAll()
+                // Auth pública (registro y login)
+                .requestMatchers(HttpMethod.POST, "/v1/auth/registro", "/v1/auth/login", "/api/v1/auth/registro", "/api/v1/auth/login").permitAll()
+                // Ubicaciones: lectura pública
+                .requestMatchers(HttpMethod.GET, "/v1/ubicaciones/**", "/api/v1/ubicaciones/**").permitAll()
+                // Casos: mis-reportes requiere autenticación explícita
+                .requestMatchers(HttpMethod.GET, "/v1/casos/mis-reportes", "/api/v1/casos/mis-reportes").authenticated()
+                // Casos: lectura pública de feed, detalle, historial, aportes y bitácora
+                .requestMatchers(HttpMethod.GET, "/v1/casos/**", "/api/v1/casos/**").permitAll()
                 // Swagger / OpenAPI
                 .requestMatchers(
                         "/swagger-ui.html",
@@ -52,7 +56,7 @@ public class SecurityConfig {
                         "/api-docs/**",
                         "/v3/api-docs/**").permitAll()
                 // Actuator
-                .requestMatchers("/actuator/health").permitAll()
+                .requestMatchers("/actuator/**").permitAll()
                 // Todo lo demás requiere autenticación
                 .anyRequest().authenticated())
             .authenticationProvider(authenticationProvider())
@@ -76,7 +80,6 @@ public class SecurityConfig {
 
     @Bean
     public AuthenticationProvider authenticationProvider() {
-        // Spring Security 7.x: UserDetailsService va en el constructor, no en setter
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
         provider.setPasswordEncoder(passwordEncoder());
         return provider;

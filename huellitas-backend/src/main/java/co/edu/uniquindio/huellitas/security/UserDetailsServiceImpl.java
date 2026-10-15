@@ -14,7 +14,7 @@ import java.util.List;
 
 /**
  * Implementación de UserDetailsService que carga el usuario desde la BD
- * usando el email como username.
+ * usando el correo como username.
  */
 @Service
 @RequiredArgsConstructor
@@ -23,14 +23,14 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     private final UsuarioRepository usuarioRepository;
 
     @Override
-    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        Usuario usuario = usuarioRepository.findByEmail(email)
+    public UserDetails loadUserByUsername(String correo) throws UsernameNotFoundException {
+        Usuario usuario = usuarioRepository.findByCorreo(correo)
                 .orElseThrow(() -> new UsernameNotFoundException(
-                        "Usuario no encontrado con email: " + email));
+                        "Usuario no encontrado con correo: " + correo));
 
         return User.builder()
-                .username(usuario.getEmail())
-                .password(usuario.getPasswordHash())
+                .username(usuario.getCorreo())
+                .password(usuario.getContrasena())
                 .authorities(List.of(new SimpleGrantedAuthority("ROLE_" + usuario.getRol().name())))
                 .accountLocked(!usuario.isActivo())
                 .build();

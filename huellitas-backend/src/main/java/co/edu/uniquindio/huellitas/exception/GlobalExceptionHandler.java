@@ -43,6 +43,28 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return ResponseEntity.unprocessableEntity().body(body);
     }
 
+    // ── 400 Bad Request & Multipart ──────────────────────────────
+
+    @ExceptionHandler({
+            IllegalArgumentException.class,
+            IllegalStateException.class,
+            org.springframework.web.multipart.MultipartException.class
+    })
+    public ResponseEntity<Object> handleBadRequest(Exception ex, WebRequest request) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(buildBody(HttpStatus.BAD_REQUEST, ex.getMessage(), request));
+    }
+
+    @Override
+    protected ResponseEntity<Object> handleMissingServletRequestPart(
+            org.springframework.web.multipart.support.MissingServletRequestPartException ex,
+            HttpHeaders headers,
+            HttpStatusCode status,
+            WebRequest request) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(buildBody(HttpStatus.BAD_REQUEST, "Parte requerida faltante: " + ex.getRequestPartName(), request));
+    }
+
     // ── 401 Autenticación ─────────────────────────────────────────
 
     @ExceptionHandler(AuthenticationException.class)

@@ -23,6 +23,9 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: prod
       DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      PGHOST: postgres
+      PGPORT: 5432
+      PGDATABASE: ${POSTGRES_DB}
       PGUSER: ${PGUSER}
       PGPASSWORD: ${PGPASSWORD}
       SPRING_JPA_HIBERNATE_DDL_AUTO: update

@@ -1,6 +1,8 @@
 package co.edu.uniquindio.huellitas.entity.enums;
 
 public enum TipoCaso {
+    EXTRAVIADO,
     VULNERABLE,
-    EXTRAVIADO
+    HERIDO,
+    EN_ADOPCION
 }

@@ -8,9 +8,9 @@ spring:
 
   # ── Base de datos PostgreSQL (Railway) ─────────────────────────
   datasource:
-    url: jdbc:postgresql://${PGHOST}:${PGPORT}/${PGDATABASE}
-    username: ${PGUSER}
-    password: ${PGPASSWORD}
+    url: jdbc:postgresql://${PGHOST:localhost}:${PGPORT:5432}/${PGDATABASE:huellitas_db}
+    username: ${PGUSER:postgres}
+    password: ${PGPASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 10
@@ -29,10 +29,13 @@ spring:
         format_sql: false
     open-in-view: false
 
-  # ── Docker Compose ────────────────────────────────────────────
+  # ── Docker Compose & DevTools ─────────────────────────────────
   docker:
     compose:
-      lifecycle-management: none
+      enabled: false
+  devtools:
+    restart:
+      enabled: false
 
   # ── CORS - Permitir requests desde Postman y frontend ─────────
   web:
@@ -53,14 +56,14 @@ server:
 
 # ── JWT ────────────────────────────────────────────────────────
 jwt:
-  secret: ${JWT_SECRET}
-  expiration: ${JWT_EXPIRATION}
+  secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
+  expiration: ${JWT_EXPIRATION:86400000}
 
 # ── Cloudinary ─────────────────────────────────────────────────
 cloudinary:
-  cloud-name: ${CLOUDINARY_CLOUD_NAME}
-  api-key: ${CLOUDINARY_API_KEY}
-  api-secret: ${CLOUDINARY_API_SECRET}
+  cloud-name: ${CLOUDINARY_CLOUD_NAME:huellitas_local}
+  api-key: ${CLOUDINARY_API_KEY:123456789012345}
+  api-secret: ${CLOUDINARY_API_SECRET:abcde12345secret}
 
 # ── Actuator ───────────────────────────────────────────────────
 management:
