@@ -27,7 +27,6 @@ export class TokenService {
     try {
       const parts = token.split('.');
       if (parts.length !== 3) {
-        console.warn('[TokenService] Invalid JWT format: expected 3 parts');
         return null;
       }
 
@@ -38,8 +37,7 @@ export class TokenService {
 
       const payload = JSON.parse(atob(b64));
       return payload;
-    } catch (err) {
-      console.error('[TokenService] Failed to decode JWT payload:', err);
+    } catch {
       return null;
     }
   }

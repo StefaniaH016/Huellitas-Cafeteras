@@ -1,4 +1,4 @@
-import { Component, inject, computed } from '@angular/core';
+import { Component, inject, computed, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { TokenService } from '../../../core/services/token.service';
@@ -13,9 +13,12 @@ export class HeaderComponent {
   private authService = inject(AuthService);
   private tokenService = inject(TokenService);
 
+  // Decode token once and cache the payload
+  private payload = signal(this.tokenService.decodePayload());
+
   userName = computed(() => {
-    const payload = this.tokenService.decodePayload();
-    return (payload?.['nombre'] ?? payload?.['name'] ?? payload?.['sub'] ?? 'Usuario') as string;
+    const p = this.payload();
+    return (p?.['nombre'] ?? p?.['name'] ?? p?.['sub'] ?? 'Usuario') as string;
   });
 
   initials = computed(() => {

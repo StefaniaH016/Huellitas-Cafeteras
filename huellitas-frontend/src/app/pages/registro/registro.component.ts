@@ -73,13 +73,20 @@ export class RegistroComponent {
       return;
     }
     if (this.isInstitutional()) {
-      this.step2Form.get('nombreEntidad')!.addValidators(Validators.required);
-      this.step2Form.get('nit')!.addValidators(Validators.required);
-      this.step2Form.get('municipioOperacion')!.addValidators(Validators.required);
-      this.step2Form.get('nombreEntidad')!.updateValueAndValidity();
-      this.step2Form.get('nit')!.updateValueAndValidity();
-      this.step2Form.get('municipioOperacion')!.updateValueAndValidity();
+      // Conditionally enable validators for institutional fields
+      this.step2Form.get('nombreEntidad')!.setValidators([Validators.required]);
+      this.step2Form.get('nit')!.setValidators([Validators.required]);
+      this.step2Form.get('municipioOperacion')!.setValidators([Validators.required]);
+    } else {
+      // Clear validators for citizen fields
+      this.step2Form.get('nombreEntidad')!.clearValidators();
+      this.step2Form.get('nit')!.clearValidators();
+      this.step2Form.get('municipioOperacion')!.clearValidators();
     }
+    // Update validity for the affected controls
+    this.step2Form.get('nombreEntidad')!.updateValueAndValidity({ emitEvent: false });
+    this.step2Form.get('nit')!.updateValueAndValidity({ emitEvent: false });
+    this.step2Form.get('municipioOperacion')!.updateValueAndValidity({ emitEvent: false });
     this.step.set(2);
   }
 

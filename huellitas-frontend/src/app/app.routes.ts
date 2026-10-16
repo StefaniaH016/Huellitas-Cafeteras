@@ -61,20 +61,47 @@ export const routes: Routes = [
           ),
       },
       {
-        path: 'acceso-denegado',
+        path: 'mis-reportes',
+        canActivate: [authGuard],
         loadComponent: () =>
-          import(
-            './pages/acceso-denegado/acceso-denegado.component'
-          ).then((m) => m.AccesoDenegadoComponent),
+          import('./pages/placeholder/placeholder.component').then(
+            (m) => m.PlaceholderComponent
+          ),
+        data: { title: 'Mis reportes' },
       },
       {
-        path: '404',
+        path: 'mensajes',
+        canActivate: [authGuard],
         loadComponent: () =>
-          import('./pages/not-found/not-found.component').then(
-            (m) => m.NotFoundComponent
+          import('./pages/placeholder/placeholder.component').then(
+            (m) => m.PlaceholderComponent
           ),
+        data: { title: 'Mensajes' },
+      },
+      {
+        path: 'notificaciones',
+        canActivate: [authGuard],
+        loadComponent: () =>
+          import('./pages/placeholder/placeholder.component').then(
+            (m) => m.PlaceholderComponent
+          ),
+        data: { title: 'Notificaciones' },
       },
     ],
+  },
+  {
+    path: 'acceso-denegado',
+    loadComponent: () =>
+      import('./pages/acceso-denegado/acceso-denegado.component').then(
+        (m) => m.AccesoDenegadoComponent
+      ),
+  },
+  {
+    path: '404',
+    loadComponent: () =>
+      import('./pages/not-found/not-found.component').then(
+        (m) => m.NotFoundComponent
+      ),
   },
   { path: '**', redirectTo: '/404' },
 ];
