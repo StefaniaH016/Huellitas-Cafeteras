@@ -1,0 +1,73 @@
+<div class="panel-wrapper">
+  <div class="panel-header">
+    <div class="org-info">
+      <div class="org-avatar" aria-hidden="true">VJ</div>
+      <div>
+        <h1>Veterinaria San Jorge</h1>
+        <span class="verified">Verificada ✓</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel-layout">
+    <aside class="panel-sidebar">
+      <nav class="sidebar-nav">
+        <button
+          type="button"
+          class="sidebar-link"
+          [class.active]="activeSection() === 'solicitudes'"
+          (click)="setSection('solicitudes')"
+        >
+          Solicitudes
+        </button>
+        <button
+          type="button"
+          class="sidebar-link"
+          [class.active]="activeSection() === 'pacientes'"
+          (click)="setSection('pacientes')"
+        >
+          Pacientes activos
+        </button>
+        <button
+          type="button"
+          class="sidebar-link"
+          [class.active]="activeSection() === 'historial'"
+          (click)="setSection('historial')"
+        >
+          Historial clínico
+        </button>
+        <button
+          type="button"
+          class="sidebar-link"
+          [class.active]="activeSection() === 'informes'"
+          (click)="setSection('informes')"
+        >
+          Informes PDF
+        </button>
+        <button
+          type="button"
+          class="sidebar-link"
+          [class.active]="activeSection() === 'mensajes'"
+          (click)="setSection('mensajes')"
+        >
+          Mensajes
+        </button>
+        <button
+          type="button"
+          class="sidebar-link"
+          [class.active]="activeSection() === 'perfil'"
+          (click)="setSection('perfil')"
+        >
+          Perfil
+        </button>
+      </nav>
+    </aside>
+
+    <main class="panel-main">
+      <div class="section-content">
+        <h2>{{ activeSection() | titlecase }}</h2>
+        <p class="placeholder">Contenido de {{ activeSection() }} será cargado aquí.</p>
+      </div>
+    </main>
+  </div>
+</div>

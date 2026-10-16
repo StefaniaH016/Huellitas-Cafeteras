@@ -1,0 +1,107 @@
+<div class="panel-wrapper">
+  <div class="panel-header">
+    <div class="org-info">
+      <div class="org-avatar" aria-hidden="true">FP</div>
+      <div>
+        <h1>Fundación Patitas</h1>
+        <span class="verified">Verificada ✓</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel-layout">
+    <aside class="panel-sidebar">
+      <nav class="sidebar-nav">
+        <button
+          type="button"
+          class="sidebar-link"
+          [class.active]="activeSection() === 'resumen'"
+          (click)="setSection('resumen')"
+        >
+          Resumen
+        </button>
+        <button
+          type="button"
+          class="sidebar-link"
+          [class.active]="activeSection() === 'custodia'"
+          (click)="setSection('custodia')"
+        >
+          Casos en custodia
+        </button>
+        <button
+          type="button"
+          class="sidebar-link"
+          [class.active]="activeSection() === 'zona'"
+          (click)="setSection('zona')"
+        >
+          Casos de mi zona
+        </button>
+        <button
+          type="button"
+          class="sidebar-link"
+          [class.active]="activeSection() === 'medicas'"
+          (click)="setSection('medicas')"
+        >
+          Solicitudes médicas
+        </button>
+        <button
+          type="button"
+          class="sidebar-link"
+          [class.active]="activeSection() === 'adopcion'"
+          (click)="setSection('adopcion')"
+        >
+          Animales en adopción
+        </button>
+        <button
+          type="button"
+          class="sidebar-link"
+          [class.active]="activeSection() === 'mensajes'"
+          (click)="setSection('mensajes')"
+        >
+          Mensajes
+        </button>
+        <button
+          type="button"
+          class="sidebar-link"
+          [class.active]="activeSection() === 'perfil'"
+          (click)="setSection('perfil')"
+        >
+          Perfil de la entidad
+        </button>
+      </nav>
+    </aside>
+
+    <main class="panel-main">
+      @if (activeSection() === 'resumen') {
+        <div class="section-content">
+          <h2>Resumen de actividad</h2>
+          <div class="stats-row">
+            <div class="stat-card">
+              <div class="stat-value">12</div>
+              <div class="stat-label">Animales en custodia</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value">3</div>
+              <div class="stat-label">Esperando atención médica</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value">5</div>
+              <div class="stat-label">Emergencias registradas</div>
+            </div>
+          </div>
+          <div class="alerts-section">
+            <h3>Alertas de zona</h3>
+            <p class="placeholder">No hay alertas nuevas en tu zona de operación.</p>
+          </div>
+        </div>
+      }
+
+      @if (activeSection() !== 'resumen') {
+        <div class="section-content">
+          <h2>{{ activeSection() | titlecase }}</h2>
+          <p class="placeholder">Contenido de {{ activeSection() }} será cargado aquí.</p>
+        </div>
+      }
+    </main>
+  </div>
+</div>
