@@ -34,3 +34,7 @@ build/
 
 ### Docker ###
 .env
+
+# Documentación local — no subir a GitHub
+/AGENTS.md
+/Vault-Soft III/
