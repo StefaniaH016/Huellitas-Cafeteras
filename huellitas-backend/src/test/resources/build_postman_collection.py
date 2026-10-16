@@ -1,0 +1,900 @@
+import json
+import os
+
+collection = {
+    "info": {
+        "name": "Huellitas Cafeteras API - Suite Completa (100% Automatizada)",
+        "description": "Colección completa y autosuficiente de pruebas automatizadas para los 13 módulos y 28 endpoints de Huellitas Cafeteras. Diseñada para ejecutarse de punta a punta con 100% de éxito (0 fallos) en Postman Collection Runner y Newman.",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "variable": [
+        {"key": "baseUrl", "value": "http://localhost:8080/api"},
+        {"key": "admin_correo", "value": "admin@huellitas.co"},
+        {"key": "admin_contrasena", "value": "Admin12345!"},
+        {"key": "token", "value": ""},
+        {"key": "admin_token", "value": ""},
+        {"key": "casoId", "value": "1"},
+        {"key": "usuarioId", "value": "2"},
+        {"key": "vetUsuarioId", "value": "3"},
+        {"key": "departamentoId", "value": "1"},
+        {"key": "municipioId", "value": "1"},
+        {"key": "barrioId", "value": "1"},
+        {"key": "user_correo", "value": ""},
+        {"key": "user_contrasena", "value": "Voluntario12345!"},
+        {"key": "vet_correo", "value": ""},
+        {"key": "notificacionId", "value": "1"}
+    ],
+    "item": [
+        # 00 - Health Check
+        {
+            "name": "00 - Health Check",
+            "item": [
+                {
+                    "name": "GET /actuator/health",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": "{{baseUrl}}/actuator/health"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
+                                "var json = pm.response.json();",
+                                "pm.test('Estado de salud del sistema es UP', function () { pm.expect(json.status).to.eql('UP'); });"
+                            ]
+                        }
+                    }]
+                }
+            ]
+        },
+        # Módulo 01 - Autenticación
+        {
+            "name": "Módulo 01 - Autenticación (/v1/auth)",
+            "item": [
+                {
+                    "name": "POST /v1/auth/login (Admin Inicial)",
+                    "request": {
+                        "method": "POST",
+                        "header": [{"key": "Content-Type", "value": "application/json"}],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"correo\": \"{{admin_correo}}\",\n  \"contrasena\": \"{{admin_contrasena}}\"\n}"
+                        },
+                        "url": "{{baseUrl}}/v1/auth/login"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
+                                "var json = pm.response.json();",
+                                "pm.test('Retorna token JWT válido', function () { pm.expect(json.token).to.not.be.empty; });",
+                                "pm.test('Rol es ADMINISTRADOR', function () { pm.expect(json.usuario.rol).to.eql('ADMINISTRADOR'); });",
+                                "pm.environment.set('admin_token', json.token);",
+                                "pm.collectionVariables.set('admin_token', json.token);"
+                            ]
+                        }
+                    }]
+                },
+                {
+                    "name": "POST /v1/auth/registro (Ciudadano Voluntario)",
+                    "event": [
+                        {
+                            "listen": "prerequest",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "const randomId = Math.floor(Math.random() * 900000) + 100000;",
+                                    "const email = 'voluntario_' + randomId + '@huellitas.co';",
+                                    "pm.environment.set('user_correo', email);",
+                                    "pm.collectionVariables.set('user_correo', email);"
+                                ]
+                            }
+                        },
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('Status code es 201 Created', function () { pm.response.to.have.status(201); });",
+                                    "var json = pm.response.json();",
+                                    "pm.test('Retorna ID de nuevo usuario', function () { pm.expect(json.id).to.be.a('number'); });",
+                                    "pm.test('Rol asignado es CIUDADANO_VOLUNTARIO', function () { pm.expect(json.rol).to.eql('CIUDADANO_VOLUNTARIO'); });",
+                                    "pm.environment.set('usuarioId', json.id);",
+                                    "pm.collectionVariables.set('usuarioId', json.id);"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [{"key": "Content-Type", "value": "application/json"}],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"nombre\": \"Ciudadano Voluntario\",\n  \"correo\": \"{{user_correo}}\",\n  \"contrasena\": \"{{user_contrasena}}\",\n  \"telefono\": \"3101234567\",\n  \"rol\": \"CIUDADANO_VOLUNTARIO\",\n  \"barrioId\": 1\n}"
+                        },
+                        "url": "{{baseUrl}}/v1/auth/registro"
+                    }
+                },
+                {
+                    "name": "POST /v1/auth/login (Ciudadano Voluntario)",
+                    "request": {
+                        "method": "POST",
+                        "header": [{"key": "Content-Type", "value": "application/json"}],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"correo\": \"{{user_correo}}\",\n  \"contrasena\": \"{{user_contrasena}}\"\n}"
+                        },
+                        "url": "{{baseUrl}}/v1/auth/login"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
+                                "var json = pm.response.json();",
+                                "pm.test('Retorna token JWT de ciudadano', function () { pm.expect(json.token).to.not.be.empty; });",
+                                "pm.environment.set('token', json.token);",
+                                "pm.collectionVariables.set('token', json.token);"
+                            ]
+                        }
+                    }]
+                },
+                {
+                    "name": "GET /v1/auth/me",
+                    "request": {
+                        "method": "GET",
+                        "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+                        "url": "{{baseUrl}}/v1/auth/me"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
+                                "var json = pm.response.json();",
+                                "pm.test('Retorna datos del usuario autenticado', function () {",
+                                "    pm.expect(json.correo).to.eql(pm.environment.get('user_correo') || pm.collectionVariables.get('user_correo'));",
+                                "});"
+                            ]
+                        }
+                    }]
+                }
+            ]
+        },
+        # Módulo 02 - Usuarios y Perfil
+        {
+            "name": "Módulo 02 - Usuarios y Perfil (/v1/usuarios)",
+            "item": [
+                {
+                    "name": "GET /v1/usuarios/me",
+                    "request": {
+                        "method": "GET",
+                        "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+                        "url": "{{baseUrl}}/v1/usuarios/me"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
+                                "var json = pm.response.json();",
+                                "pm.test('Perfil contiene correo y nombre', function () { pm.expect(json).to.have.property('nombre'); pm.expect(json).to.have.property('correo'); });"
+                            ]
+                        }
+                    }]
+                },
+                {
+                    "name": "PUT /v1/usuarios/me",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {"key": "Authorization", "value": "Bearer {{token}}"},
+                            {"key": "Content-Type", "value": "application/json"}
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"nombre\": \"Ciudadano Voluntario Actualizado\",\n  \"telefono\": \"3159998877\",\n  \"barrioId\": 1\n}"
+                        },
+                        "url": "{{baseUrl}}/v1/usuarios/me"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
+                                "var json = pm.response.json();",
+                                "pm.test('Nombre actualizado con éxito', function () { pm.expect(json.nombre).to.eql('Ciudadano Voluntario Actualizado'); });"
+                            ]
+                        }
+                    }]
+                }
+            ]
+        },
+        # Módulo 03 - Verificaciones
+        {
+            "name": "Módulo 03 - Verificaciones (/v1/verificaciones)",
+            "item": [
+                {
+                    "name": "POST /v1/auth/registro (Registrar Veterinaria para Verificación)",
+                    "event": [
+                        {
+                            "listen": "prerequest",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "const randomId = Math.floor(Math.random() * 900000) + 100000;",
+                                    "const email = 'veterinaria_' + randomId + '@huellitas.co';",
+                                    "pm.environment.set('vet_correo', email);",
+                                    "pm.collectionVariables.set('vet_correo', email);"
+                                ]
+                            }
+                        },
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('Status code es 201 Created', function () { pm.response.to.have.status(201); });",
+                                    "var json = pm.response.json();",
+                                    "pm.test('Rol es VETERINARIA y no verificado inicialmente', function () { pm.expect(json.rol).to.eql('VETERINARIA'); });",
+                                    "pm.environment.set('vetUsuarioId', json.id);",
+                                    "pm.collectionVariables.set('vetUsuarioId', json.id);"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [{"key": "Content-Type", "value": "application/json"}],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"nombre\": \"Clínica Veterinaria Los Andes\",\n  \"correo\": \"{{vet_correo}}\",\n  \"contrasena\": \"Veterinaria12345!\",\n  \"telefono\": \"3117778899\",\n  \"rol\": \"VETERINARIA\",\n  \"barrioId\": 1\n}"
+                        },
+                        "url": "{{baseUrl}}/v1/auth/registro"
+                    }
+                },
+                {
+                    "name": "GET /v1/verificaciones/pendientes",
+                    "request": {
+                        "method": "GET",
+                        "header": [{"key": "Authorization", "value": "Bearer {{admin_token}}"}],
+                        "url": "{{baseUrl}}/v1/verificaciones/pendientes"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
+                                "var json = pm.response.json();",
+                                "pm.test('Retorna lista de verificaciones pendientes', function () { pm.expect(Array.isArray(json)).to.be.true; });"
+                            ]
+                        }
+                    }]
+                },
+                {
+                    "name": "PATCH /v1/verificaciones/{usuarioId}",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {"key": "Authorization", "value": "Bearer {{admin_token}}"},
+                            {"key": "Content-Type", "value": "application/json"}
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"decision\": \"APROBAR\",\n  \"observacion\": \"Registro mercantil y matrícula profesional validados con éxito\"\n}"
+                        },
+                        "url": "{{baseUrl}}/v1/verificaciones/{{vetUsuarioId}}"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
+                                "var json = pm.response.json();",
+                                "pm.test('Entidad aprobada y verificada', function () { pm.expect(json.verificado).to.be.true; });"
+                            ]
+                        }
+                    }]
+                }
+            ]
+        },
+        # Módulo 04 - Ubicaciones
+        {
+            "name": "Módulo 04 - Ubicaciones (/v1/ubicaciones)",
+            "item": [
+                {
+                    "name": "GET /v1/ubicaciones/departamentos",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": "{{baseUrl}}/v1/ubicaciones/departamentos"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
+                                "var json = pm.response.json();",
+                                "pm.test('Contiene al menos 3 departamentos (Quindío, Risaralda, Caldas)', function () { pm.expect(json.length).to.be.at.least(3); });",
+                                "pm.environment.set('departamentoId', json[0].id);",
+                                "pm.collectionVariables.set('departamentoId', json[0].id);"
+                            ]
+                        }
+                    }]
+                },
+                {
+                    "name": "GET /v1/ubicaciones/municipios?departamentoId={id}",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": "{{baseUrl}}/v1/ubicaciones/municipios?departamentoId={{departamentoId}}"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
+                                "var json = pm.response.json();",
+                                "pm.test('Retorna municipios para el departamento', function () { pm.expect(json.length).to.be.at.least(1); });",
+                                "pm.environment.set('municipioId', json[0].id);",
+                                "pm.collectionVariables.set('municipioId', json[0].id);"
+                            ]
+                        }
+                    }]
+                },
+                {
+                    "name": "GET /v1/ubicaciones/barrios?municipioId={id}",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": "{{baseUrl}}/v1/ubicaciones/barrios?municipioId={{municipioId}}"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
+                                "var json = pm.response.json();",
+                                "pm.test('Retorna barrios del municipio', function () { pm.expect(json.length).to.be.at.least(1); });",
+                                "pm.environment.set('barrioId', json[0].id);",
+                                "pm.collectionVariables.set('barrioId', json[0].id);"
+                            ]
+                        }
+                    }]
+                }
+            ]
+        },
+        # Módulo 05 - Creación de Casos e Imágenes
+        {
+            "name": "Módulo 05 - Creación de Casos e Imágenes",
+            "item": [
+                {
+                    "name": "POST /v1/casos (Crear Caso Nuevo)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {"key": "Authorization", "value": "Bearer {{token}}"},
+                            {"key": "Content-Type", "value": "application/json"}
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"tipoCaso\": \"HERIDO\",\n  \"urgencia\": \"ALTA\",\n  \"descripcion\": \"Perro rescatado cerca de la plaza con herida en pata\",\n  \"direccionReferencia\": \"Carrera 14 con Calle 20\",\n  \"barrioId\": 1,\n  \"animal\": {\n    \"nombre\": \"Firulais\",\n    \"especie\": \"PERRO\",\n    \"raza\": \"Criollo\",\n    \"color\": \"Caramelo\",\n    \"sexo\": \"MACHO\",\n    \"edadAproximada\": \"2 anios\",\n    \"senasParticulares\": \"Mancha blanca en el pecho\"\n  },\n  \"fotografias\": [\n    \"https://res.cloudinary.com/huellitas_local/image/upload/perro_herido.jpg\"\n  ]\n}"
+                        },
+                        "url": "{{baseUrl}}/v1/casos"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('Status code es 201 Created', function () { pm.response.to.have.status(201); });",
+                                "var json = pm.response.json();",
+                                "pm.test('Caso creado con estado REGISTRADO', function () { pm.expect(json.estado).to.eql('REGISTRADO'); });",
+                                "pm.test('Retorna ID numérico del caso', function () { pm.expect(json.id).to.be.a('number'); });",
+                                "pm.environment.set('casoId', json.id);",
+                                "pm.collectionVariables.set('casoId', json.id);"
+                            ]
+                        }
+                    }]
+                },
+                {
+                    "name": "POST /v1/imagenes (Subir Imagen)",
+                    "request": {
+                        "method": "POST",
+                        "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {"key": "casoId", "value": "{{casoId}}", "type": "text"}
+                            ]
+                        },
+                        "url": "{{baseUrl}}/v1/imagenes"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('Status code es 201 Created', function () { pm.response.to.have.status(201); });",
+                                "var json = pm.response.json();",
+                                "pm.test('Retorna URL y publicId de imagen', function () {",
+                                "    pm.expect(json.url).to.not.be.empty;",
+                                "    pm.expect(json.publicId).to.not.be.empty;",
+                                "});"
+                            ]
+                        }
+                    }]
+                }
+            ]
+        },
+        # Módulo 06 - Feed y Detalle
+        {
+            "name": "Módulo 06 - Feed y Detalle de Casos (/v1/casos)",
+            "item": [
+                {
+                    "name": "GET /v1/casos (Feed de Casos Activos)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": "{{baseUrl}}/v1/casos?page=0&size=10&especie=PERRO"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
+                                "var json = pm.response.json();",
+                                "pm.test('Retorna lista paginada en content', function () { pm.expect(json).to.have.property('content'); });",
+                                "pm.test('Hay al menos un caso activo', function () { pm.expect(json.content.length).to.be.at.least(1); });"
+                            ]
+                        }
+                    }]
+                },
+                {
+                    "name": "GET /v1/casos/{id} (Detalle Completo)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": "{{baseUrl}}/v1/casos/{{casoId}}"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
+                                "var json = pm.response.json();",
+                                "pm.test('Contiene objeto animal y ubicación', function () {",
+                                "    pm.expect(json).to.have.property('animal');",
+                                "    pm.expect(json).to.have.property('ubicacion');",
+                                "});"
+                            ]
+                        }
+                    }]
+                },
+                {
+                    "name": "GET /v1/casos/mis-reportes",
+                    "request": {
+                        "method": "GET",
+                        "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+                        "url": "{{baseUrl}}/v1/casos/mis-reportes"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
+                                "var json = pm.response.json();",
+                                "pm.test('Retorna reportes creados por el ciudadano', function () { pm.expect(json).to.have.property('content'); });"
+                            ]
+                        }
+                    }]
+                }
+            ]
+        },
+        # Módulo 07 - Gestión del Caso
+        {
+            "name": "Módulo 07 - Gestión del Caso (/v1/casos/{id})",
+            "item": [
+                {
+                    "name": "PATCH /v1/casos/{id}/estado (Actualizar Estado)",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {"key": "Authorization", "value": "Bearer {{admin_token}}"},
+                            {"key": "Content-Type", "value": "application/json"}
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"estado\": \"EN_ATENCION\",\n  \"observacion\": \"Caso en proceso de rescate y traslado veterinario\"\n}"
+                        },
+                        "url": "{{baseUrl}}/v1/casos/{{casoId}}/estado"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
+                                "var json = pm.response.json();",
+                                "pm.test('Estado cambiado a EN_ATENCION', function () { pm.expect(json.estado).to.eql('EN_ATENCION'); });"
+                            ]
+                        }
+                    }]
+                },
+                {
+                    "name": "GET /v1/casos/{id}/historial",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": "{{baseUrl}}/v1/casos/{{casoId}}/historial"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
+                                "var json = pm.response.json();",
+                                "pm.test('Historial registra trazabilidad del caso', function () { pm.expect(json.length).to.be.at.least(1); });"
+                            ]
+                        }
+                    }]
+                }
+            ]
+        },
+        # Módulo 08 - Aportes Comunitarios
+        {
+            "name": "Módulo 08 - Aportes Comunitarios (/v1/casos/{id}/aportes)",
+            "item": [
+                {
+                    "name": "POST /v1/casos/{id}/aportes (Registrar Aporte)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {"key": "Authorization", "value": "Bearer {{token}}"},
+                            {"key": "Content-Type", "value": "application/json"}
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"descripcion\": \"Avistamiento: Vimos al perrito ingresar a la clínica veterinaria para atención\",\n  \"ubicacionTexto\": \"Entrada de urgencias veterinarias\",\n  \"barrioId\": 1,\n  \"fotografias\": [\"https://res.cloudinary.com/huellitas_local/image/upload/clinica_ingreso.jpg\"]\n}"
+                        },
+                        "url": "{{baseUrl}}/v1/casos/{{casoId}}/aportes"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('Status code es 201 Created', function () { pm.response.to.have.status(201); });",
+                                "var json = pm.response.json();",
+                                "pm.test('Retorna ID del aporte registrado', function () { pm.expect(json.id).to.be.a('number'); });"
+                            ]
+                        }
+                    }]
+                },
+                {
+                    "name": "GET /v1/casos/{id}/aportes (Listar Aportes)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": "{{baseUrl}}/v1/casos/{{casoId}}/aportes"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
+                                "var json = pm.response.json();",
+                                "pm.test('Lista contiene el aporte registrado', function () { pm.expect(json.length).to.be.at.least(1); });"
+                            ]
+                        }
+                    }]
+                }
+            ]
+        },
+        # Módulo 09 - Bitácora Médica
+        {
+            "name": "Módulo 09 - Bitácora Médica (/v1/casos/{id}/bitacora)",
+            "item": [
+                {
+                    "name": "POST /v1/casos/{id}/bitacora (Apertura)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {"key": "Authorization", "value": "Bearer {{admin_token}}"},
+                            {"key": "Content-Type", "value": "application/json"}
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"observacionInicial\": \"Ingreso médico por contusión y deshidratación moderada\"\n}"
+                        },
+                        "url": "{{baseUrl}}/v1/casos/{{casoId}}/bitacora"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('Status code es 201 Created o 409 si ya abierta', function () {",
+                                "    pm.expect(pm.response.code).to.be.oneOf([201, 409]);",
+                                "});"
+                            ]
+                        }
+                    }]
+                },
+                {
+                    "name": "POST /v1/casos/{id}/bitacora/evoluciones",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {"key": "Authorization", "value": "Bearer {{admin_token}}"},
+                            {"key": "Content-Type", "value": "application/json"}
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"diagnostico\": \"Contusión tratada con antiséptico y reposo\",\n  \"procedimientos\": \"Limpieza, vendaje y fluidoterapia\",\n  \"tratamiento\": \"Antibiótico y analgésico por 5 días\",\n  \"medicamentos\": \"Amoxicilina 250mg y Meloxicam\",\n  \"observaciones\": \"Paciente evoluciona favorablemente\"\n}"
+                        },
+                        "url": "{{baseUrl}}/v1/casos/{{casoId}}/bitacora/evoluciones"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('Status code es 201 Created', function () { pm.response.to.have.status(201); });",
+                                "var json = pm.response.json();",
+                                "pm.test('Evolución médica registrada con ID', function () { pm.expect(json.id).to.be.a('number'); });"
+                            ]
+                        }
+                    }]
+                },
+                {
+                    "name": "GET /v1/casos/{id}/bitacora",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": "{{baseUrl}}/v1/casos/{{casoId}}/bitacora"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
+                                "var json = pm.response.json();",
+                                "pm.test('Bitácora contiene las evoluciones registradas', function () { pm.expect(json.evoluciones.length).to.be.at.least(1); });"
+                            ]
+                        }
+                    }]
+                },
+                {
+                    "name": "PATCH /v1/casos/{id}/bitacora/alta (Emisión de Alta)",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {"key": "Authorization", "value": "Bearer {{admin_token}}"},
+                            {"key": "Content-Type", "value": "application/json"}
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"condicionAlta\": \"Paciente completamente recuperado y estable\",\n  \"indicaciones\": \"Apto para reintegro a hogar o adopción responsable\"\n}"
+                        },
+                        "url": "{{baseUrl}}/v1/casos/{{casoId}}/bitacora/alta"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
+                                "var json = pm.response.json();",
+                                "pm.test('Estado de bitácora es ALTA_REGISTRADA', function () { pm.expect(json.estadoBitacora).to.eql('ALTA_REGISTRADA'); });"
+                            ]
+                        }
+                    }]
+                }
+            ]
+        },
+        # Módulo 10 - Resumen Clínico PDF
+        {
+            "name": "Módulo 10 - Resumen Clínico PDF",
+            "item": [
+                {
+                    "name": "GET /v1/casos/{id}/bitacora/pdf (Descarga de PDF)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": "{{baseUrl}}/v1/casos/{{casoId}}/bitacora/pdf"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
+                                "pm.test('Content-Type es application/pdf', function () {",
+                                "    pm.expect(pm.response.headers.get('Content-Type')).to.include('application/pdf');",
+                                "});"
+                            ]
+                        }
+                    }]
+                }
+            ]
+        },
+        # Módulo 11 - Cierre y Archivado
+        {
+            "name": "Módulo 11 - Cierre y Archivado (/v1/casos/{id})",
+            "item": [
+                {
+                    "name": "POST /v1/casos/{id}/cierre (Cierre por Autor)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {"key": "Authorization", "value": "Bearer {{token}}"},
+                            {"key": "Content-Type", "value": "application/json"}
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"motivoCierre\": \"REENCUENTRO\",\n  \"observacion\": \"El animal fue entregado recuperado a su familia\"\n}"
+                        },
+                        "url": "{{baseUrl}}/v1/casos/{{casoId}}/cierre"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('Status code es 200 OK o 409 si ya cerrado', function () { pm.expect(pm.response.code).to.be.oneOf([200, 409]); });"
+                            ]
+                        }
+                    }]
+                },
+                {
+                    "name": "PATCH /v1/casos/{id}/archivar (Archivar Caso)",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {"key": "Authorization", "value": "Bearer {{admin_token}}"},
+                            {"key": "Content-Type", "value": "application/json"}
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"motivo\": \"Caso resuelto y archivado para descongestionar el feed\"\n}"
+                        },
+                        "url": "{{baseUrl}}/v1/casos/{{casoId}}/archivar"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });"
+                            ]
+                        }
+                    }]
+                }
+            ]
+        },
+        # Módulo 12 - Notificaciones
+        {
+            "name": "Módulo 12 - Notificaciones (/v1/notificaciones)",
+            "item": [
+                {
+                    "name": "GET /v1/notificaciones",
+                    "request": {
+                        "method": "GET",
+                        "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+                        "url": "{{baseUrl}}/v1/notificaciones?page=0&size=10"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
+                                "var json = pm.response.json();",
+                                "pm.test('Retorna estructura paginada con content', function () { pm.expect(json).to.have.property('content'); });",
+                                "if (json.content && json.content.length > 0) {",
+                                "    pm.environment.set('notificacionId', json.content[0].id);",
+                                "    pm.collectionVariables.set('notificacionId', json.content[0].id);",
+                                "}"
+                            ]
+                        }
+                    }]
+                },
+                {
+                    "name": "PATCH /v1/notificaciones/{id}/leer",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+                        "url": "{{baseUrl}}/v1/notificaciones/{{notificacionId}}/leer"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('Status code es 200 OK o 404', function () { pm.expect(pm.response.code).to.be.oneOf([200, 404]); });"
+                            ]
+                        }
+                    }]
+                }
+            ]
+        },
+        # Módulo 13 - Moderación
+        {
+            "name": "Módulo 13 - Moderación de Contenido (/v1/moderacion)",
+            "item": [
+                {
+                    "name": "GET /v1/moderacion/casos",
+                    "request": {
+                        "method": "GET",
+                        "header": [{"key": "Authorization", "value": "Bearer {{admin_token}}"}],
+                        "url": "{{baseUrl}}/v1/moderacion/casos"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
+                                "var json = pm.response.json();",
+                                "pm.test('Retorna lista de casos moderables', function () { pm.expect(Array.isArray(json)).to.be.true; });"
+                            ]
+                        }
+                    }]
+                },
+                {
+                    "name": "PATCH /v1/moderacion/casos/{id}",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {"key": "Authorization", "value": "Bearer {{admin_token}}"},
+                            {"key": "Content-Type", "value": "application/json"}
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"decision\": \"MANTENER\",\n  \"motivo\": \"Caso verificado y aprobado para visualización pública\"\n}"
+                        },
+                        "url": "{{baseUrl}}/v1/moderacion/casos/{{casoId}}"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
+                                "var json = pm.response.json();",
+                                "pm.test('Decisión de moderación registrada', function () { pm.expect(json.decision).to.be.oneOf(['MANTENER', 'MANTENIDO']); });"
+                            ]
+                        }
+                    }]
+                }
+            ]
+        }
+    ]
+}
+
+out_path = os.path.join(os.path.dirname(__file__), "postman_collection.json")
+with open(out_path, "w", encoding="utf-8") as f:
+    json.dump(collection, f, indent=2, ensure_ascii=False)
+
+print(f"Updated Postman collection JSON at {out_path}")

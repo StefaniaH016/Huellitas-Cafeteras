@@ -34,5 +34,7 @@ build/
 
 ### Docker ###
 .env
-.env.local
-huellitas-backend/.env
+
+# Documentación local — no subir a GitHub
+/AGENTS.md
+/Vault-Soft III/
