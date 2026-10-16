@@ -1,0 +1,15 @@
+.private-wrapper {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.private-main {
+  flex: 1;
+  padding: 2rem 1.5rem;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+}
+@media (max-width: 768px) {
+  .private-main { padding: 1rem; }
+}

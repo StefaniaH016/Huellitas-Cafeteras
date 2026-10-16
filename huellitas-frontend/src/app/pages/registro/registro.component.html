@@ -1,0 +1,175 @@
+<div class="registro-card">
+  <div class="registro-brand">
+    <svg width="36" height="36" viewBox="0 0 24 24" fill="var(--color-primary)" aria-hidden="true">
+      <ellipse cx="12" cy="15.5" rx="5.4" ry="4.6"/>
+      <ellipse cx="5.6" cy="9.2" rx="2.1" ry="2.6"/>
+      <ellipse cx="10.2" cy="5.6" rx="2.1" ry="2.7"/>
+      <ellipse cx="14.8" cy="5.6" rx="2.1" ry="2.7"/>
+      <ellipse cx="18.4" cy="9.2" rx="2.1" ry="2.6"/>
+    </svg>
+    <h1>Crear cuenta</h1>
+  </div>
+
+  <div class="stepper" aria-label="Pasos del registro">
+    <div class="step-dot" [class.active]="step() >= 1">1</div>
+    <div class="step-line" [class.active]="step() >= 2"></div>
+    <div class="step-dot" [class.active]="step() >= 2">2</div>
+  </div>
+
+  @if (step() === 1) {
+    <div class="step-content">
+      <h2>Tipo de cuenta</h2>
+      <p class="step-desc">¿Cómo participarás en Huellitas Cafeteras?</p>
+      <div class="tipo-cards">
+        <button
+          type="button"
+          class="tipo-card"
+          [class.selected]="tipoCuenta() === 'CIUDADANO'"
+          (click)="selectTipo('CIUDADANO')"
+        >
+          <span class="tipo-icon">🏠</span>
+          <strong>Ciudadano / Voluntario</strong>
+          <p>Reporta casos y apoya a los animales de tu comunidad.</p>
+        </button>
+        <button
+          type="button"
+          class="tipo-card"
+          [class.selected]="tipoCuenta() === 'FUNDACION'"
+          (click)="selectTipo('FUNDACION')"
+        >
+          <span class="tipo-icon">🏛️</span>
+          <strong>Fundación / Refugio</strong>
+          <p>Gestiona casos y animales en custodia.</p>
+          <span class="requiere-validacion">Requiere validación del administrador</span>
+        </button>
+        <button
+          type="button"
+          class="tipo-card"
+          [class.selected]="tipoCuenta() === 'VETERINARIA'"
+          (click)="selectTipo('VETERINARIA')"
+        >
+          <span class="tipo-icon">🩺</span>
+          <strong>Veterinaria / Profesional</strong>
+          <p>Atiende solicitudes médicas de animales en situación vulnerable.</p>
+          <span class="requiere-validacion">Requiere validación del administrador</span>
+        </button>
+      </div>
+      <button
+        type="button"
+        class="btn-primary"
+        [disabled]="!tipoCuenta()"
+        (click)="goToStep2()"
+      >Continuar</button>
+      <p class="login-link">¿Ya tienes cuenta? <a routerLink="/login">Inicia sesión</a></p>
+    </div>
+  }
+
+  @if (step() === 2) {
+    <form [formGroup]="step2Form" (ngSubmit)="onSubmit()" class="step-content" novalidate>
+      <h2>Tus datos</h2>
+      <div class="form-group">
+        <label for="nombre" class="form-label">Nombre completo</label>
+        <input id="nombre" type="text" formControlName="nombre" class="form-input"
+          [class.input-error]="step2Form.get('nombre')?.invalid && step2Form.get('nombre')?.touched"
+          placeholder="Juan García" autocomplete="name" />
+        @if (step2Form.get('nombre')?.invalid && step2Form.get('nombre')?.touched) {
+          <span class="field-error" role="alert">El nombre es obligatorio.</span>
+        }
+      </div>
+      <div class="form-group">
+        <label for="reg-email" class="form-label">Correo electrónico</label>
+        <input id="reg-email" type="email" formControlName="email" class="form-input"
+          [class.input-error]="step2Form.get('email')?.invalid && step2Form.get('email')?.touched"
+          placeholder="tu@correo.com" autocomplete="email" />
+        @if (step2Form.get('email')?.invalid && step2Form.get('email')?.touched) {
+          <span class="field-error" role="alert">
+            @if (step2Form.get('email')?.hasError('required')) { El correo es obligatorio. }
+            @if (step2Form.get('email')?.hasError('email')) { Ingresa un correo válido. }
+          </span>
+        }
+      </div>
+      <div class="form-group">
+        <label for="telefono" class="form-label">Teléfono</label>
+        <input id="telefono" type="tel" formControlName="telefono" class="form-input"
+          [class.input-error]="step2Form.get('telefono')?.invalid && step2Form.get('telefono')?.touched"
+          placeholder="+57 300 123 4567" autocomplete="tel" />
+        @if (step2Form.get('telefono')?.invalid && step2Form.get('telefono')?.touched) {
+          <span class="field-error" role="alert">El teléfono es obligatorio.</span>
+        }
+      </div>
+      <div class="form-group">
+        <label for="municipio" class="form-label">Municipio</label>
+        <input id="municipio" type="text" formControlName="municipio" class="form-input"
+          [class.input-error]="step2Form.get('municipio')?.invalid && step2Form.get('municipio')?.touched"
+          placeholder="Armenia" />
+        @if (step2Form.get('municipio')?.invalid && step2Form.get('municipio')?.touched) {
+          <span class="field-error" role="alert">El municipio es obligatorio.</span>
+        }
+      </div>
+      @if (isInstitutional) {
+        <div class="form-group">
+          <label for="nombreEntidad" class="form-label">Nombre de la entidad</label>
+          <input id="nombreEntidad" type="text" formControlName="nombreEntidad" class="form-input"
+            [class.input-error]="step2Form.get('nombreEntidad')?.invalid && step2Form.get('nombreEntidad')?.touched"
+            placeholder="Fundación Patitas" />
+          @if (step2Form.get('nombreEntidad')?.invalid && step2Form.get('nombreEntidad')?.touched) {
+            <span class="field-error" role="alert">El nombre de la entidad es obligatorio.</span>
+          }
+        </div>
+        <div class="form-group">
+          <label for="nit" class="form-label">NIT o Registro legal</label>
+          <input id="nit" type="text" formControlName="nit" class="form-input"
+            [class.input-error]="step2Form.get('nit')?.invalid && step2Form.get('nit')?.touched"
+            placeholder="900.123.456-7" />
+          @if (step2Form.get('nit')?.invalid && step2Form.get('nit')?.touched) {
+            <span class="field-error" role="alert">El NIT es obligatorio.</span>
+          }
+        </div>
+        <div class="form-group">
+          <label for="municipioOperacion" class="form-label">Municipio de operación</label>
+          <input id="municipioOperacion" type="text" formControlName="municipioOperacion" class="form-input"
+            [class.input-error]="step2Form.get('municipioOperacion')?.invalid && step2Form.get('municipioOperacion')?.touched"
+            placeholder="Armenia" />
+          @if (step2Form.get('municipioOperacion')?.invalid && step2Form.get('municipioOperacion')?.touched) {
+            <span class="field-error" role="alert">El municipio de operación es obligatorio.</span>
+          }
+        </div>
+      }
+      <div class="form-group">
+        <label for="reg-password" class="form-label">Contraseña</label>
+        <input id="reg-password" type="password" formControlName="password" class="form-input"
+          [class.input-error]="step2Form.get('password')?.invalid && step2Form.get('password')?.touched"
+          placeholder="Mínimo 8 caracteres" autocomplete="new-password" />
+        @if (step2Form.get('password')?.invalid && step2Form.get('password')?.touched) {
+          <span class="field-error" role="alert">
+            @if (step2Form.get('password')?.hasError('required')) { La contraseña es obligatoria. }
+            @if (step2Form.get('password')?.hasError('minlength')) { Mínimo 8 caracteres. }
+          </span>
+        }
+      </div>
+      <div class="form-group">
+        <label for="confirmPassword" class="form-label">Confirmar contraseña</label>
+        <input id="confirmPassword" type="password" formControlName="confirmPassword" class="form-input"
+          [class.input-error]="step2Form.get('confirmPassword')?.invalid && step2Form.get('confirmPassword')?.touched"
+          placeholder="Repite tu contraseña" autocomplete="new-password" />
+        @if (step2Form.get('confirmPassword')?.invalid && step2Form.get('confirmPassword')?.touched) {
+          <span class="field-error" role="alert">Las contraseñas no coinciden.</span>
+        }
+      </div>
+      <label class="checkbox-label">
+        <input type="checkbox" formControlName="aceptaDatos" />
+        Acepto el tratamiento de mis datos personales según la
+        <a href="#" target="_blank" rel="noopener">Ley 1581 de 2012</a>
+      </label>
+      @if (step2Form.get('aceptaDatos')?.invalid && step2Form.get('aceptaDatos')?.touched) {
+        <span class="field-error" role="alert">Debes aceptar el tratamiento de datos.</span>
+      }
+      <div class="form-actions">
+        <button type="button" class="btn-secondary" (click)="goBack()">Atrás</button>
+        <button type="submit" class="btn-primary" [disabled]="isLoading()">
+          @if (isLoading()) { Creando cuenta... } @else { Crear cuenta }
+        </button>
+      </div>
+    </form>
+  }
+</div>

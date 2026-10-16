@@ -1,1 +1,40 @@
-/* You can add global styles to this file, and also import other style files */
+/* Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Public+Sans:wght@400;500;600;700&display=swap');
+
+/* CSS Variables */
+:root {
+  --color-primary: #7B2FBE;
+  --color-primary-dark: #5a1f9a;
+  --color-primary-light: #f5f0fb;
+  --color-secondary: #e91e8c;
+  --color-bg: #f8f6fd;
+  --color-text: #1a1a2e;
+  --color-text-muted: #6b6b8a;
+  --color-white: #ffffff;
+  --color-border: #e2d9f3;
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-info: #3b82f6;
+  --font-heading: 'Baloo 2', cursive;
+  --font-body: 'Public Sans', sans-serif;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --shadow-sm: 0 2px 8px rgba(123,47,190,0.08);
+  --shadow-md: 0 4px 16px rgba(123,47,190,0.12);
+}
+
+/* Reset */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: var(--font-body);
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  line-height: 1.6;
+}
+a { color: var(--color-primary); text-decoration: none; }
+a:hover { text-decoration: underline; }
+button { cursor: pointer; font-family: inherit; }
+img { max-width: 100%; }

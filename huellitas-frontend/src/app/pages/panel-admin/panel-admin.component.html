@@ -1,0 +1,120 @@
+<div class="admin-panel">
+  <div class="admin-header">
+    <h1>Administración</h1>
+    <div class="admin-avatar" aria-hidden="true">A1</div>
+  </div>
+
+  <nav class="admin-navbar" aria-label="Navegación de administración">
+    <button
+      type="button"
+      class="navbar-link"
+      [class.active]="activeSection() === 'resumen'"
+      (click)="setSection('resumen')"
+    >
+      Resumen
+    </button>
+    <button
+      type="button"
+      class="navbar-link"
+      [class.active]="activeSection() === 'validaciones'"
+      (click)="setSection('validaciones')"
+    >
+      Validaciones
+    </button>
+    <button
+      type="button"
+      class="navbar-link"
+      [class.active]="activeSection() === 'moderacion'"
+      (click)="setSection('moderacion')"
+    >
+      Moderación
+    </button>
+    <button
+      type="button"
+      class="navbar-link"
+      [class.active]="activeSection() === 'usuarios'"
+      (click)="setSection('usuarios')"
+    >
+      Usuarios
+    </button>
+    <button
+      type="button"
+      class="navbar-link"
+      [class.active]="activeSection() === 'casos'"
+      (click)="setSection('casos')"
+    >
+      Casos
+    </button>
+    <button
+      type="button"
+      class="navbar-link"
+      [class.active]="activeSection() === 'catalogos'"
+      (click)="setSection('catalogos')"
+    >
+      Catálogos
+    </button>
+    <button
+      type="button"
+      class="navbar-link"
+      [class.active]="activeSection() === 'reportes'"
+      (click)="setSection('reportes')"
+    >
+      Reportes y KPIs
+    </button>
+  </nav>
+
+  <div class="admin-content">
+    @if (activeSection() === 'resumen') {
+      <div class="content-section">
+        <h2>Resumen de administración</h2>
+        <div class="stats-row">
+          <div class="stat-card warning">
+            <div class="stat-value">7</div>
+            <div class="stat-label">Cuentas por validar</div>
+          </div>
+          <div class="stat-card danger">
+            <div class="stat-value">3</div>
+            <div class="stat-label">Contenidos denunciados</div>
+          </div>
+          <div class="stat-card info">
+            <div class="stat-value">128</div>
+            <div class="stat-label">Casos activos</div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h3>Validación de cuentas pendientes</h3>
+          <div class="validation-list">
+            <div class="validation-item">
+              <div>
+                <strong>Fundación Patitas</strong>
+                <p>NIT: 900.123.456-7</p>
+              </div>
+              <div class="actions">
+                <button class="btn-approve">Aprobar</button>
+                <button class="btn-reject">Rechazar</button>
+              </div>
+            </div>
+            <div class="validation-item">
+              <div>
+                <strong>Veterinaria San Jorge</strong>
+                <p>NIT: 900.987.654-3</p>
+              </div>
+              <div class="actions">
+                <button class="btn-approve">Aprobar</button>
+                <button class="btn-reject">Rechazar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (activeSection() !== 'resumen') {
+      <div class="content-section">
+        <h2>{{ activeSection() | titlecase }}</h2>
+        <p class="placeholder">Contenido de {{ activeSection() }} será cargado aquí.</p>
+      </div>
+    }
+  </div>
+</div>
