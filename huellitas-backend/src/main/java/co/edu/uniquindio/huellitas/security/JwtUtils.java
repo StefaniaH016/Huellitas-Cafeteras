@@ -34,8 +34,14 @@ public class JwtUtils {
 
     /** Genera un token JWT firmado para el usuario dado. */
     public String generateToken(UserDetails userDetails) {
+        String rol = userDetails.getAuthorities().stream()
+                .map(auth -> auth.getAuthority().replace("ROLE_", ""))
+                .findFirst()
+                .orElse("CIUDADANO");
+        
         return Jwts.builder()
                 .subject(userDetails.getUsername())
+                .claim("rol", rol)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + expirationMs))
                 .signWith(secretKey)
