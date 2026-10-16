@@ -34,3 +34,5 @@ build/
 
 ### Docker ###
 .env
+.env.local
+huellitas-backend/.env
