@@ -131,7 +131,6 @@ export class RegistroComponent {
           this.isLoading.set(false);
           const errMsg = err.error?.message || 'Error al registrarse. Intenta de nuevo.';
           this.errorMessage.set(errMsg);
-          console.error('[RegistroComponent] Registration error:', err);
         }
       });
   }

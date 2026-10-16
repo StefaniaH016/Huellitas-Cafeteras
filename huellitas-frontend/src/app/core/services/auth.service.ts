@@ -60,4 +60,24 @@ export class AuthService {
     const payload = this.tokenService.decodePayload();
     return (payload?.['rol'] ?? null) as string | null;
   }
+
+  /**
+   * Navigate to role-specific dashboard after successful login.
+   * Centralizes redirect logic for use across components and guards.
+   */
+  navigateAfterLogin(rol: string): void {
+    switch (rol) {
+      case 'FUNDACION':
+        this.router.navigate(['/fundacion']);
+        break;
+      case 'VETERINARIA':
+        this.router.navigate(['/veterinaria']);
+        break;
+      case 'ADMIN':
+        this.router.navigate(['/admin']);
+        break;
+      default:
+        this.router.navigate(['/']);
+    }
+  }
 }

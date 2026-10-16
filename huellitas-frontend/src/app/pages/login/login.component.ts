@@ -39,19 +39,7 @@ export class LoginComponent {
     this.authService.login(email!, password!).subscribe({
       next: (rol) => {
         this.isLoading.set(false);
-        switch (rol) {
-          case 'FUNDACION':
-            this.router.navigate(['/fundacion']);
-            break;
-          case 'VETERINARIA':
-            this.router.navigate(['/veterinaria']);
-            break;
-          case 'ADMIN':
-            this.router.navigate(['/admin']);
-            break;
-          default:
-            this.router.navigate(['/']);
-        }
+        this.authService.navigateAfterLogin(rol);
       },
       error: () => {
         this.isLoading.set(false);
