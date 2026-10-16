@@ -8,9 +8,9 @@ spring:
 
   # ── Base de datos PostgreSQL (Railway) ─────────────────────────
   datasource:
-    url: jdbc:postgresql://${PGHOST:localhost}:${PGPORT:5432}/${PGDATABASE:huellitas_db}
-    username: ${PGUSER:postgres}
-    password: ${PGPASSWORD:postgres}
+    url: jdbc:postgresql://${PGHOST}:${PGPORT}/${PGDATABASE}
+    username: ${PGUSER}
+    password: ${PGPASSWORD}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 10
@@ -50,20 +50,20 @@ spring:
 server:
   port: 8080
   servlet:
-    context-path: /api
+    context-path: /
   http2:
     enabled: true
 
 # ── JWT ────────────────────────────────────────────────────────
 jwt:
-  secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
-  expiration: ${JWT_EXPIRATION:86400000}
+  secret: ${JWT_SECRET}
+  expiration: ${JWT_EXPIRATION}
 
 # ── Cloudinary ─────────────────────────────────────────────────
 cloudinary:
-  cloud-name: ${CLOUDINARY_CLOUD_NAME:huellitas_local}
-  api-key: ${CLOUDINARY_API_KEY:123456789012345}
-  api-secret: ${CLOUDINARY_API_SECRET:abcde12345secret}
+  cloud-name: ${CLOUDINARY_CLOUD_NAME}
+  api-key: ${CLOUDINARY_API_KEY}
+  api-secret: ${CLOUDINARY_API_SECRET}
 
 # ── Actuator ───────────────────────────────────────────────────
 management:

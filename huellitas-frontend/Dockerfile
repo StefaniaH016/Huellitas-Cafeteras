@@ -3,11 +3,11 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-COPY package*.json ./
+COPY huellitas-frontend/package*.json ./
 
 RUN npm ci
 
-COPY . .
+COPY huellitas-frontend .
 
 RUN npm run build
 

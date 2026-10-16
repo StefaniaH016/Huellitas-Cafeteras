@@ -10,7 +10,7 @@ import { Router, RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 
-type TipoCuenta = 'CIUDADANO' | 'FUNDACION' | 'VETERINARIA' | null;
+type TipoCuenta = 'CIUDADANO_VOLUNTARIO' | 'FUNDACION_REFUGIO' | 'VETERINARIA' | null;
 
 interface FormValue {
   nombre?: string;
@@ -82,7 +82,7 @@ export class RegistroComponent {
   });
 
   isInstitutional = computed(
-    () => this.tipoCuenta() === 'FUNDACION' || this.tipoCuenta() === 'VETERINARIA',
+    () => this.tipoCuenta() === 'FUNDACION_REFUGIO' || this.tipoCuenta() === 'VETERINARIA',
   );
 
   selectTipo(tipo: TipoCuenta): void {
@@ -120,24 +120,27 @@ export class RegistroComponent {
       return {};
     }
     return {
-      nombreEntidad: formValue.nombreEntidad || undefined,
-      nit: formValue.nit || undefined,
-      documentoLegal: formValue.documentoLegal || undefined,
-      municipioOperacion: formValue.municipioOperacion || undefined,
-      documentoSoporte: formValue.documentoSoporte || undefined,
+      ...(formValue.nombreEntidad && { nombreEntidad: formValue.nombreEntidad }),
+      ...(formValue.nit && { nit: formValue.nit }),
+      ...(formValue.documentoLegal && { documentoLegal: formValue.documentoLegal }),
+      ...(formValue.municipioOperacion && { municipioOperacion: formValue.municipioOperacion }),
+      ...(formValue.documentoSoporte && { documentoSoporte: formValue.documentoSoporte }),
     };
   }
 
   private buildRegistroPayload(): RegistroRequest {
     const formValue = this.step2Form.value as unknown as FormValue;
-    return {
+    const payload: RegistroRequest = {
       nombre: formValue.nombre || '',
       correo: formValue.email || '',
       telefono: formValue.telefono || '',
       contrasena: formValue.password || '',
-      rol: this.tipoCuenta() || 'CIUDADANO',
-      ...this.buildInstitutionalFields(formValue),
-    } as RegistroRequest;
+      rol: this.tipoCuenta() || 'CIUDADANO_VOLUNTARIO',
+    };
+
+    // Agregar campos institucionales si aplica
+    const institutionalFields = this.buildInstitutionalFields(formValue);
+    return { ...payload, ...institutionalFields };
   }
 
   onSubmit(): void {

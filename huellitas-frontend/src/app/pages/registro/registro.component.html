@@ -24,8 +24,8 @@
         <button
           type="button"
           class="tipo-card"
-          [class.selected]="tipoCuenta() === 'CIUDADANO'"
-          (click)="selectTipo('CIUDADANO')"
+          [class.selected]="tipoCuenta() === 'CIUDADANO_VOLUNTARIO'"
+          (click)="selectTipo('CIUDADANO_VOLUNTARIO')"
         >
           <span class="tipo-icon">🏠</span>
           <strong>Ciudadano / Voluntario</strong>
@@ -34,8 +34,8 @@
         <button
           type="button"
           class="tipo-card"
-          [class.selected]="tipoCuenta() === 'FUNDACION'"
-          (click)="selectTipo('FUNDACION')"
+          [class.selected]="tipoCuenta() === 'FUNDACION_REFUGIO'"
+          (click)="selectTipo('FUNDACION_REFUGIO')"
         >
           <span class="tipo-icon">🏛️</span>
           <strong>Fundación / Refugio</strong>
@@ -237,7 +237,12 @@
       <label class="checkbox-label">
         <input type="checkbox" formControlName="aceptaDatos" />
         Acepto el tratamiento de mis datos personales según la
-        <a href="#" target="_blank" rel="noopener">Ley 1581 de 2012</a>
+        <a
+          href="https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=49981"
+          target="_blank"
+          rel="noopener"
+          >Ley 1581 de 2012</a
+        >
       </label>
       @if (step2Form.get('aceptaDatos')?.invalid && step2Form.get('aceptaDatos')?.touched) {
         <span class="field-error" role="alert">Debes aceptar el tratamiento de datos.</span>
