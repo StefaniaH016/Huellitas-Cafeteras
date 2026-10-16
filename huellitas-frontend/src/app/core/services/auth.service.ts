@@ -30,7 +30,7 @@ export class AuthService {
 
   login(email: string, password: string): Observable<string> {
     const body = { correo: email, contrasena: password };
-    return this.httpClient.post<LoginResponse>(`${environment.apiUrl}/v1/auth/login`, body).pipe(
+    return this.httpClient.post<LoginResponse>(`${environment.apiUrl}/auth/login`, body).pipe(
       tap((response) => {
         this.tokenService.setToken(response.token);
         // Store rol from response, fallback to token payload
@@ -57,7 +57,7 @@ export class AuthService {
 
   registro(correo: string, contrasena: string, nombre: string): Observable<RegistroResponse> {
     const body = { correo, contrasena, nombre };
-    return this.httpClient.post<RegistroResponse>(`${environment.apiUrl}/v1/auth/registro`, body);
+    return this.httpClient.post<RegistroResponse>(`${environment.apiUrl}/auth/registro`, body);
   }
 
   isLoggedIn(): boolean {

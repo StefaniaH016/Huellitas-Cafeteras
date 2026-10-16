@@ -155,7 +155,7 @@ export class RegistroComponent {
     const payload = this.buildRegistroPayload();
 
     this.httpClient
-      .post<{ message: string }>(`${environment.apiUrl}/v1/auth/registro`, payload)
+      .post<{ message: string }>(`${environment.apiUrl}/auth/registro`, payload)
       .subscribe({
         next: () => {
           this.isLoading.set(false);
