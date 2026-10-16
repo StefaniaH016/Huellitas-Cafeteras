@@ -6,13 +6,19 @@ import { environment } from '../../../environments/environment';
 
 type TipoCuenta = 'CIUDADANO' | 'FUNDACION' | 'VETERINARIA' | null;
 
-function confirmPasswordValidator(control: AbstractControl): ValidationErrors | null {
-  const parent = control.parent;
-  if (!parent) {
-    return null;
-  }
-  const password = parent.get('password')?.value;
-  return control.value === password ? null : { passwordMismatch: true };
+interface FormValue {
+  nombre?: string;
+  email?: string;
+  telefono?: string;
+  municipio?: string;
+  password?: string;
+  confirmPassword?: string;
+  nombreEntidad?: string;
+  nit?: string;
+  documentoLegal?: string;
+  municipioOperacion?: string;
+  documentoSoporte?: string;
+  aceptaDatos?: boolean;
 }
 
 interface RegistroRequest {
@@ -27,6 +33,15 @@ interface RegistroRequest {
   documentoLegal?: string;
   municipioOperacion?: string;
   documentoSoporte?: string;
+}
+
+function confirmPasswordValidator(control: AbstractControl): ValidationErrors | null {
+  const parent = control.parent;
+  if (!parent) {
+    return null;
+  }
+  const password = parent.get('password')?.value;
+  return control.value === password ? null : { passwordMismatch: true };
 }
 
 @Component({
@@ -94,31 +109,42 @@ export class RegistroComponent {
     this.step.set(1);
   }
 
-  onSubmit(): void {
-    this.step2Form.markAllAsTouched();
-    if (this.step2Form.invalid) {
-      return;
+  private buildInstitutionalFields(formValue: FormValue): Partial<RegistroRequest> {
+    if (!this.isInstitutional()) {
+      return {};
     }
-    this.isLoading.set(true);
-    this.errorMessage.set(null);
+    return {
+      nombreEntidad: formValue.nombreEntidad || undefined,
+      nit: formValue.nit || undefined,
+      documentoLegal: formValue.documentoLegal || undefined,
+      municipioOperacion: formValue.municipioOperacion || undefined,
+      documentoSoporte: formValue.documentoSoporte || undefined
+    };
+  }
 
-    const formValue = this.step2Form.value;
-    const payload: RegistroRequest = {
+  private buildRegistroPayload(): RegistroRequest {
+    const formValue = this.step2Form.value as unknown as FormValue;
+    return {
       nombre: formValue.nombre || '',
       email: formValue.email || '',
       telefono: formValue.telefono || '',
       municipio: formValue.municipio || '',
       password: formValue.password || '',
-      rol: this.tipoCuenta() || 'CIUDADANO'
-    };
+      rol: this.tipoCuenta() || 'CIUDADANO',
+      ...this.buildInstitutionalFields(formValue)
+    } as RegistroRequest;
+  }
 
-    if (this.isInstitutional()) {
-      payload.nombreEntidad = formValue.nombreEntidad || undefined;
-      payload.nit = formValue.nit || undefined;
-      payload.documentoLegal = formValue.documentoLegal || undefined;
-      payload.municipioOperacion = formValue.municipioOperacion || undefined;
-      payload.documentoSoporte = formValue.documentoSoporte || undefined;
+  onSubmit(): void {
+    this.step2Form.markAllAsTouched();
+    if (this.step2Form.invalid) {
+      return;
     }
+
+    this.isLoading.set(true);
+    this.errorMessage.set(null);
+
+    const payload = this.buildRegistroPayload();
 
     this.httpClient
       .post<{ message: string }>(`${environment.apiUrl}/v1/auth/registro`, payload)
