@@ -20,37 +20,39 @@ public class Usuario {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, length = 150)
+    @Column(name = "nombre", nullable = false, length = 150)
     private String nombre;
 
-    @Column(nullable = false, unique = true, length = 150)
+    @Column(name = "email", nullable = false, unique = true, length = 150)
     private String correo;
 
-    @Column(nullable = false)
+    @Column(name = "password_hash", nullable = false)
     private String contrasena;
 
-    @Column(length = 20)
+    @Column(name = "telefono", length = 20)
     private String telefono;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 30)
+    @Column(name = "rol", nullable = false, length = 30)
     private Rol rol;
 
     @Builder.Default
-    @Column(nullable = false)
+    @Column(name = "verificado", nullable = false)
     private boolean verificado = false;
 
     @Builder.Default
-    @Column(nullable = false)
+    @Column(name = "activo", nullable = false)
     private boolean activo = true;
 
     @Builder.Default
+    @Column(name = "disponible_rescate", nullable = false)
     private boolean disponibleRescate = false;
 
     @Builder.Default
-    @Column(nullable = false)
+    @Column(name = "acepto_tratamiento_datos", nullable = false)
     private boolean aceptoTratamientoDatos = false;
 
+    @Column(name = "fecha_aceptacion_datos")
     private Instant fechaAceptacionDatos;
 
     /** Organización a la que pertenece (null si es ciudadano independiente). */

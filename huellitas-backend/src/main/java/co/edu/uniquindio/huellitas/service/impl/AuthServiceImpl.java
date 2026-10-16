@@ -45,20 +45,14 @@ public class AuthServiceImpl implements AuthService {
 
         Rol rol = dto.rol() != null ? dto.rol() : Rol.CIUDADANO_VOLUNTARIO;
 
-        Barrio barrio = null;
-        if (dto.barrioId() != null) {
-            barrio = barrioRepository.findById(dto.barrioId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Barrio", dto.barrioId()));
-        }
-
         Usuario usuario = Usuario.builder()
                 .nombre(dto.nombre().trim())
                 .correo(dto.correo().trim().toLowerCase())
                 .contrasena(passwordEncoder.encode(dto.contrasena()))
                 .telefono(dto.telefono())
                 .rol(rol)
-                .barrio(barrio)
-                .municipioInteres(barrio != null ? barrio.getMunicipio() : null)
+                .barrio(null)
+                .municipioInteres(null)
                 .verificado(false)
                 .activo(true)
                 .aceptoTratamientoDatos(true)

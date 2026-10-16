@@ -12,6 +12,13 @@ interface LoginResponse {
   role?: string;
 }
 
+interface RegistroResponse {
+  id?: string;
+  correo: string;
+  nombre: string;
+  mensaje?: string;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -46,6 +53,11 @@ export class AuthService {
     this.tokenService.removeToken();
     localStorage.removeItem(this.rolKey);
     this.router.navigate(['/login']);
+  }
+
+  registro(correo: string, contrasena: string, nombre: string): Observable<RegistroResponse> {
+    const body = { correo, contrasena, nombre };
+    return this.httpClient.post<RegistroResponse>(`${environment.apiUrl}/v1/auth/registro`, body);
   }
 
   isLoggedIn(): boolean {
