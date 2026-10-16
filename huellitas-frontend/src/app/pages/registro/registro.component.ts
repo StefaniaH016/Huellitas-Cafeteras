@@ -1,6 +1,8 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, computed } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
 
 type TipoCuenta = 'CIUDADANO' | 'FUNDACION' | 'VETERINARIA' | null;
 
@@ -13,6 +15,20 @@ function confirmPasswordValidator(control: AbstractControl): ValidationErrors | 
   return control.value === password ? null : { passwordMismatch: true };
 }
 
+interface RegistroRequest {
+  nombre: string;
+  email: string;
+  telefono: string;
+  municipio: string;
+  password: string;
+  rol: string;
+  nombreEntidad?: string;
+  nit?: string;
+  documentoLegal?: string;
+  municipioOperacion?: string;
+  documentoSoporte?: string;
+}
+
 @Component({
   selector: 'app-registro',
   imports: [ReactiveFormsModule, RouterLink],
@@ -22,10 +38,12 @@ function confirmPasswordValidator(control: AbstractControl): ValidationErrors | 
 export class RegistroComponent {
   private fb = inject(FormBuilder);
   private router = inject(Router);
+  private httpClient = inject(HttpClient);
 
   step = signal(1);
   tipoCuenta = signal<TipoCuenta>(null);
   isLoading = signal(false);
+  errorMessage = signal<string | null>(null);
 
   step2Form = this.fb.group({
     nombre: ['', Validators.required],
@@ -42,6 +60,10 @@ export class RegistroComponent {
     aceptaDatos: [false, Validators.requiredTrue]
   });
 
+  isInstitutional = computed(() =>
+    this.tipoCuenta() === 'FUNDACION' || this.tipoCuenta() === 'VETERINARIA'
+  );
+
   selectTipo(tipo: TipoCuenta): void {
     this.tipoCuenta.set(tipo);
   }
@@ -50,7 +72,7 @@ export class RegistroComponent {
     if (!this.tipoCuenta()) {
       return;
     }
-    if (this.isInstitutional) {
+    if (this.isInstitutional()) {
       this.step2Form.get('nombreEntidad')!.addValidators(Validators.required);
       this.step2Form.get('nit')!.addValidators(Validators.required);
       this.step2Form.get('municipioOperacion')!.addValidators(Validators.required);
@@ -71,14 +93,39 @@ export class RegistroComponent {
       return;
     }
     this.isLoading.set(true);
-    // TODO: llamar al servicio de registro
-    setTimeout(() => {
-      this.isLoading.set(false);
-      this.router.navigate(['/login']);
-    }, 1000);
-  }
+    this.errorMessage.set(null);
 
-  get isInstitutional(): boolean {
-    return this.tipoCuenta() === 'FUNDACION' || this.tipoCuenta() === 'VETERINARIA';
+    const formValue = this.step2Form.value;
+    const payload: RegistroRequest = {
+      nombre: formValue.nombre || '',
+      email: formValue.email || '',
+      telefono: formValue.telefono || '',
+      municipio: formValue.municipio || '',
+      password: formValue.password || '',
+      rol: this.tipoCuenta() || 'CIUDADANO'
+    };
+
+    if (this.isInstitutional()) {
+      payload.nombreEntidad = formValue.nombreEntidad || undefined;
+      payload.nit = formValue.nit || undefined;
+      payload.documentoLegal = formValue.documentoLegal || undefined;
+      payload.municipioOperacion = formValue.municipioOperacion || undefined;
+      payload.documentoSoporte = formValue.documentoSoporte || undefined;
+    }
+
+    this.httpClient
+      .post<{ message: string }>(`${environment.apiUrl}/v1/auth/registro`, payload)
+      .subscribe({
+        next: () => {
+          this.isLoading.set(false);
+          this.router.navigate(['/login']);
+        },
+        error: (err) => {
+          this.isLoading.set(false);
+          const errMsg = err.error?.message || 'Error al registrarse. Intenta de nuevo.';
+          this.errorMessage.set(errMsg);
+          console.error('[RegistroComponent] Registration error:', err);
+        }
+      });
   }
 }

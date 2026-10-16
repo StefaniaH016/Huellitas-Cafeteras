@@ -67,6 +67,11 @@
   @if (step() === 2) {
     <form [formGroup]="step2Form" (ngSubmit)="onSubmit()" class="step-content" novalidate>
       <h2>Tus datos</h2>
+      @if (errorMessage()) {
+        <div class="error-msg" role="alert">
+          {{errorMessage()}}
+        </div>
+      }
       <div class="form-group">
         <label for="nombre" class="form-label">Nombre completo</label>
         <input id="nombre" type="text" formControlName="nombre" class="form-input"
@@ -106,7 +111,7 @@
           <span class="field-error" role="alert">El municipio es obligatorio.</span>
         }
       </div>
-      @if (isInstitutional) {
+      @if (isInstitutional()) {
         <div class="form-group">
           <label for="nombreEntidad" class="form-label">Nombre de la entidad</label>
           <input id="nombreEntidad" type="text" formControlName="nombreEntidad" class="form-input"
