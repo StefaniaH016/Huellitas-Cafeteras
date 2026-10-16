@@ -3,14 +3,14 @@ FROM maven:3.9-eclipse-temurin-21 AS builder
 
 WORKDIR /app
 
-COPY pom.xml .
-COPY .mvn .mvn
-COPY mvnw .
-COPY mvnw.cmd .
+COPY huellitas-backend/pom.xml .
+COPY huellitas-backend/.mvn .mvn
+COPY huellitas-backend/mvnw .
+COPY huellitas-backend/mvnw.cmd .
 
 RUN mvn dependency:resolve
 
-COPY src src
+COPY huellitas-backend/src src
 
 RUN mvn clean package -DskipTests
 
