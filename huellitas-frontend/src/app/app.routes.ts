@@ -39,7 +39,7 @@ export const routes: Routes = [
       {
         path: 'fundacion',
         canActivate: [roleGuard],
-        data: { roles: ['FUNDACION'] },
+        data: { roles: ['FUNDACION_REFUGIO'] },
         loadComponent: () =>
           import('./pages/panel-fundacion/panel-fundacion.component').then(
             (m) => m.PanelFundacionComponent,
@@ -57,7 +57,7 @@ export const routes: Routes = [
       {
         path: 'admin',
         canActivate: [roleGuard],
-        data: { roles: ['ADMIN'] },
+        data: { roles: ['ADMINISTRADOR'] },
         loadComponent: () =>
           import('./pages/panel-admin/panel-admin.component').then((m) => m.PanelAdminComponent),
       },
