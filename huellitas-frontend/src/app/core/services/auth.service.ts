@@ -92,7 +92,7 @@ export class AuthService {
         break;
       case 'CIUDADANO_VOLUNTARIO':
       default:
-        this.router.navigate(['']);
+        this.router.navigate(['/home']);
     }
   }
 }
