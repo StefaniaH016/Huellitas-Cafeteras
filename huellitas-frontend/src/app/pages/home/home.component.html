@@ -22,51 +22,46 @@
 
 <div class="home-stats">
   <div class="stat-card">
-    <div class="stat-number">312</div>
+    <div class="stat-number">{{ estadisticas().total }}</div>
     <div class="stat-label">Casos registrados</div>
   </div>
   <div class="stat-card">
-    <div class="stat-number">198</div>
+    <div class="stat-number">{{ estadisticas().resueltos }}</div>
     <div class="stat-label">Resueltos</div>
   </div>
   <div class="stat-card">
-    <div class="stat-number">24</div>
+    <div class="stat-number">{{ estadisticas().fundaciones }}</div>
     <div class="stat-label">Fundaciones verificadas</div>
   </div>
 </div>
 
 <div class="home-cases">
   <h2>Casos recientes</h2>
+  @if (cargando()) {
+    <p class="loading-message">Cargando casos...</p>
+  }
+  @if (errorMensaje()) {
+    <p class="error-message">{{ errorMensaje() }}</p>
+  }
   <div class="cases-grid">
-    <div class="case-card">
-      <div class="case-header">
-        <span class="urgency-badge urgency-high">Emergencia</span>
-        <span class="case-date">Hoy</span>
+    @for (caso of casos(); track caso.id) {
+      <div class="case-card">
+        <div class="case-header">
+          <span class="urgency-badge" [ngClass]="'urgency-' + (caso.urgencia || 'low')">
+            {{ caso.urgencia || 'Baja' }}
+          </span>
+          <span class="case-date">{{ caso.fechaCreacion || 'Reciente' }}</span>
+        </div>
+        <h3>{{ caso.titulo || caso.descripcion }}</h3>
+        <p>Ubicación: {{ caso.ubicacion || 'No especificada' }}</p>
+        <p class="case-desc">{{ caso.descripcion || 'Sin descripción' }}</p>
+        <p class="case-status">
+          Estado: <strong>{{ caso.estado || 'Pendiente' }}</strong>
+        </p>
+        <button class="btn-tertiary">Ver detalles</button>
       </div>
-      <h3>Perro atrapado en construcción</h3>
-      <p>Ubicación: Centro, Armenia</p>
-      <p class="case-desc">Animal asustado requiere rescate inmediato. Posible fractura.</p>
-      <button class="btn-tertiary">Ver detalles</button>
-    </div>
-    <div class="case-card">
-      <div class="case-header">
-        <span class="urgency-badge urgency-medium">Moderada</span>
-        <span class="case-date">Ayer</span>
-      </div>
-      <h3>Gato abandonado en casa vacía</h3>
-      <p>Ubicación: La Carreta, Quimbaya</p>
-      <p class="case-desc">Felino desnutrido necesita refugio temporal y atención veterinaria.</p>
-      <button class="btn-tertiary">Ver detalles</button>
-    </div>
-    <div class="case-card">
-      <div class="case-header">
-        <span class="urgency-badge urgency-low">Baja</span>
-        <span class="case-date">Hace 3 días</span>
-      </div>
-      <h3>Búsqueda de hogar para perro rescatado</h3>
-      <p>Ubicación: Montenegro</p>
-      <p class="case-desc">Perro adulto necesita familia adoptiva. Completamente socializado.</p>
-      <button class="btn-tertiary">Ver detalles</button>
-    </div>
+    } @empty {
+      <p class="empty-message">No hay casos disponibles en este momento.</p>
+    }
   </div>
 </div>

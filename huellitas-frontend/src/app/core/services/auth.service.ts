@@ -90,8 +90,9 @@ export class AuthService {
       case 'ADMIN':
         this.router.navigate(['/admin']);
         break;
+      case 'CIUDADANO_VOLUNTARIO':
       default:
-        this.router.navigate(['/']);
+        this.router.navigate(['']);
     }
   }
 }
