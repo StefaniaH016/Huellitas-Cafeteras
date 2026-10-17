@@ -1,67 +1,94 @@
-<div class="home-hero">
+<div class="hero">
   <h1>Cuando un animal necesita ayuda, cada minuto cuenta.</h1>
   <p>
     Reporta casos y conecta con fundaciones y veterinarios para rescatar a los animales de tu
     comunidad.
   </p>
-  <div class="hero-actions">
-    <button class="btn-primary">Reportar un caso</button>
-    <button class="btn-secondary">Ver casos activos</button>
+  <div class="hero-ctas">
+    <button class="btn btn-primary">Reportar un caso</button>
+    <button class="btn btn-secondary">Ver casos activos</button>
   </div>
 </div>
 
-<div class="home-filters">
-  <h2>Filtrar casos</h2>
-  <div class="filters-row">
-    <input type="text" placeholder="Departamento" class="filter-input" />
-    <input type="text" placeholder="Municipio" class="filter-input" />
-    <input type="text" placeholder="Tipo de caso" class="filter-input" />
-    <button class="btn-search">Buscar</button>
+<div class="search-bar">
+  <div class="field">
+    <label for="dep">Departamento</label>
+    <select id="dep">
+      <option>Quindío</option>
+      <option>Risaralda</option>
+      <option>Caldas</option>
+    </select>
   </div>
+  <div class="field">
+    <label for="mun">Municipio</label>
+    <select id="mun">
+      <option>Armenia</option>
+      <option>Calarcá</option>
+      <option>Circasia</option>
+    </select>
+  </div>
+  <div class="field">
+    <label for="tipo">Tipo de caso</label>
+    <select id="tipo">
+      <option>Vulnerabilidad</option>
+      <option>Extraviado</option>
+      <option>Ambos</option>
+    </select>
+  </div>
+  <button class="btn btn-primary" style="align-self: end">Buscar</button>
 </div>
 
-<div class="home-stats">
-  <div class="stat-card">
-    <div class="stat-number">{{ estadisticas().total }}</div>
-    <div class="stat-label">Casos registrados</div>
+<section class="block">
+  <div class="block-head">
+    <h2>Casos urgentes cerca de ti</h2>
+    <a href="#">Ver todos</a>
   </div>
-  <div class="stat-card">
-    <div class="stat-number">{{ estadisticas().resueltos }}</div>
-    <div class="stat-label">Resueltos</div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-number">{{ estadisticas().fundaciones }}</div>
-    <div class="stat-label">Fundaciones verificadas</div>
-  </div>
-</div>
-
-<div class="home-cases">
-  <h2>Casos recientes</h2>
-  @if (cargando()) {
-    <p class="loading-message">Cargando casos...</p>
-  }
-  @if (errorMensaje()) {
-    <p class="error-message">{{ errorMensaje() }}</p>
-  }
-  <div class="cases-grid">
-    @for (caso of casos(); track caso.id) {
-      <div class="case-card">
-        <div class="case-header">
-          <span class="urgency-badge" [ngClass]="'urgency-' + (caso.urgencia || 'low')">
-            {{ caso.urgencia || 'Baja' }}
-          </span>
-          <span class="case-date">{{ caso.fechaCreacion || 'Reciente' }}</span>
-        </div>
-        <h3>{{ caso.titulo || caso.descripcion }}</h3>
-        <p>Ubicación: {{ caso.ubicacion || 'No especificada' }}</p>
-        <p class="case-desc">{{ caso.descripcion || 'Sin descripción' }}</p>
-        <p class="case-status">
-          Estado: <strong>{{ caso.estado || 'Pendiente' }}</strong>
-        </p>
-        <button class="btn-tertiary">Ver detalles</button>
-      </div>
-    } @empty {
-      <p class="empty-message">No hay casos disponibles en este momento.</p>
+  <div class="case-grid">
+    @if (cargando()) {
+      <p style="text-align: center; color: var(--ink-soft); grid-column: 1/-1">Cargando casos...</p>
     }
+    @if (errorMensaje()) {
+      <p style="text-align: center; color: var(--coral-600); grid-column: 1/-1">
+        {{ errorMensaje() }}
+      </p>
+    }
+    @for (caso of casos(); track caso.id) {
+      <article class="case-card">
+        <div class="case-photo">
+          @if (caso.foto) {
+            <img [src]="caso.foto" [alt]="caso.titulo" />
+          } @else {
+            <span style="color: var(--ink-soft)">Foto del animal</span>
+          }
+        </div>
+        <div class="case-body">
+          <span class="badge" [ngClass]="getBadgeClass(caso.urgencia)">
+            <span class="badge-dot"></span>
+            {{ getBadgeLabel(caso.urgencia) }}
+          </span>
+          <p class="case-title">{{ caso.titulo || caso.descripcion }}</p>
+          <p class="case-meta">{{ caso.municipio }} · {{ caso.barrio }}</p>
+        </div>
+      </article>
+    } @empty {
+      <p style="text-align: center; color: var(--ink-soft); grid-column: 1/-1">
+        No hay casos disponibles.
+      </p>
+    }
+  </div>
+</section>
+
+<div class="trust-strip">
+  <div class="trust-item">
+    <div class="trust-num">{{ estadisticas().total }}</div>
+    <div class="trust-label">Casos registrados este mes</div>
+  </div>
+  <div class="trust-item">
+    <div class="trust-num">{{ estadisticas().resueltos }}</div>
+    <div class="trust-label">Casos resueltos</div>
+  </div>
+  <div class="trust-item">
+    <div class="trust-num">{{ estadisticas().fundaciones }}</div>
+    <div class="trust-label">Fundaciones y veterinarias verificadas</div>
   </div>
 </div>

@@ -55,6 +55,12 @@ public class ReporteController {
         return ResponseEntity.ok(list);
     }
 
+    @GetMapping("/feed")
+    public ResponseEntity<Page<CasoListItemDTO>> getFeed(Pageable pageable) {
+        Page<CasoListItemDTO> feed = casoService.getFeed(pageable);
+        return ResponseEntity.ok(feed);
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<CasoDetalleDTO> obtenerDetalle(@PathVariable Long id) {
         CasoDetalleDTO detalle = casoService.obtenerDetalle(id);

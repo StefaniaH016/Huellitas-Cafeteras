@@ -4,6 +4,7 @@ import co.edu.uniquindio.huellitas.dto.reporte.*;
 import co.edu.uniquindio.huellitas.entity.*;
 import co.edu.uniquindio.huellitas.entity.enums.EstadoCaso;
 import co.edu.uniquindio.huellitas.entity.enums.TipoAporte;
+import co.edu.uniquindio.huellitas.entity.enums.Urgencia;
 import co.edu.uniquindio.huellitas.exception.ResourceNotFoundException;
 import co.edu.uniquindio.huellitas.repository.*;
 import co.edu.uniquindio.huellitas.service.CasoService;
@@ -404,5 +405,13 @@ public class CasoServiceImpl implements CasoService {
                 .map(Foto::getUrl)
                 .findFirst()
                 .orElseGet(() -> caso.getFotos().get(0).getUrl());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<CasoListItemDTO> getFeed(Pageable pageable) {
+        List<Urgencia> urgentes = List.of(Urgencia.ALTA, Urgencia.CRITICA);
+        return casoRepository.findByUrgenciaInAndVisibleTrueOrderByFechaRegistroDesc(urgentes, pageable)
+                .map(this::mapearACasoListItemDTO);
     }
 }

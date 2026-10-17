@@ -23,4 +23,6 @@ public interface CasoService {
     CasoResponseDTO cerrarCaso(Long id, CierreCasoRequestDTO dto, String correoUsuario);
 
     CasoResponseDTO archivarCaso(Long id, ArchivarCasoDTO dto, String correoUsuario);
+
+    Page<CasoListItemDTO> getFeed(Pageable pageable);
 }

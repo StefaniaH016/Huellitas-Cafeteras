@@ -14,7 +14,7 @@ export class CasoService {
   private readonly apiUrl = `${environment.apiUrl}/casos`;
 
   getFeed(page = 0, size = 10): Observable<ApiResponse> {
-    return this.httpClient.get<ApiResponse>(`${this.apiUrl}/feed`, {
+    return this.httpClient.get<ApiResponse>(`${this.apiUrl}`, {
       params: { page, size },
     });
   }

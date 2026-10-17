@@ -40,7 +40,7 @@ spring:
   # ── CORS - Permitir requests desde Vercel, Railway y localhost ──
   web:
     cors:
-      allowed-origins: https://huellitas-cafeteras.vercel.app,https://*.vercel.app,https://*.railway.app,http://localhost:4200
+      allowed-origins: https://huellitas-cafeteras.vercel.app,https://*.vercel.app,https://*.railway.app,http://localhost:*
       allowed-methods: GET,POST,PUT,DELETE,OPTIONS,PATCH
       allowed-headers: "*"
       allow-credentials: true

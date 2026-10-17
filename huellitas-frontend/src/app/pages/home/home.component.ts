@@ -49,4 +49,26 @@ export class HomeComponent implements OnInit {
       },
     });
   }
+
+  getBadgeClass(urgencia: string): string {
+    const urgenciaLower = (urgencia || '').toLowerCase();
+    if (urgenciaLower === 'critica' || urgenciaLower === 'emergencia') {
+      return 'badge-emergencia';
+    }
+    if (urgenciaLower === 'alta' || urgenciaLower === 'extraviado') {
+      return 'badge-alta';
+    }
+    return 'badge-atencion';
+  }
+
+  getBadgeLabel(urgencia: string): string {
+    const urgenciaLower = (urgencia || '').toLowerCase();
+    if (urgenciaLower === 'critica' || urgenciaLower === 'emergencia') {
+      return 'Emergencia';
+    }
+    if (urgenciaLower === 'alta' || urgenciaLower === 'extraviado') {
+      return 'Extraviado';
+    }
+    return 'En atención';
+  }
 }
