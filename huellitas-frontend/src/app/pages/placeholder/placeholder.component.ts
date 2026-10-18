@@ -6,7 +6,7 @@ import { ActivatedRoute } from '@angular/router';
   imports: [],
   templateUrl: './placeholder.component.html',
   styleUrl: './placeholder.component.css',
-  standalone: true
+  standalone: true,
 })
 export class PlaceholderComponent {
   private activatedRoute = inject(ActivatedRoute);

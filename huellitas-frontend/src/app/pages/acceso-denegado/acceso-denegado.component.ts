@@ -5,6 +5,6 @@ import { RouterLink } from '@angular/router';
   selector: 'app-acceso-denegado',
   imports: [RouterLink],
   templateUrl: './acceso-denegado.component.html',
-  styleUrl: './acceso-denegado.component.css'
+  styleUrl: './acceso-denegado.component.css',
 })
 export class AccesoDenegadoComponent {}

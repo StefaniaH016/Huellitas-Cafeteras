@@ -5,6 +5,6 @@ import { RouterOutlet } from '@angular/router';
   selector: 'app-public-layout',
   imports: [RouterOutlet],
   templateUrl: './public-layout.html',
-  styleUrl: './public-layout.css'
+  styleUrl: './public-layout.css',
 })
 export class PublicLayout {}

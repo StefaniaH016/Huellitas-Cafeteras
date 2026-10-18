@@ -8,9 +8,9 @@ spring:
 
   # ── Base de datos PostgreSQL (Railway) ─────────────────────────
   datasource:
-    url: jdbc:postgresql://${PGHOST:localhost}:${PGPORT:5432}/${PGDATABASE:huellitas_db}
-    username: ${PGUSER:postgres}
-    password: ${PGPASSWORD:postgres}
+    url: jdbc:postgresql://${PGHOST}:${PGPORT}/${PGDATABASE}
+    username: ${PGUSER}
+    password: ${PGPASSWORD}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 10
@@ -37,33 +37,33 @@ spring:
     restart:
       enabled: false
 
-  # ── CORS - Permitir requests desde Postman y frontend ─────────
+  # ── CORS - Permitir requests desde Vercel, Railway y localhost ──
   web:
     cors:
-      allowed-origins: "*"
+      allowed-origins: https://huellitas-cafeteras.vercel.app,https://*.vercel.app,https://*.railway.app,http://localhost:*
       allowed-methods: GET,POST,PUT,DELETE,OPTIONS,PATCH
       allowed-headers: "*"
-      allow-credentials: false
+      allow-credentials: true
       max-age: 3600
 
 # ── Servidor ───────────────────────────────────────────────────
 server:
   port: 8080
   servlet:
-    context-path: /api
+    context-path: /
   http2:
     enabled: true
 
 # ── JWT ────────────────────────────────────────────────────────
 jwt:
-  secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
-  expiration: ${JWT_EXPIRATION:86400000}
+  secret: ${JWT_SECRET}
+  expiration: ${JWT_EXPIRATION}
 
 # ── Cloudinary ─────────────────────────────────────────────────
 cloudinary:
-  cloud-name: ${CLOUDINARY_CLOUD_NAME:huellitas_local}
-  api-key: ${CLOUDINARY_API_KEY:123456789012345}
-  api-secret: ${CLOUDINARY_API_SECRET:abcde12345secret}
+  cloud-name: ${CLOUDINARY_CLOUD_NAME}
+  api-key: ${CLOUDINARY_API_KEY}
+  api-secret: ${CLOUDINARY_API_SECRET}
 
 # ── Actuator ───────────────────────────────────────────────────
 management:

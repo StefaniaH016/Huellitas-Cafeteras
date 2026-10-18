@@ -7,7 +7,7 @@ import { TokenService } from '../../../core/services/token.service';
   selector: 'app-header',
   imports: [RouterLink],
   templateUrl: './header.component.html',
-  styleUrl: './header.component.css'
+  styleUrl: './header.component.css',
 })
 export class HeaderComponent {
   private authService = inject(AuthService);
@@ -23,7 +23,12 @@ export class HeaderComponent {
 
   initials = computed(() => {
     const name = this.userName();
-    return name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .slice(0, 2)
+      .join('')
+      .toUpperCase();
   });
 
   logout(): void {

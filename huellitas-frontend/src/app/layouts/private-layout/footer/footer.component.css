@@ -12,4 +12,6 @@
   color: var(--color-primary);
   text-decoration: none;
 }
-.site-footer a:hover { text-decoration: underline; }
+.site-footer a:hover {
+  text-decoration: underline;
+}

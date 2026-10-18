@@ -12,8 +12,15 @@ interface LoginResponse {
   role?: string;
 }
 
+interface RegistroResponse {
+  id?: string;
+  correo: string;
+  nombre: string;
+  mensaje?: string;
+}
+
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class AuthService {
   private httpClient = inject(HttpClient);
@@ -22,28 +29,35 @@ export class AuthService {
   private readonly rolKey = 'hc_rol';
 
   login(email: string, password: string): Observable<string> {
-    const body = { email, password };
-    return this.httpClient
-      .post<LoginResponse>(`${environment.apiUrl}/api/auth/login`, body)
-      .pipe(
-        tap((response) => {
-          this.tokenService.setToken(response.token);
-          // Store rol from response, fallback to token payload
-          const rol = response.rol ?? response.role ?? this.tokenService.decodePayload()?.['rol'] ?? null;
-          if (rol) {
-            localStorage.setItem(this.rolKey, rol as string);
-          }
-        }),
-        map((response) => {
-          return (response.rol ?? response.role ?? this.tokenService.decodePayload()?.['rol'] ?? null) as string;
-        })
-      );
+    const body = { correo: email, contrasena: password };
+    return this.httpClient.post<LoginResponse>(`${environment.apiUrl}/auth/login`, body).pipe(
+      tap((response) => {
+        this.tokenService.setToken(response.token);
+        // Store rol from response, fallback to token payload
+        const rol =
+          response.rol ?? response.role ?? this.tokenService.decodePayload()?.['rol'] ?? null;
+        if (rol) {
+          localStorage.setItem(this.rolKey, rol as string);
+        }
+      }),
+      map((response) => {
+        return (response.rol ??
+          response.role ??
+          this.tokenService.decodePayload()?.['rol'] ??
+          null) as string;
+      }),
+    );
   }
 
   logout(): void {
     this.tokenService.removeToken();
     localStorage.removeItem(this.rolKey);
     this.router.navigate(['/login']);
+  }
+
+  registro(correo: string, contrasena: string, nombre: string): Observable<RegistroResponse> {
+    const body = { correo, contrasena, nombre };
+    return this.httpClient.post<RegistroResponse>(`${environment.apiUrl}/auth/registro`, body);
   }
 
   isLoggedIn(): boolean {
@@ -76,8 +90,9 @@ export class AuthService {
       case 'ADMIN':
         this.router.navigate(['/admin']);
         break;
+      case 'CIUDADANO_VOLUNTARIO':
       default:
-        this.router.navigate(['/']);
+        this.router.navigate(['/home']);
     }
   }
 }

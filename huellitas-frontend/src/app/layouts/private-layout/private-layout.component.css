@@ -11,5 +11,7 @@
   margin: 0 auto;
 }
 @media (max-width: 768px) {
-  .private-main { padding: 1rem; }
+  .private-main {
+    padding: 1rem;
+  }
 }

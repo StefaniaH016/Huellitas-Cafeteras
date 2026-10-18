@@ -20,16 +20,56 @@
   opacity: 0.08;
   user-select: none;
 }
-.doodles span:nth-child(1) { top: 8%; left: 5%; font-size: 3rem; }
-.doodles span:nth-child(2) { top: 20%; left: 90%; font-size: 2.5rem; }
-.doodles span:nth-child(3) { top: 50%; left: 2%; font-size: 2rem; }
-.doodles span:nth-child(4) { top: 75%; left: 8%; font-size: 3.5rem; }
-.doodles span:nth-child(5) { top: 15%; left: 50%; font-size: 2rem; }
-.doodles span:nth-child(6) { top: 85%; left: 70%; font-size: 2.5rem; }
-.doodles span:nth-child(7) { top: 60%; left: 95%; font-size: 2rem; }
-.doodles span:nth-child(8) { top: 40%; left: 40%; font-size: 1.5rem; }
-.doodles span:nth-child(9) { top: 90%; left: 30%; font-size: 3rem; }
-.doodles span:nth-child(10) { top: 30%; left: 25%; font-size: 2rem; }
+.doodles span:nth-child(1) {
+  top: 8%;
+  left: 5%;
+  font-size: 3rem;
+}
+.doodles span:nth-child(2) {
+  top: 20%;
+  left: 90%;
+  font-size: 2.5rem;
+}
+.doodles span:nth-child(3) {
+  top: 50%;
+  left: 2%;
+  font-size: 2rem;
+}
+.doodles span:nth-child(4) {
+  top: 75%;
+  left: 8%;
+  font-size: 3.5rem;
+}
+.doodles span:nth-child(5) {
+  top: 15%;
+  left: 50%;
+  font-size: 2rem;
+}
+.doodles span:nth-child(6) {
+  top: 85%;
+  left: 70%;
+  font-size: 2.5rem;
+}
+.doodles span:nth-child(7) {
+  top: 60%;
+  left: 95%;
+  font-size: 2rem;
+}
+.doodles span:nth-child(8) {
+  top: 40%;
+  left: 40%;
+  font-size: 1.5rem;
+}
+.doodles span:nth-child(9) {
+  top: 90%;
+  left: 30%;
+  font-size: 3rem;
+}
+.doodles span:nth-child(10) {
+  top: 30%;
+  left: 25%;
+  font-size: 2rem;
+}
 .public-main {
   position: relative;
   z-index: 1;

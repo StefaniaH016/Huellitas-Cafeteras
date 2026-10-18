@@ -1,9 +1,11 @@
 <div class="panel-wrapper">
   <div class="panel-header">
     <div class="org-info">
-      <div class="org-avatar" aria-hidden="true">FP</div>
+      <div class="org-avatar" aria-hidden="true">
+        {{ perfil()?.nombre?.substring(0, 2).toUpperCase() || 'FP' }}
+      </div>
       <div>
-        <h1>Fundación Patitas</h1>
+        <h1>{{ perfil()?.nombre || 'Fundación' }}</h1>
         <span class="verified">Verificada ✓</span>
       </div>
     </div>
@@ -75,17 +77,23 @@
       @if (activeSection() === 'resumen') {
         <div class="section-content">
           <h2>Resumen de actividad</h2>
+          @if (errorMensaje()) {
+            <p class="error-message">{{ errorMensaje() }}</p>
+          }
+          @if (cargando()) {
+            <p class="loading-message">Cargando datos...</p>
+          }
           <div class="stats-row">
             <div class="stat-card">
-              <div class="stat-value">12</div>
+              <div class="stat-value">{{ resumen().enCustodia }}</div>
               <div class="stat-label">Animales en custodia</div>
             </div>
             <div class="stat-card">
-              <div class="stat-value">3</div>
+              <div class="stat-value">{{ resumen().esperandoAtencion }}</div>
               <div class="stat-label">Esperando atención médica</div>
             </div>
             <div class="stat-card">
-              <div class="stat-value">5</div>
+              <div class="stat-value">{{ resumen().emergencias }}</div>
               <div class="stat-label">Emergencias registradas</div>
             </div>
           </div>
@@ -96,7 +104,24 @@
         </div>
       }
 
-      @if (activeSection() !== 'resumen') {
+      @if (activeSection() === 'perfil') {
+        <div class="section-content">
+          <h2>Perfil de la entidad</h2>
+          @if (cargando()) {
+            <p class="loading-message">Cargando perfil...</p>
+          }
+          @if (perfil()) {
+            <div class="profile-info">
+              <p><strong>Nombre:</strong> {{ perfil().nombre }}</p>
+              <p><strong>Correo:</strong> {{ perfil().correo }}</p>
+              <p><strong>Teléfono:</strong> {{ perfil().telefono || 'No disponible' }}</p>
+              <p><strong>Ubicación:</strong> {{ perfil().ubicacion || 'No disponible' }}</p>
+            </div>
+          }
+        </div>
+      }
+
+      @if (activeSection() !== 'resumen' && activeSection() !== 'perfil') {
         <div class="section-content">
           <h2>{{ activeSection() | titlecase }}</h2>
           <p class="placeholder">Contenido de {{ activeSection() }} será cargado aquí.</p>

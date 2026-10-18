@@ -43,13 +43,18 @@
   gap: 2rem;
 }
 @media (max-width: 768px) {
-  .panel-layout { flex-direction: column; gap: 1rem; }
+  .panel-layout {
+    flex-direction: column;
+    gap: 1rem;
+  }
 }
 .panel-sidebar {
   min-width: 200px;
 }
 @media (max-width: 768px) {
-  .panel-sidebar { min-width: 100%; }
+  .panel-sidebar {
+    min-width: 100%;
+  }
 }
 .sidebar-nav {
   display: flex;

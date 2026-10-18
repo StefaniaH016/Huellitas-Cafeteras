@@ -1,10 +1,16 @@
 import { Component, inject, signal, computed } from '@angular/core';
-import { ReactiveFormsModule, FormBuilder, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
+import {
+  ReactiveFormsModule,
+  FormBuilder,
+  Validators,
+  AbstractControl,
+  ValidationErrors,
+} from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 
-type TipoCuenta = 'CIUDADANO' | 'FUNDACION' | 'VETERINARIA' | null;
+type TipoCuenta = 'CIUDADANO_VOLUNTARIO' | 'FUNDACION_REFUGIO' | 'VETERINARIA' | null;
 
 interface FormValue {
   nombre?: string;
@@ -23,10 +29,10 @@ interface FormValue {
 
 interface RegistroRequest {
   nombre: string;
-  email: string;
+  correo: string;
+  contrasena: string;
   telefono: string;
-  municipio: string;
-  password: string;
+  barrioId?: number;
   rol: string;
   nombreEntidad?: string;
   nit?: string;
@@ -48,7 +54,7 @@ function confirmPasswordValidator(control: AbstractControl): ValidationErrors | 
   selector: 'app-registro',
   imports: [ReactiveFormsModule, RouterLink],
   templateUrl: './registro.component.html',
-  styleUrl: './registro.component.css'
+  styleUrl: './registro.component.css',
 })
 export class RegistroComponent {
   private fb = inject(FormBuilder);
@@ -72,11 +78,11 @@ export class RegistroComponent {
     documentoLegal: [''],
     municipioOperacion: [''],
     documentoSoporte: [''],
-    aceptaDatos: [false, Validators.requiredTrue]
+    aceptaDatos: [false, Validators.requiredTrue],
   });
 
-  isInstitutional = computed(() =>
-    this.tipoCuenta() === 'FUNDACION' || this.tipoCuenta() === 'VETERINARIA'
+  isInstitutional = computed(
+    () => this.tipoCuenta() === 'FUNDACION_REFUGIO' || this.tipoCuenta() === 'VETERINARIA',
   );
 
   selectTipo(tipo: TipoCuenta): void {
@@ -114,25 +120,27 @@ export class RegistroComponent {
       return {};
     }
     return {
-      nombreEntidad: formValue.nombreEntidad || undefined,
-      nit: formValue.nit || undefined,
-      documentoLegal: formValue.documentoLegal || undefined,
-      municipioOperacion: formValue.municipioOperacion || undefined,
-      documentoSoporte: formValue.documentoSoporte || undefined
+      ...(formValue.nombreEntidad && { nombreEntidad: formValue.nombreEntidad }),
+      ...(formValue.nit && { nit: formValue.nit }),
+      ...(formValue.documentoLegal && { documentoLegal: formValue.documentoLegal }),
+      ...(formValue.municipioOperacion && { municipioOperacion: formValue.municipioOperacion }),
+      ...(formValue.documentoSoporte && { documentoSoporte: formValue.documentoSoporte }),
     };
   }
 
   private buildRegistroPayload(): RegistroRequest {
     const formValue = this.step2Form.value as unknown as FormValue;
-    return {
+    const payload: RegistroRequest = {
       nombre: formValue.nombre || '',
-      email: formValue.email || '',
+      correo: formValue.email || '',
       telefono: formValue.telefono || '',
-      municipio: formValue.municipio || '',
-      password: formValue.password || '',
-      rol: this.tipoCuenta() || 'CIUDADANO',
-      ...this.buildInstitutionalFields(formValue)
-    } as RegistroRequest;
+      contrasena: formValue.password || '',
+      rol: this.tipoCuenta() || 'CIUDADANO_VOLUNTARIO',
+    };
+
+    // Agregar campos institucionales si aplica
+    const institutionalFields = this.buildInstitutionalFields(formValue);
+    return { ...payload, ...institutionalFields };
   }
 
   onSubmit(): void {
@@ -147,7 +155,7 @@ export class RegistroComponent {
     const payload = this.buildRegistroPayload();
 
     this.httpClient
-      .post<{ message: string }>(`${environment.apiUrl}/v1/auth/registro`, payload)
+      .post<{ message: string }>(`${environment.apiUrl}/auth/registro`, payload)
       .subscribe({
         next: () => {
           this.isLoading.set(false);
@@ -157,7 +165,7 @@ export class RegistroComponent {
           this.isLoading.set(false);
           const errMsg = err.error?.message || 'Error al registrarse. Intenta de nuevo.';
           this.errorMessage.set(errMsg);
-        }
+        },
       });
   }
 }

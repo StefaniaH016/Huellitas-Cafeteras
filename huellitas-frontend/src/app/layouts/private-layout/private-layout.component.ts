@@ -7,6 +7,6 @@ import { FooterComponent } from './footer/footer.component';
   selector: 'app-private-layout',
   imports: [RouterOutlet, HeaderComponent, FooterComponent],
   templateUrl: './private-layout.component.html',
-  styleUrl: './private-layout.component.css'
+  styleUrl: './private-layout.component.css',
 })
 export class PrivateLayout {}

@@ -35,4 +35,6 @@
   cursor: pointer;
   transition: background 0.2s;
 }
-.btn-primary:hover { background: var(--color-primary-dark); }
+.btn-primary:hover {
+  background: var(--color-primary-dark);
+}

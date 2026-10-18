@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class TokenService {
   private readonly tokenKey = 'hc_token';
@@ -33,7 +33,7 @@ export class TokenService {
       let b64 = parts[1];
       // Fix base64 padding
       b64 = b64.replace(/-/g, '+').replace(/_/g, '/');
-      b64 = b64.padEnd(b64.length + (4 - (b64.length % 4)) % 4, '=');
+      b64 = b64.padEnd(b64.length + ((4 - (b64.length % 4)) % 4), '=');
 
       const payload = JSON.parse(atob(b64));
       return payload;

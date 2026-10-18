@@ -2,11 +2,11 @@
   <div class="login-brand">
     <div class="brand-mark" aria-hidden="true">
       <svg width="40" height="40" viewBox="0 0 24 24" fill="var(--color-primary)">
-        <ellipse cx="12" cy="15.5" rx="5.4" ry="4.6"/>
-        <ellipse cx="5.6" cy="9.2" rx="2.1" ry="2.6"/>
-        <ellipse cx="10.2" cy="5.6" rx="2.1" ry="2.7"/>
-        <ellipse cx="14.8" cy="5.6" rx="2.1" ry="2.7"/>
-        <ellipse cx="18.4" cy="9.2" rx="2.1" ry="2.6"/>
+        <ellipse cx="12" cy="15.5" rx="5.4" ry="4.6" />
+        <ellipse cx="5.6" cy="9.2" rx="2.1" ry="2.6" />
+        <ellipse cx="10.2" cy="5.6" rx="2.1" ry="2.7" />
+        <ellipse cx="14.8" cy="5.6" rx="2.1" ry="2.7" />
+        <ellipse cx="18.4" cy="9.2" rx="2.1" ry="2.6" />
       </svg>
     </div>
     <h1 class="brand-title">Huellitas Cafeteras</h1>
@@ -26,8 +26,12 @@
       />
       @if (loginForm.get('email')?.invalid && loginForm.get('email')?.touched) {
         <span class="field-error" role="alert">
-          @if (loginForm.get('email')?.hasError('required')) { El correo es obligatorio. }
-          @if (loginForm.get('email')?.hasError('email')) { Ingresa un correo válido. }
+          @if (loginForm.get('email')?.hasError('required')) {
+            El correo es obligatorio.
+          }
+          @if (loginForm.get('email')?.hasError('email')) {
+            Ingresa un correo válido.
+          }
         </span>
       }
     </div>
@@ -39,7 +43,9 @@
         type="password"
         formControlName="password"
         class="form-input"
-        [class.input-error]="loginForm.get('password')?.invalid && loginForm.get('password')?.touched"
+        [class.input-error]="
+          loginForm.get('password')?.invalid && loginForm.get('password')?.touched
+        "
         placeholder="••••••••"
         autocomplete="current-password"
       />
@@ -53,22 +59,27 @@
         <input type="checkbox" formControlName="mantenerSesion" />
         Mantener sesión iniciada
       </label>
-      <button type="button" class="link-btn" (click)="toggleRecovery()">¿Olvidaste tu contraseña?</button>
+      <button type="button" class="link-btn" (click)="toggleRecovery()">
+        ¿Olvidaste tu contraseña?
+      </button>
     </div>
 
     @if (showError()) {
       <div class="error-msg" role="alert">
-        Correo o contraseña incorrectos. Si tu cuenta es institucional, puede estar pendiente de validación.
+        Correo o contraseña incorrectos. Si tu cuenta es institucional, puede estar pendiente de
+        validación.
       </div>
     }
 
     <button type="submit" class="btn-primary" [disabled]="isLoading()">
-      @if (isLoading()) { Ingresando... } @else { Ingresar }
+      @if (isLoading()) {
+        Ingresando...
+      } @else {
+        Ingresar
+      }
     </button>
 
-    <p class="register-link">
-      ¿No tienes cuenta? <a routerLink="/registro">Regístrate</a>
-    </p>
+    <p class="register-link">¿No tienes cuenta? <a routerLink="/registro">Regístrate</a></p>
   </form>
 
   @if (showRecovery()) {

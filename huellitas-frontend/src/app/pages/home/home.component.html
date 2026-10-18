@@ -1,69 +1,94 @@
-<div class="home-hero">
+<div class="hero">
   <h1>Cuando un animal necesita ayuda, cada minuto cuenta.</h1>
-  <p>Reporta casos y conecta con fundaciones y veterinarios para rescatar a los animales de tu comunidad.</p>
-  <div class="hero-actions">
-    <button class="btn-primary">Reportar un caso</button>
-    <button class="btn-secondary">Ver casos activos</button>
+  <p>
+    Reporta casos y conecta con fundaciones y veterinarios para rescatar a los animales de tu
+    comunidad.
+  </p>
+  <div class="hero-ctas">
+    <button class="btn btn-primary">Reportar un caso</button>
+    <button class="btn btn-secondary">Ver casos activos</button>
   </div>
 </div>
 
-<div class="home-filters">
-  <h2>Filtrar casos</h2>
-  <div class="filters-row">
-    <input type="text" placeholder="Departamento" class="filter-input" />
-    <input type="text" placeholder="Municipio" class="filter-input" />
-    <input type="text" placeholder="Tipo de caso" class="filter-input" />
-    <button class="btn-search">Buscar</button>
+<div class="search-bar">
+  <div class="field">
+    <label for="dep">Departamento</label>
+    <select id="dep">
+      <option>Quindío</option>
+      <option>Risaralda</option>
+      <option>Caldas</option>
+    </select>
   </div>
+  <div class="field">
+    <label for="mun">Municipio</label>
+    <select id="mun">
+      <option>Armenia</option>
+      <option>Calarcá</option>
+      <option>Circasia</option>
+    </select>
+  </div>
+  <div class="field">
+    <label for="tipo">Tipo de caso</label>
+    <select id="tipo">
+      <option>Vulnerabilidad</option>
+      <option>Extraviado</option>
+      <option>Ambos</option>
+    </select>
+  </div>
+  <button class="btn btn-primary" style="align-self: end">Buscar</button>
 </div>
 
-<div class="home-stats">
-  <div class="stat-card">
-    <div class="stat-number">312</div>
-    <div class="stat-label">Casos registrados</div>
+<section class="block">
+  <div class="block-head">
+    <h2>Casos urgentes cerca de ti</h2>
+    <a href="#">Ver todos</a>
   </div>
-  <div class="stat-card">
-    <div class="stat-number">198</div>
-    <div class="stat-label">Resueltos</div>
+  <div class="case-grid">
+    @if (cargando()) {
+      <p style="text-align: center; color: var(--ink-soft); grid-column: 1/-1">Cargando casos...</p>
+    }
+    @if (errorMensaje()) {
+      <p style="text-align: center; color: var(--coral-600); grid-column: 1/-1">
+        {{ errorMensaje() }}
+      </p>
+    }
+    @for (caso of casos(); track caso.id) {
+      <article class="case-card">
+        <div class="case-photo">
+          @if (caso.foto) {
+            <img [src]="caso.foto" [alt]="caso.titulo" />
+          } @else {
+            <span style="color: var(--ink-soft)">Foto del animal</span>
+          }
+        </div>
+        <div class="case-body">
+          <span class="badge" [ngClass]="getBadgeClass(caso.urgencia)">
+            <span class="badge-dot"></span>
+            {{ getBadgeLabel(caso.urgencia) }}
+          </span>
+          <p class="case-title">{{ caso.titulo || caso.descripcion }}</p>
+          <p class="case-meta">{{ caso.municipio }} · {{ caso.barrio }}</p>
+        </div>
+      </article>
+    } @empty {
+      <p style="text-align: center; color: var(--ink-soft); grid-column: 1/-1">
+        No hay casos disponibles.
+      </p>
+    }
   </div>
-  <div class="stat-card">
-    <div class="stat-number">24</div>
-    <div class="stat-label">Fundaciones verificadas</div>
-  </div>
-</div>
+</section>
 
-<div class="home-cases">
-  <h2>Casos recientes</h2>
-  <div class="cases-grid">
-    <div class="case-card">
-      <div class="case-header">
-        <span class="urgency-badge urgency-high">Emergencia</span>
-        <span class="case-date">Hoy</span>
-      </div>
-      <h3>Perro atrapado en construcción</h3>
-      <p>Ubicación: Centro, Armenia</p>
-      <p class="case-desc">Animal asustado requiere rescate inmediato. Posible fractura.</p>
-      <button class="btn-tertiary">Ver detalles</button>
-    </div>
-    <div class="case-card">
-      <div class="case-header">
-        <span class="urgency-badge urgency-medium">Moderada</span>
-        <span class="case-date">Ayer</span>
-      </div>
-      <h3>Gato abandonado en casa vacía</h3>
-      <p>Ubicación: La Carreta, Quimbaya</p>
-      <p class="case-desc">Felino desnutrido necesita refugio temporal y atención veterinaria.</p>
-      <button class="btn-tertiary">Ver detalles</button>
-    </div>
-    <div class="case-card">
-      <div class="case-header">
-        <span class="urgency-badge urgency-low">Baja</span>
-        <span class="case-date">Hace 3 días</span>
-      </div>
-      <h3>Búsqueda de hogar para perro rescatado</h3>
-      <p>Ubicación: Montenegro</p>
-      <p class="case-desc">Perro adulto necesita familia adoptiva. Completamente socializado.</p>
-      <button class="btn-tertiary">Ver detalles</button>
-    </div>
+<div class="trust-strip">
+  <div class="trust-item">
+    <div class="trust-num">{{ estadisticas().total }}</div>
+    <div class="trust-label">Casos registrados este mes</div>
+  </div>
+  <div class="trust-item">
+    <div class="trust-num">{{ estadisticas().resueltos }}</div>
+    <div class="trust-label">Casos resueltos</div>
+  </div>
+  <div class="trust-item">
+    <div class="trust-num">{{ estadisticas().fundaciones }}</div>
+    <div class="trust-label">Fundaciones y veterinarias verificadas</div>
   </div>
 </div>

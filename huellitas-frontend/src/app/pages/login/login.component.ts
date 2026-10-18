@@ -7,7 +7,7 @@ import { AuthService } from '../../core/services/auth.service';
   selector: 'app-login',
   imports: [ReactiveFormsModule, RouterLink],
   templateUrl: './login.component.html',
-  styleUrl: './login.component.css'
+  styleUrl: './login.component.css',
 })
 export class LoginComponent {
   private fb = inject(FormBuilder);
@@ -17,11 +17,11 @@ export class LoginComponent {
   loginForm = this.fb.group({
     email: ['', [Validators.required, Validators.email]],
     password: ['', Validators.required],
-    mantenerSesion: [false]
+    mantenerSesion: [false],
   });
 
   recoveryForm = this.fb.group({
-    recoveryEmail: ['', [Validators.required, Validators.email]]
+    recoveryEmail: ['', [Validators.required, Validators.email]],
   });
 
   showError = signal(false);
@@ -44,12 +44,12 @@ export class LoginComponent {
       error: () => {
         this.isLoading.set(false);
         this.showError.set(true);
-      }
+      },
     });
   }
 
   toggleRecovery(): void {
-    this.showRecovery.update(v => !v);
+    this.showRecovery.update((v) => !v);
   }
 
   onRecovery(): void {
