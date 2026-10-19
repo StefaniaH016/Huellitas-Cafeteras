@@ -14,88 +14,126 @@
     <div class="two-col">
       <div>
         <div class="tabs">
-          <button class="tab" [class.active]="activeTab() === 'informacion'" (click)="selectTab('informacion')"
-            role="tab" [attr.aria-selected]="activeTab() === 'informacion'">
+          <button
+            class="tab"
+            [class.active]="activeTab() === 'informacion'"
+            (click)="selectTab('informacion')"
+            role="tab"
+            [attr.aria-selected]="activeTab() === 'informacion'"
+          >
             Información
           </button>
-          <button class="tab" [class.active]="activeTab() === 'seguimiento'" (click)="selectTab('seguimiento')"
-            role="tab" [attr.aria-selected]="activeTab() === 'seguimiento'" aria-disabled="true">
+          <button
+            class="tab"
+            [class.active]="activeTab() === 'seguimiento'"
+            (click)="selectTab('seguimiento')"
+            role="tab"
+            [attr.aria-selected]="activeTab() === 'seguimiento'"
+            aria-disabled="true"
+          >
             Seguimiento
           </button>
-          <button class="tab" [class.active]="activeTab() === 'bitacora'" (click)="selectTab('bitacora')" role="tab"
-            [attr.aria-selected]="activeTab() === 'bitacora'" aria-disabled="true">
+          <button
+            class="tab"
+            [class.active]="activeTab() === 'bitacora'"
+            (click)="selectTab('bitacora')"
+            role="tab"
+            [attr.aria-selected]="activeTab() === 'bitacora'"
+            aria-disabled="true"
+          >
             Bitácora médica
           </button>
         </div>
 
         @if (activeTab() === 'informacion') {
+          <div class="gallery-container">
+            @if (fotos().length > 0) {
+              <div class="gallery-main">
+                <div
+                  class="gallery-blur-backdrop"
+                  [style.background-image]="'url(' + fotoActual() + ')'"
+                  aria-hidden="true"
+                ></div>
 
-        <div class="gallery-container">
-          @if (fotos().length > 0) {
-          <div class="gallery-main">
-            <div class="gallery-blur-backdrop" [style.background-image]="'url(' + fotoActual() + ')'"
-              aria-hidden="true"></div>
+                <img
+                  [src]="fotoActual()"
+                  [alt]="caso()?.titulo || caso()?.descripcion || 'Foto del caso'"
+                  class="gallery-image"
+                  (error)="onFotoError()"
+                />
 
-            <img [src]="fotoActual()" [alt]="caso()?.titulo || caso()?.descripcion || 'Foto del caso'"
-              class="gallery-image" (error)="onFotoError()" />
+                @if (fotos().length > 1) {
+                  <button
+                    type="button"
+                    class="gallery-nav-btn nav-prev"
+                    (click)="prevFoto()"
+                    aria-label="Foto anterior"
+                  >
+                    ‹
+                  </button>
+                  <button
+                    type="button"
+                    class="gallery-nav-btn nav-next"
+                    (click)="nextFoto()"
+                    aria-label="Siguiente foto"
+                  >
+                    ›
+                  </button>
+                  <div class="gallery-counter">
+                    <span>{{ selectedFotoIndex() + 1 }} / {{ fotos().length }}</span>
+                  </div>
+                }
+              </div>
 
-            @if (fotos().length > 1) {
-            <button type="button" class="gallery-nav-btn nav-prev" (click)="prevFoto()" aria-label="Foto anterior">
-              ‹
-            </button>
-            <button type="button" class="gallery-nav-btn nav-next" (click)="nextFoto()" aria-label="Siguiente foto">
-              ›
-            </button>
-            <div class="gallery-counter">
-              <span>{{ selectedFotoIndex() + 1 }} / {{ fotos().length }}</span>
+              @if (fotos().length > 1) {
+                <div class="gallery-thumbnails" role="tablist" aria-label="Fotografías del caso">
+                  @for (f of fotos(); track $index; let i = $index) {
+                    <button
+                      type="button"
+                      class="gallery-thumb"
+                      [class.active]="selectedFotoIndex() === i"
+                      (click)="selectFoto(i)"
+                      [attr.aria-label]="'Ver fotografía ' + (i + 1)"
+                    >
+                      <img [src]="f" [alt]="'Miniatura ' + (i + 1)" />
+                    </button>
+                  }
+                </div>
+              }
+            } @else {
+              <div class="gallery-empty">
+                <span class="empty-icon">🐾</span>
+                <p>Sin fotografías registradas para este caso</p>
+              </div>
+            }
+          </div>
+          <p class="text-soft-md">{{ caso()?.descripcion }}</p>
+          <div class="data-grid">
+            <div>
+              <p class="k">Especie</p>
+              <p class="v">{{ caso()?.especie }}</p>
             </div>
-            }
+            <div>
+              <p class="k">Tamaño / edad</p>
+              <p class="v">{{ caso()?.tamanio }} · {{ caso()?.edad }}</p>
+            </div>
+            <div>
+              <p class="k">Color y señas</p>
+              <p class="v">{{ caso()?.color }}</p>
+            </div>
+            <div>
+              <p class="k">Ubicación</p>
+              <p class="v">{{ caso()?.municipio }} · {{ caso()?.barrio }}</p>
+            </div>
           </div>
-
-          @if (fotos().length > 1) {
-          <div class="gallery-thumbnails" role="tablist" aria-label="Fotografías del caso">
-            @for (f of fotos(); track $index; let i = $index) {
-            <button type="button" class="gallery-thumb" [class.active]="selectedFotoIndex() === i"
-              (click)="selectFoto(i)" [attr.aria-label]="'Ver fotografía ' + (i + 1)">
-              <img [src]="f" [alt]="'Miniatura ' + (i + 1)" />
-            </button>
-            }
-          </div>
-          }
-          } @else {
-          <div class="gallery-empty">
-            <span class="empty-icon">🐾</span>
-            <p>Sin fotografías registradas para este caso</p>
-          </div>
-          }
-        </div>
-        <p class="text-soft-md">{{ caso()?.descripcion }}</p>
-        <div class="data-grid">
-          <div>
-            <p class="k">Especie</p>
-            <p class="v">{{ caso()?.especie }}</p>
-          </div>
-          <div>
-            <p class="k">Tamaño / edad</p>
-            <p class="v">{{ caso()?.tamanio }} · {{ caso()?.edad }}</p>
-          </div>
-          <div>
-            <p class="k">Color y señas</p>
-            <p class="v">{{ caso()?.color }}</p>
-          </div>
-          <div>
-            <p class="k">Ubicación</p>
-            <p class="v">{{ caso()?.municipio }} · {{ caso()?.barrio }}</p>
-          </div>
-        </div>
         }
 
         @if (activeTab() === 'seguimiento') {
-        <p class="text-soft-md" style="padding: 1rem">Seguimiento próximamente disponible.</p>
+          <p class="text-soft-md" style="padding: 1rem">Seguimiento próximamente disponible.</p>
         }
 
         @if (activeTab() === 'bitacora') {
-        <p class="text-soft-md" style="padding: 1rem">Bitácora médica próximamente disponible.</p>
+          <p class="text-soft-md" style="padding: 1rem">Bitácora médica próximamente disponible.</p>
         }
       </div>
 
@@ -114,27 +152,27 @@
             <h3>Responsables</h3>
           </div>
           @if (caso()?.fundacion) {
-          <div class="list-row">
-            <div class="avatar-dot">🏠</div>
-            <div class="list-info">
-              <p class="list-title">{{ caso()?.fundacion }}</p>
-              <p class="list-meta">A cargo</p>
+            <div class="list-row">
+              <div class="avatar-dot">🏠</div>
+              <div class="list-info">
+                <p class="list-title">{{ caso()?.fundacion }}</p>
+                <p class="list-meta">A cargo</p>
+              </div>
             </div>
-          </div>
           }
           @if (caso()?.veterinaria) {
-          <div class="list-row">
-            <div class="avatar-dot">🩺</div>
-            <div class="list-info">
-              <p class="list-title">{{ caso()?.veterinaria }}</p>
-              <p class="list-meta">Atención médica</p>
+            <div class="list-row">
+              <div class="avatar-dot">🩺</div>
+              <div class="list-info">
+                <p class="list-title">{{ caso()?.veterinaria }}</p>
+                <p class="list-meta">Atención médica</p>
+              </div>
             </div>
-          </div>
           }
           @if (!caso()?.fundacion && !caso()?.veterinaria) {
-          <p style="padding: 1rem; color: var(--ink-soft); font-size: 0.85rem">
-            Sin responsables asignados aún.
-          </p>
+            <p style="padding: 1rem; color: var(--ink-soft); font-size: 0.85rem">
+              Sin responsables asignados aún.
+            </p>
           }
         </div>
       </aside>
