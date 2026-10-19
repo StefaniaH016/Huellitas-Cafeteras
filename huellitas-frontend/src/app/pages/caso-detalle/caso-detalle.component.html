@@ -46,7 +46,15 @@
         </div>
 
         @if (activeTab() === 'informacion') {
-          <div class="case-photo"></div>
+          <div class="case-photo">
+            @if (caso()?.foto) {
+              <img
+                [src]="caso()?.foto"
+                [alt]="caso()?.descripcion"
+                style="width: 100%; height: 100%; object-fit: cover; border-radius: 16px"
+              />
+            }
+          </div>
           <p class="text-soft-md">{{ caso()?.descripcion }}</p>
           <div class="data-grid">
             <div>

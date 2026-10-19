@@ -131,7 +131,11 @@
             </p>
           }
           @for (caso of casos(); track caso.id) {
-            <article class="case-card">
+            <article
+              class="case-card"
+              [routerLink]="['/caso-detalle', caso.id]"
+              style="cursor: pointer"
+            >
               <div class="case-photo">
                 @if (caso.foto) {
                   <img [src]="caso.foto" [alt]="caso.titulo" />
@@ -140,10 +144,48 @@
                 }
               </div>
               <div class="case-body">
-                <span class="badge" [ngClass]="getBadgeClass(caso.urgencia)">
-                  <span class="badge-dot"></span>
-                  {{ getBadgeLabel(caso.urgencia) }}
-                </span>
+                <div
+                  style="
+                    display: flex;
+                    gap: 0.4rem;
+                    align-items: center;
+                    margin-bottom: 0.4rem;
+                    flex-wrap: wrap;
+                  "
+                >
+                  <span class="badge" [ngClass]="getBadgeClass(caso.urgencia)">
+                    <span class="badge-dot"></span>
+                    {{ getBadgeLabel(caso.urgencia) }}
+                  </span>
+                  @if (caso.tipoCaso && getTipoLabel(caso.tipoCaso)) {
+                    <span
+                      class="badge"
+                      style="
+                        background: var(--lav-100, #f0ebfd);
+                        color: var(--lav-700, #5c35b8);
+                        font-size: 0.75rem;
+                        padding: 0.2rem 0.5rem;
+                        border-radius: 99px;
+                      "
+                    >
+                      {{ getTipoLabel(caso.tipoCaso) }}
+                    </span>
+                  }
+                  @if (caso.estado) {
+                    <span
+                      class="badge"
+                      style="
+                        background: var(--pine-100, #e6f6f0);
+                        color: var(--pine-700, #147253);
+                        font-size: 0.75rem;
+                        padding: 0.2rem 0.5rem;
+                        border-radius: 99px;
+                      "
+                    >
+                      {{ getEstadoLabel(caso.estado) }}
+                    </span>
+                  }
+                </div>
                 <p class="case-title">{{ caso.titulo || caso.descripcion }}</p>
                 <p class="case-meta">{{ caso.municipio }} · {{ caso.barrio }}</p>
               </div>

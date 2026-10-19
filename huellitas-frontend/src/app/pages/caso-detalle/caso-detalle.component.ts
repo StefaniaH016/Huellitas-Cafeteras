@@ -8,6 +8,8 @@ interface Caso {
   titulo?: string;
   descripcion?: string;
   urgencia: string;
+  tipo?: string;
+  estado?: string;
   fechaReporte: string;
   especie?: string;
   tamanio?: string;
@@ -15,22 +17,56 @@ interface Caso {
   color?: string;
   municipio?: string;
   barrio?: string;
+  foto?: string;
   fundacion?: string;
   veterinaria?: string;
 }
 
+interface AnimalResponse {
+  id?: number;
+  nombre?: string;
+  especie?: string;
+  raza?: string;
+  color?: string;
+  sexo?: string;
+  edadAproximada?: string;
+  senasParticulares?: string;
+}
+
+interface UbicacionResponse {
+  departamentoId?: number;
+  departamento?: string;
+  municipioId?: number;
+  municipio?: string;
+  barrioId?: number;
+  barrio?: string;
+  direccionReferencia?: string;
+}
+
+interface FotoResponse {
+  id?: number;
+  url?: string;
+  principal?: boolean;
+}
+
 interface CasoResponse {
   id?: string | number;
-  titulo?: string;
-  descripcion?: string;
+  tipoCaso?: string;
+  estado?: string;
   urgencia?: string;
-  fechaReporte?: string;
+  descripcion?: string;
+  animal?: AnimalResponse;
+  ubicacion?: UbicacionResponse;
+  fotografias?: FotoResponse[];
+  fechaCreacion?: string;
+  titulo?: string;
   especie?: string;
   tamanio?: string;
   edad?: string;
   color?: string;
   municipio?: string;
   barrio?: string;
+  fechaReporte?: string;
   fundacion?: string;
   veterinaria?: string;
 }
@@ -60,21 +96,102 @@ export class CasoDetalleComponent implements OnInit {
     });
   }
 
-  private mapResponseToCaso(response: CasoResponse, fallbackId: string | number): Caso {
+  private formatEspecie(especie?: string): string {
+    const esp = (especie || '').toUpperCase();
+    const map: Record<string, string> = {
+      PERRO: 'Perro',
+      CANINO: 'Perro',
+      GATO: 'Gato',
+      FELINO: 'Gato',
+      OTRO: 'Otro',
+    };
+    if (map[esp]) {
+      return map[esp];
+    }
+    if (especie) {
+      return especie.charAt(0).toUpperCase() + especie.slice(1).toLowerCase();
+    }
+    return 'Animal';
+  }
+
+  private formatColorYsenas(color?: string, senas?: string): string {
+    const c = color?.trim() || '';
+    const s = senas?.trim() || '';
+    if (c && s) {
+      return `${c} · ${s}`;
+    }
+    return c || s || 'N/A';
+  }
+
+  private formatUbicacion(ubicacion?: UbicacionResponse): { mun: string; bar: string } {
+    const mun = ubicacion?.municipio || 'N/A';
+    const bar = ubicacion?.barrio || 'N/A';
+    const dir = ubicacion?.direccionReferencia ? ` (${ubicacion.direccionReferencia})` : '';
+    return { mun, bar: `${bar}${dir}` };
+  }
+
+  private formatFecha(fechaCreacion?: string): string {
+    if (!fechaCreacion) {
+      return new Date().toLocaleDateString('es-CO');
+    }
+    try {
+      return new Date(fechaCreacion).toLocaleDateString('es-CO');
+    } catch {
+      return fechaCreacion;
+    }
+  }
+
+  private extractFotoUrl(fotografias?: FotoResponse[]): string {
+    if (!fotografias || fotografias.length === 0) {
+      return '';
+    }
+    const principal = fotografias.find((f) => f.principal);
+    return principal?.url || fotografias[0]?.url || '';
+  }
+
+  private extractAnimalInfo(a?: AnimalResponse): {
+    especie: string;
+    tamanio: string;
+    edad: string;
+    color: string;
+  } {
+    if (!a) {
+      return { especie: 'N/A', tamanio: 'Mediano', edad: 'N/A', color: 'N/A' };
+    }
+    const tamanio = a.raza ? a.raza : 'Mediano';
+    const edad = a.edadAproximada ? a.edadAproximada : 'N/A';
     return {
-      id: response.id ?? fallbackId,
-      titulo: response.titulo ?? '',
-      descripcion: response.descripcion ?? '',
-      urgencia: response.urgencia ?? 'MEDIA',
-      fechaReporte: response.fechaReporte ?? new Date().toLocaleDateString('es-CO'),
-      especie: response.especie ?? 'Animal',
-      tamanio: response.tamanio ?? 'N/A',
-      edad: response.edad ?? 'N/A',
-      color: response.color ?? 'N/A',
-      municipio: response.municipio ?? 'N/A',
-      barrio: response.barrio ?? 'N/A',
-      fundacion: response.fundacion ?? '',
-      veterinaria: response.veterinaria ?? '',
+      especie: this.formatEspecie(a.especie),
+      tamanio,
+      edad,
+      color: this.formatColorYsenas(a.color, a.senasParticulares),
+    };
+  }
+
+  private mapResponseToCaso(response: CasoResponse, fallbackId: string | number): Caso {
+    const ai = this.extractAnimalInfo(response.animal);
+    const u = this.formatUbicacion(response.ubicacion);
+    const desc = response.descripcion ? response.descripcion : '';
+    const titulo = desc ? desc : response.titulo ? response.titulo : '';
+    const idVal = response.id !== undefined && response.id !== null ? response.id : fallbackId;
+
+    return {
+      id: idVal,
+      titulo,
+      descripcion: desc,
+      urgencia: response.urgencia ? response.urgencia : 'MEDIA',
+      tipo: response.tipoCaso,
+      estado: response.estado,
+      fechaReporte: this.formatFecha(response.fechaCreacion),
+      especie: ai.especie,
+      tamanio: ai.tamanio,
+      edad: ai.edad,
+      color: ai.color,
+      municipio: u.mun,
+      barrio: u.bar,
+      foto: this.extractFotoUrl(response.fotografias),
+      fundacion: response.fundacion ? response.fundacion : '',
+      veterinaria: response.veterinaria ? response.veterinaria : '',
     };
   }
 
@@ -101,7 +218,7 @@ export class CasoDetalleComponent implements OnInit {
   }
 
   getBadgeClass(urgencia?: string): string {
-    switch (urgencia) {
+    switch (urgencia?.toUpperCase()) {
       case 'CRITICA':
         return 'badge-emergencia';
       case 'ALTA':
@@ -116,7 +233,7 @@ export class CasoDetalleComponent implements OnInit {
   }
 
   getBadgeLabel(urgencia?: string): string {
-    switch (urgencia) {
+    switch (urgencia?.toUpperCase()) {
       case 'CRITICA':
         return 'Emergencia';
       case 'ALTA':

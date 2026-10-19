@@ -31,6 +31,15 @@
             />
             Media
           </label>
+          <label for="check-urgencia-baja">
+            <input
+              id="check-urgencia-baja"
+              type="checkbox"
+              [checked]="urgencias().includes('BAJA')"
+              (change)="toggleUrgencia('BAJA')"
+            />
+            Baja
+          </label>
         </div>
       </div>
 
@@ -123,7 +132,13 @@
       <div class="panel">
         @for (caso of casos(); track caso.id) {
           <div class="list-row">
-            <div class="list-thumb">🐾</div>
+            <div class="list-thumb">
+              @if (caso.foto) {
+                <img [src]="caso.foto" [alt]="caso.titulo" class="list-thumb-img" />
+              } @else {
+                🐾
+              }
+            </div>
             <div class="list-info">
               <p class="list-title">{{ caso.titulo || caso.descripcion }}</p>
               <p class="list-meta">

@@ -37,6 +37,18 @@ export class CasoService {
     return this.httpClient.post<ApiResponse>(`${this.apiUrl}`, dto);
   }
 
+  subirImagen(archivo: File, casoId?: string | number): Observable<ApiResponse> {
+    const formData = new FormData();
+    formData.append('archivo', archivo);
+    const params: Record<string, string> = {};
+    if (casoId !== undefined && casoId !== null) {
+      params['casoId'] = casoId.toString();
+    }
+    return this.httpClient.post<ApiResponse>(`${environment.apiUrl}/imagenes`, formData, {
+      params,
+    });
+  }
+
   actualizarEstado(id: number, dto: ApiResponse): Observable<ApiResponse> {
     return this.httpClient.patch<ApiResponse>(`${this.apiUrl}/${id}/estado`, dto);
   }

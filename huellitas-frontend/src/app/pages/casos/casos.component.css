@@ -70,6 +70,17 @@
 .list-thumb {
   font-size: 2rem;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.list-thumb-img {
+  width: 44px;
+  height: 44px;
+  object-fit: cover;
+  border-radius: 8px;
+  display: block;
 }
 
 .list-info {

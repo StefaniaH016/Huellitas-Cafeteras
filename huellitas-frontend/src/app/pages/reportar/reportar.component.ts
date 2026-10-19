@@ -1,7 +1,8 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, OnDestroy, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { forkJoin } from 'rxjs';
 import { CasoService } from '../../core/services/caso.service';
 import { UbicacionService } from '../../core/services/ubicacion.service';
 import { UbicacionSelectorComponent } from '../../shared/components/ubicacion-selector/ubicacion-selector.component';
@@ -36,7 +37,7 @@ interface CrearReporteResponse {
   templateUrl: './reportar.component.html',
   styleUrls: ['./reportar.component.css'],
 })
-export class ReportarComponent {
+export class ReportarComponent implements OnDestroy {
   private casoService = inject(CasoService);
   private ubicacionService = inject(UbicacionService);
   private router = inject(Router);
@@ -45,6 +46,9 @@ export class ReportarComponent {
   enviando = signal(false);
   createdCasoId = signal('');
   submitError = signal('');
+  fotos = signal<File[]>([]);
+  previewUrls = signal<string[]>([]);
+  fotoError = signal('');
 
   tipoCasoLabels: Record<string, string> = {
     HERIDO: 'Herido',
@@ -156,30 +160,24 @@ export class ReportarComponent {
     }
   }
 
+  private cleanField(val?: string): string | undefined {
+    if (!val) {
+      return undefined;
+    }
+    const trimmed = val.trim();
+    return trimmed ? trimmed : undefined;
+  }
+
   private buildAnimalPayload(): AnimalReportePayload {
     const animal: AnimalReportePayload = {
       especie: this.formData.especie,
     };
-
-    if (this.formData.nombre?.trim()) {
-      animal.nombre = this.formData.nombre;
-    }
-    if (this.formData.raza?.trim()) {
-      animal.raza = this.formData.raza;
-    }
-    if (this.formData.color?.trim()) {
-      animal.color = this.formData.color;
-    }
-    if (this.formData.sexo) {
-      animal.sexo = this.formData.sexo;
-    }
-    if (this.formData.edad?.trim()) {
-      animal.edadAproximada = this.formData.edad;
-    }
-    if (this.formData.senas?.trim()) {
-      animal.senasParticulares = this.formData.senas;
-    }
-
+    animal.nombre = this.cleanField(this.formData.nombre);
+    animal.raza = this.cleanField(this.formData.raza);
+    animal.color = this.cleanField(this.formData.color);
+    animal.sexo = this.formData.sexo || undefined;
+    animal.edadAproximada = this.cleanField(this.formData.edad);
+    animal.senasParticulares = this.cleanField(this.formData.senas);
     return animal;
   }
 
@@ -192,11 +190,83 @@ export class ReportarComponent {
       animal: animalPayload,
     };
 
-    if (this.formData.direccion?.trim()) {
-      dto.direccionReferencia = this.formData.direccion;
+    const dir = this.cleanField(this.formData.direccion);
+    if (dir) {
+      dto.direccionReferencia = dir;
     }
 
     return dto;
+  }
+
+  onFilesSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files) {
+      this.addFiles(Array.from(input.files));
+      input.value = '';
+    }
+  }
+
+  onFileDrop(event: DragEvent): void {
+    event.preventDefault();
+    if (event.dataTransfer?.files) {
+      this.addFiles(Array.from(event.dataTransfer.files));
+    }
+  }
+
+  onDragOver(event: DragEvent): void {
+    event.preventDefault();
+  }
+
+  private validateFile(file: File): string | null {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      return 'Solo se admiten formatos JPG, PNG o WebP.';
+    }
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      return 'Cada imagen debe pesar máximo 5 MB.';
+    }
+    return null;
+  }
+
+  private addFiles(files: File[]): void {
+    this.fotoError.set('');
+    const currentCount = this.fotos().length;
+    if (currentCount + files.length > 5) {
+      this.fotoError.set('Puedes subir un máximo de 5 fotos.');
+      return;
+    }
+
+    const newFiles: File[] = [];
+    const newUrls: string[] = [];
+
+    for (const file of files) {
+      const error = this.validateFile(file);
+      if (error) {
+        this.fotoError.set(error);
+        return;
+      }
+      newFiles.push(file);
+      newUrls.push(URL.createObjectURL(file));
+    }
+
+    this.fotos.update((prev) => [...prev, ...newFiles]);
+    this.previewUrls.update((prev) => [...prev, ...newUrls]);
+  }
+
+  removeFoto(index: number): void {
+    const urls = this.previewUrls();
+    if (urls[index]) {
+      URL.revokeObjectURL(urls[index]);
+    }
+    this.fotos.update((prev) => prev.filter((_, i) => i !== index));
+    this.previewUrls.update((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  ngOnDestroy(): void {
+    for (const url of this.previewUrls()) {
+      URL.revokeObjectURL(url);
+    }
   }
 
   onPublicar(): void {
@@ -209,17 +279,41 @@ export class ReportarComponent {
     this.casoService.crearReporte(dto).subscribe({
       next: (response: unknown): void => {
         const idGenerado = (response as CrearReporteResponse).id?.toString() || '#NUEVO';
-        this.createdCasoId.set(idGenerado);
-        this.currentStep.set(4);
-        this.enviando.set(false);
+        this.handleUploadImages(idGenerado);
       },
       error: (err: { error?: unknown }): void => {
         console.error('Error creating report:', err);
-        console.error('Error response:', err.error);
         this.submitError.set('Error al publicar el reporte. Intenta de nuevo.');
         this.enviando.set(false);
       },
     });
+  }
+
+  private handleUploadImages(idGenerado: string): void {
+    const files = this.fotos();
+    const casoIdNum = Number(idGenerado);
+
+    if (files.length === 0 || isNaN(casoIdNum)) {
+      this.finishPublicacion(idGenerado);
+      return;
+    }
+
+    const uploads = files.map((file) => this.casoService.subirImagen(file, casoIdNum));
+    forkJoin(uploads).subscribe({
+      next: (): void => {
+        this.finishPublicacion(idGenerado);
+      },
+      error: (uploadErr: unknown): void => {
+        console.error('Error al subir imágenes:', uploadErr);
+        this.finishPublicacion(idGenerado);
+      },
+    });
+  }
+
+  private finishPublicacion(idGenerado: string): void {
+    this.createdCasoId.set(idGenerado);
+    this.currentStep.set(4);
+    this.enviando.set(false);
   }
 
   onDeptoChange(deptoId: number | null): void {

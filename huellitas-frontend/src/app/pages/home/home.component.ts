@@ -17,6 +17,8 @@ interface Caso {
   titulo?: string;
   descripcion: string;
   urgencia: string;
+  tipoCaso?: string;
+  estado?: string;
   municipio: string;
   barrio: string;
   foto?: string;
@@ -28,8 +30,24 @@ interface FiltrosCaso {
   barrioId?: string | number;
   urgencia?: string;
   tipoAnimal?: string;
+  especie?: string;
   page?: number;
   size?: number;
+}
+
+interface RawHomeCaso {
+  id: number;
+  titulo?: string;
+  descripcion?: string;
+  urgencia?: string;
+  tipoCaso?: string;
+  tipo?: string;
+  estado?: string;
+  municipio?: string;
+  barrio?: string;
+  fotoPrincipal?: string;
+  foto?: string;
+  fotografias?: { url?: string }[];
 }
 
 @Component({
@@ -57,9 +75,8 @@ export class HomeComponent implements OnInit {
     tipoAnimal: '',
   };
 
-  // Feed data (for Ciudadano)
+  // Feed data
   casos = signal<Caso[]>([]);
-
   cargando = signal(false);
   errorMensaje = signal('');
 
@@ -80,7 +97,6 @@ export class HomeComponent implements OnInit {
     const normalized = normalizeRole(rawRole);
     this.rol.set(normalized);
 
-    // Load location and feed data for ciudadano, fundacion, and veterinaria
     const role = this.rol();
     if (
       !role ||
@@ -93,7 +109,6 @@ export class HomeComponent implements OnInit {
     }
   }
 
-  // Ubicación methods
   cargarDepartamentos(): void {
     this.ubicacionService.getDepartamentos().subscribe({
       next: (deps: Ubicacion[]) => {
@@ -109,6 +124,8 @@ export class HomeComponent implements OnInit {
     if (!this.filtros.departamentoId) {
       this.municipios.set([]);
       this.barrios.set([]);
+      this.filtros.municipioId = '';
+      this.filtros.barrioId = '';
       return;
     }
     this.ubicacionService.getMunicipios(Number(this.filtros.departamentoId)).subscribe({
@@ -145,25 +162,64 @@ export class HomeComponent implements OnInit {
   }
 
   private buildFilterParams(): FiltrosCaso {
-    const filtros: FiltrosCaso = {};
+    const p: FiltrosCaso = {};
     if (this.filtros.departamentoId) {
-      filtros.departamentoId = this.filtros.departamentoId;
+      p.departamentoId = this.filtros.departamentoId;
     }
     if (this.filtros.municipioId) {
-      filtros.municipioId = this.filtros.municipioId;
+      p.municipioId = this.filtros.municipioId;
     }
     if (this.filtros.barrioId) {
-      filtros.barrioId = this.filtros.barrioId;
+      p.barrioId = this.filtros.barrioId;
     }
     if (this.filtros.urgencia) {
-      filtros.urgencia = this.filtros.urgencia;
+      p.urgencia = this.filtros.urgencia;
     }
     if (this.filtros.tipoAnimal) {
-      filtros.tipoAnimal = this.filtros.tipoAnimal;
+      p.especie = this.filtros.tipoAnimal;
     }
-    filtros.page = 0;
-    filtros.size = 10;
-    return filtros;
+    p.page = 0;
+    p.size = 10;
+    return p;
+  }
+
+  private fallbackStr(val?: string, defaultVal = ''): string {
+    if (val) {
+      return val;
+    }
+    return defaultVal;
+  }
+
+  private extractHomeFoto(c: RawHomeCaso): string {
+    if (c.fotoPrincipal) {
+      return c.fotoPrincipal;
+    }
+    if (c.foto) {
+      return c.foto;
+    }
+    if (c.fotografias && c.fotografias.length > 0) {
+      return c.fotografias[0]?.url || '';
+    }
+    return '';
+  }
+
+  private mapRawHomeCaso(c: RawHomeCaso): Caso {
+    const urg = c.urgencia ? c.urgencia.toUpperCase() : 'MEDIA';
+    const tip = this.fallbackStr(c.tipoCaso, this.fallbackStr(c.tipo));
+    const est = this.fallbackStr(c.estado, 'REGISTRADO').toUpperCase();
+    const titulo = this.fallbackStr(c.titulo, this.fallbackStr(c.descripcion));
+
+    return {
+      id: c.id,
+      titulo,
+      descripcion: this.fallbackStr(c.descripcion),
+      urgencia: urg,
+      tipoCaso: tip.toUpperCase(),
+      estado: est,
+      municipio: this.fallbackStr(c.municipio),
+      barrio: this.fallbackStr(c.barrio),
+      foto: this.extractHomeFoto(c),
+    };
   }
 
   private extractCasosArray(response: unknown): Caso[] {
@@ -174,12 +230,11 @@ export class HomeComponent implements OnInit {
     const obj = response as Record<string, unknown>;
     const casosArray: unknown = obj['casos'] || obj['content'] || response;
 
-    // Validate that we have an array
     if (!Array.isArray(casosArray)) {
       return [];
     }
 
-    return casosArray as Caso[];
+    return (casosArray as RawHomeCaso[]).map((c) => this.mapRawHomeCaso(c));
   }
 
   cargarFeed(): void {
@@ -203,25 +258,63 @@ export class HomeComponent implements OnInit {
   }
 
   getBadgeClass(urgencia: string): string {
-    const urgenciaLower = (urgencia || '').toLowerCase();
-    if (urgenciaLower === 'critica' || urgenciaLower === 'emergencia') {
-      return 'badge-emergencia';
+    switch (urgencia?.toUpperCase()) {
+      case 'CRITICA':
+        return 'badge-emergencia';
+      case 'ALTA':
+        return 'badge-alta';
+      case 'MEDIA':
+        return 'badge-atencion';
+      case 'BAJA':
+        return 'badge-media';
+      default:
+        return 'badge-atencion';
     }
-    if (urgenciaLower === 'alta' || urgenciaLower === 'extraviado') {
-      return 'badge-alta';
-    }
-    return 'badge-atencion';
   }
 
   getBadgeLabel(urgencia: string): string {
-    const urgenciaLower = (urgencia || '').toLowerCase();
-    if (urgenciaLower === 'critica' || urgenciaLower === 'emergencia') {
-      return 'Emergencia';
+    switch (urgencia?.toUpperCase()) {
+      case 'CRITICA':
+        return 'Emergencia';
+      case 'ALTA':
+        return 'Alta';
+      case 'MEDIA':
+        return 'Media';
+      case 'BAJA':
+        return 'Baja';
+      default:
+        return urgencia || 'Media';
     }
-    if (urgenciaLower === 'alta' || urgenciaLower === 'extraviado') {
-      return 'Extraviado';
+  }
+
+  getEstadoLabel(estado?: string): string {
+    switch (estado?.toUpperCase()) {
+      case 'REGISTRADO':
+        return 'Registrado';
+      case 'EN_ATENCION':
+        return 'En atención';
+      case 'RESUELTO':
+        return 'Resuelto';
+      case 'ARCHIVADO':
+        return 'Archivado';
+      default:
+        return estado || 'Registrado';
     }
-    return 'En atención';
+  }
+
+  getTipoLabel(tipo?: string): string {
+    switch (tipo?.toUpperCase()) {
+      case 'EXTRAVIADO':
+        return 'Extraviado';
+      case 'VULNERABLE':
+        return 'Vulnerable';
+      case 'HERIDO':
+        return 'Herido';
+      case 'EN_ADOPCION':
+        return 'En adopción';
+      default:
+        return tipo || '';
+    }
   }
 
   getPanelLink(): string {

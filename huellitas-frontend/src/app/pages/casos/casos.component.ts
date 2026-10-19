@@ -15,6 +15,7 @@ interface Caso {
   municipio: string;
   barrio: string;
   fechaReporte: string;
+  foto?: string;
 }
 
 interface RespuestaCasos {
@@ -22,15 +23,20 @@ interface RespuestaCasos {
   totalElements?: number;
 }
 
-interface FiltrosCasos {
-  page: number;
-  size: number;
-  urgencias?: string;
-  tipos?: string;
-  estados?: string;
-  deptoId?: number;
-  munId?: number;
-  barrioId?: number;
+interface RawCasoItem {
+  id: string | number;
+  titulo?: string;
+  descripcion?: string;
+  urgencia?: string;
+  tipoCaso?: string;
+  tipo?: string;
+  estado?: string;
+  municipio?: string;
+  barrio?: string;
+  fechaCreacion?: string;
+  fechaReporte?: string;
+  fotoPrincipal?: string;
+  foto?: string;
 }
 
 @Component({
@@ -50,8 +56,8 @@ export class CasosComponent implements OnInit {
   page = signal(0);
   pageSize = 10;
 
-  urgencias = signal<string[]>(['CRITICA', 'ALTA']);
-  tipos = signal<string[]>(['HERIDO', 'VULNERABLE']);
+  urgencias = signal<string[]>(['CRITICA', 'ALTA', 'MEDIA', 'BAJA']);
+  tipos = signal<string[]>(['VULNERABLE', 'EXTRAVIADO']);
   estados = signal<string[]>(['REGISTRADO', 'EN_ATENCION']);
   deptoId = signal<number | null>(null);
   munId = signal<number | null>(null);
@@ -61,31 +67,114 @@ export class CasosComponent implements OnInit {
     this.loadCasos();
   }
 
+  buildFilterParams(): Record<string, string | number> {
+    const params: Record<string, string | number> = {
+      page: this.page(),
+      size: 50,
+    };
+
+    const currentDepto = this.deptoId();
+    if (currentDepto !== null) {
+      params['departamentoId'] = currentDepto;
+    }
+
+    const currentMun = this.munId();
+    if (currentMun !== null) {
+      params['municipioId'] = currentMun;
+    }
+
+    const currentBarrio = this.barrioId();
+    if (currentBarrio !== null) {
+      params['barrioId'] = currentBarrio;
+    }
+
+    if (this.urgencias().length === 1) {
+      params['urgencia'] = this.urgencias()[0];
+    }
+    if (this.tipos().length === 1) {
+      params['tipoCaso'] = this.tipos()[0];
+    }
+    if (this.estados().length === 1) {
+      params['estado'] = this.estados()[0];
+    }
+
+    return params;
+  }
+
+  private formatCasoFecha(fechaCreacion?: string, fechaReporte?: string): string {
+    if (fechaCreacion) {
+      return new Date(fechaCreacion).toLocaleDateString('es-CO');
+    }
+    return fechaReporte || new Date().toLocaleDateString('es-CO');
+  }
+
+  private fallbackStr(val?: string, defaultVal = ''): string {
+    if (val) {
+      return val;
+    }
+    return defaultVal;
+  }
+
+  private extractTipo(caso: RawCasoItem): string {
+    if (caso.tipoCaso) {
+      return caso.tipoCaso.toUpperCase();
+    }
+    if (caso.tipo) {
+      return caso.tipo.toUpperCase();
+    }
+    return 'VULNERABLE';
+  }
+
+  private mapRawCaso(caso: RawCasoItem): Caso {
+    const urg = caso.urgencia ? caso.urgencia.toUpperCase() : 'MEDIA';
+    const est = this.fallbackStr(caso.estado, 'REGISTRADO').toUpperCase();
+    const titulo = this.fallbackStr(caso.titulo, this.fallbackStr(caso.descripcion));
+    const foto = this.fallbackStr(caso.fotoPrincipal, this.fallbackStr(caso.foto));
+
+    return {
+      id: caso.id,
+      titulo,
+      descripcion: this.fallbackStr(caso.descripcion),
+      urgencia: urg,
+      tipo: this.extractTipo(caso),
+      estado: est,
+      municipio: this.fallbackStr(caso.municipio),
+      barrio: this.fallbackStr(caso.barrio),
+      fechaReporte: this.formatCasoFecha(caso.fechaCreacion, caso.fechaReporte),
+      foto,
+    };
+  }
+
+  private filterCasos(allCasos: Caso[]): Caso[] {
+    let filtered = allCasos;
+
+    if (this.urgencias().length > 0) {
+      filtered = filtered.filter((c) => this.urgencias().includes(c.urgencia));
+    }
+
+    if (this.tipos().length > 0) {
+      filtered = filtered.filter((c) => this.tipos().includes(c.tipo));
+    }
+
+    if (this.estados().length > 0) {
+      filtered = filtered.filter((c) => this.estados().includes(c.estado));
+    }
+
+    return filtered;
+  }
+
   loadCasos(): void {
     this.cargando.set(true);
     const filtros = this.buildFilterParams();
 
     this.casoService.listarCasos(filtros).subscribe({
       next: (response: RespuestaCasos | Caso[]): void => {
-        const content = Array.isArray(response) ? response : response.content || [];
-        const totalElements = Array.isArray(response)
-          ? response.length
-          : response.totalElements || content.length;
+        const rawContent = Array.isArray(response) ? response : response.content || [];
+        const allCasos = (rawContent as unknown as RawCasoItem[]).map((c) => this.mapRawCaso(c));
+        const filtered = this.filterCasos(allCasos);
 
-        const casosData = content.map((caso: Caso): Caso => ({
-          id: caso.id,
-          titulo: caso.titulo || '',
-          descripcion: caso.descripcion || '',
-          urgencia: caso.urgencia || 'MEDIA',
-          tipo: caso.tipo || 'HERIDO',
-          estado: caso.estado || 'REGISTRADO',
-          municipio: caso.municipio || '',
-          barrio: caso.barrio || '',
-          fechaReporte: caso.fechaReporte || new Date().toLocaleDateString('es-CO'),
-        }));
-
-        this.casos.set(casosData);
-        this.total.set(totalElements);
+        this.casos.set(filtered);
+        this.total.set(filtered.length);
         this.cargando.set(false);
       },
       error: (err: unknown): void => {
@@ -93,40 +182,6 @@ export class CasosComponent implements OnInit {
         this.cargando.set(false);
       },
     });
-  }
-
-  buildFilterParams(): FiltrosCasos {
-    const params: FiltrosCasos = {
-      page: this.page(),
-      size: this.pageSize,
-    };
-
-    if (this.urgencias().length > 0) {
-      params.urgencias = this.urgencias().join(',');
-    }
-    if (this.tipos().length > 0) {
-      params.tipos = this.tipos().join(',');
-    }
-    if (this.estados().length > 0) {
-      params.estados = this.estados().join(',');
-    }
-
-    const currentDepto = this.deptoId();
-    if (currentDepto !== null) {
-      params.deptoId = currentDepto;
-    }
-
-    const currentMun = this.munId();
-    if (currentMun !== null) {
-      params.munId = currentMun;
-    }
-
-    const currentBarrio = this.barrioId();
-    if (currentBarrio !== null) {
-      params.barrioId = currentBarrio;
-    }
-
-    return params;
   }
 
   toggleUrgencia(urgencia: string): void {
@@ -192,7 +247,7 @@ export class CasosComponent implements OnInit {
   }
 
   getBadgeClass(urgencia: string): string {
-    switch (urgencia) {
+    switch (urgencia?.toUpperCase()) {
       case 'CRITICA':
         return 'badge-emergencia';
       case 'ALTA':
@@ -207,7 +262,7 @@ export class CasosComponent implements OnInit {
   }
 
   getBadgeLabel(urgencia: string): string {
-    switch (urgencia) {
+    switch (urgencia?.toUpperCase()) {
       case 'CRITICA':
         return 'Emergencia';
       case 'ALTA':
@@ -217,7 +272,7 @@ export class CasosComponent implements OnInit {
       case 'BAJA':
         return 'Baja';
       default:
-        return urgencia;
+        return urgencia || 'Media';
     }
   }
 }

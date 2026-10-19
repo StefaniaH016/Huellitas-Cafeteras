@@ -209,7 +209,13 @@
         <p class="group-label" id="etiqueta-fotos">
           Fotografías <span class="optional">(recomendado)</span>
         </p>
-        <label class="dropzone" for="fotos" aria-disabled="true">
+        <label
+          class="dropzone"
+          for="fotos"
+          [class.has-file]="fotos().length > 0"
+          (dragover)="onDragOver($event)"
+          (drop)="onFileDrop($event)"
+        >
           <span class="dropzone-title">Toca para elegir fotos o arrástralas aquí</span>
           <span class="dropzone-hint">JPG, PNG o WebP · hasta 5 fotos de máximo 5 MB</span>
           <input
@@ -218,13 +224,33 @@
             type="file"
             accept="image/jpeg,image/png,image/webp"
             multiple
-            disabled
+            (change)="onFilesSelected($event)"
             aria-describedby="error-fotos contadorFotos"
           />
         </label>
-        <p class="field-hint" id="contadorFotos">0 de 5 fotos</p>
-        <p class="field-note">Feature próximamente disponible</p>
-        <p class="field-error" id="error-fotos" hidden></p>
+        <p class="field-hint" id="contadorFotos">{{ fotos().length }} de 5 fotos</p>
+
+        @if (fotoError()) {
+          <p class="field-error" id="error-fotos">{{ fotoError() }}</p>
+        }
+
+        @if (previewUrls().length > 0) {
+          <div class="preview-grid">
+            @for (url of previewUrls(); track $index) {
+              <div class="preview-card">
+                <img [src]="url" [alt]="'Foto ' + ($index + 1)" class="preview-thumb" />
+                <button
+                  type="button"
+                  class="preview-remove-btn"
+                  (click)="removeFoto($index)"
+                  aria-label="Eliminar foto"
+                >
+                  ✕
+                </button>
+              </div>
+            }
+          </div>
+        }
       </div>
 
       <div class="step-actions">
@@ -259,6 +285,16 @@
           <p class="summary-label">Ubicación</p>
           <p class="summary-value">{{ deptoNombre() }}, {{ munNombre() }}</p>
         </div>
+        @if (previewUrls().length > 0) {
+          <div class="summary-section">
+            <p class="summary-label">Fotos ({{ previewUrls().length }})</p>
+            <div class="summary-previews">
+              @for (url of previewUrls(); track $index) {
+                <img [src]="url" [alt]="'Foto ' + ($index + 1)" class="summary-thumb" />
+              }
+            </div>
+          </div>
+        }
       </div>
 
       @if (submitError()) {
