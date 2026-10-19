@@ -25,6 +25,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
 /**
@@ -121,15 +122,24 @@ class CloudinaryServiceTest {
         casoMock.getFotos().add(fotoExistente);
 
         when(casoRepository.findById(1L)).thenReturn(Optional.of(casoMock));
+
+        // usar anyLong() para evitar problemas de matching
+        when(fotoRepository.existsByCasoId(anyLong())).thenReturn(true);
+
         ArgumentCaptor<Foto> fotoCaptor = ArgumentCaptor.forClass(Foto.class);
         when(fotoRepository.save(fotoCaptor.capture())).thenAnswer(invocation -> invocation.getArgument(0));
 
         // Act
         cloudinaryService.subirImagen(archivoMock, 1L);
 
-        // Assert
+        // Assert: verificar que existsByCasoId fue llamado
+        verify(fotoRepository, times(1)).existsByCasoId(1L);
+
+        // verificar save y la propiedad principal
+        verify(fotoRepository, times(1)).save(any(Foto.class));
         Foto fotoGuardada = fotoCaptor.getValue();
         assertFalse(fotoGuardada.isPrincipal(), "No debe ser principal si ya hay fotos");
+
     }
 
     @Test

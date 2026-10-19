@@ -154,35 +154,23 @@ export class CasoDetalleComponent implements OnInit {
   }
 
   private extractFotos(response: CasoResponse): string[] {
-    const urls: string[] = [];
+    const fotos = response.fotografias ?? [];
 
-    if (Array.isArray(response.fotografias) && response.fotografias.length > 0) {
-      const sorted = [...response.fotografias].sort((a, b) => {
-        if (a.principal && !b.principal) {
-          return -1;
-        }
-        if (!a.principal && b.principal) {
-          return 1;
-        }
-        return 0;
-      });
+    // Ordenar y extraer URLs válidas en un solo flujo declarativo
+    const urls = [...fotos]
+      .sort((a, b) => Number(!!b.principal) - Number(!!a.principal))
+      .map((f) => f?.url?.trim())
+      .filter((url): url is string => Boolean(url));
 
-      for (const f of sorted) {
-        if (f?.url && typeof f.url === 'string' && f.url.trim().length > 0) {
-          urls.push(f.url.trim());
-        }
-      }
+    if (urls.length > 0) {
+      return urls;
     }
 
-    if (urls.length === 0) {
-      const respRecord = response as Record<string, unknown>;
-      const single = respRecord['fotoPrincipal'] || respRecord['foto'];
-      if (typeof single === 'string' && single.trim().length > 0) {
-        urls.push(single.trim());
-      }
-    }
+    // Fallback si no hay fotos en el arreglo
+    const respRecord = response as Record<string, unknown>;
+    const single = respRecord['fotoPrincipal'] ?? respRecord['foto'];
 
-    return urls;
+    return typeof single === 'string' && single.trim() ? [single.trim()] : [];
   }
 
   private extractAnimalInfo(a?: AnimalResponse): {
