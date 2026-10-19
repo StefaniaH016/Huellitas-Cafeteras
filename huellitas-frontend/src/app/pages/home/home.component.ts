@@ -113,6 +113,14 @@ export class HomeComponent implements OnInit {
     ),
   );
 
+  // Mis reportes (Ciudadano)
+  misReportes = signal<Caso[]>([]);
+  cargandoMisReportes = signal(false);
+
+  misReportesActivos = computed(() => this.misReportes().filter((c) => c.estado !== 'RESUELTO'));
+
+  misReportesResueltos = computed(() => this.misReportes().filter((c) => c.estado === 'RESUELTO'));
+
   ngOnInit(): void {
     const rawRole = this.authService.getRol();
     const normalized = normalizeRole(rawRole);
@@ -128,6 +136,26 @@ export class HomeComponent implements OnInit {
       this.cargarDepartamentos();
       this.cargarFeed();
     }
+
+    if (this.isCiudadano()) {
+      this.cargarMisReportes();
+    }
+  }
+
+  cargarMisReportes(): void {
+    this.cargandoMisReportes.set(true);
+    this.casoService.getMisReportes(0).subscribe({
+      next: (resp: unknown): void => {
+        const list = this.extractCasosArray(resp);
+        this.misReportes.set(list);
+        this.cargandoMisReportes.set(false);
+      },
+      error: (err: unknown): void => {
+        console.error('Error cargando mis reportes:', err);
+        this.misReportes.set([]);
+        this.cargandoMisReportes.set(false);
+      },
+    });
   }
 
   cargarDepartamentos(): void {

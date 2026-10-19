@@ -16,11 +16,12 @@
       </section>
       <section class="dash-figures" aria-label="Resumen de tu actividad">
         <a class="figure" routerLink="/mis-reportes"
-          ><span class="figure-num">{{ casos().length }}</span
+          ><span class="figure-num">{{ misReportesActivos().length }}</span
           ><span class="figure-label">Reporte activo</span></a
         >
         <a class="figure" routerLink="/mis-reportes"
-          ><span class="figure-num">0</span><span class="figure-label">Caso resuelto</span></a
+          ><span class="figure-num">{{ misReportesResueltos().length }}</span
+          ><span class="figure-label">Caso resuelto</span></a
         >
         <a class="figure" routerLink="/notificaciones"
           ><span class="figure-num">0</span
@@ -32,25 +33,42 @@
           <h3>Tus reportes en curso</h3>
           <a class="panel-link" routerLink="/mis-reportes">Ver todos mis reportes</a>
         </div>
-        @for (caso of casos(); track caso.id) {
-          <div class="list-row">
-            <div class="list-thumb">🐾</div>
-            <div class="list-info">
-              <p class="list-title">{{ caso.titulo || caso.descripcion }}</p>
-              @if (caso.municipio) {
-                <p class="list-meta">{{ caso.municipio }}</p>
-              }
+        @if (cargandoMisReportes()) {
+          <p class="list-empty">Cargando tus reportes...</p>
+        } @else if (misReportesActivos().length === 0) {
+          <p class="list-empty">No tienes reportes en curso actualmente.</p>
+        } @else {
+          @for (caso of misReportesActivos(); track caso.id) {
+            <div class="list-row" [routerLink]="['/caso-detalle', caso.id]" style="cursor: pointer">
+              <div class="list-thumb">
+                @if (caso.foto) {
+                  <img
+                    [src]="caso.foto"
+                    [alt]="caso.titulo"
+                    class="list-thumb-img"
+                    (error)="caso.foto = ''"
+                  />
+                } @else {
+                  🐾
+                }
+              </div>
+              <div class="list-info">
+                <p class="list-title">{{ caso.titulo || caso.descripcion }}</p>
+                @if (caso.municipio) {
+                  <p class="list-meta">{{ caso.municipio }} · {{ caso.barrio }}</p>
+                }
+              </div>
+              <span class="badge" [ngClass]="getBadgeClass(caso.urgencia)">
+                <span class="badge-dot"></span>
+                {{ getBadgeLabel(caso.urgencia) }}
+              </span>
+              <div class="list-actions">
+                <button class="btn btn-secondary btn-sm" [routerLink]="['/caso-detalle', caso.id]">
+                  Ver seguimiento
+                </button>
+              </div>
             </div>
-            <span class="badge" [ngClass]="getBadgeClass(caso.urgencia)">
-              <span class="badge-dot"></span>
-              {{ getBadgeLabel(caso.urgencia) }}
-            </span>
-            <div class="list-actions">
-              <button class="btn btn-secondary btn-sm" routerLink="/mis-reportes">
-                Ver seguimiento
-              </button>
-            </div>
-          </div>
+          }
         }
       </section>
     </div>
