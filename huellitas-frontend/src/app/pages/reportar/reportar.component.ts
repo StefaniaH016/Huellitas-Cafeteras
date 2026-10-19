@@ -2,7 +2,7 @@ import { Component, OnDestroy, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { forkJoin } from 'rxjs';
+import { from, concatMap, toArray } from 'rxjs';
 import { CasoService } from '../../core/services/caso.service';
 import { UbicacionService } from '../../core/services/ubicacion.service';
 import { UbicacionSelectorComponent } from '../../shared/components/ubicacion-selector/ubicacion-selector.component';
@@ -298,16 +298,20 @@ export class ReportarComponent implements OnDestroy {
       return;
     }
 
-    const uploads = files.map((file) => this.casoService.subirImagen(file, casoIdNum));
-    forkJoin(uploads).subscribe({
-      next: (): void => {
-        this.finishPublicacion(idGenerado);
-      },
-      error: (uploadErr: unknown): void => {
-        console.error('Error al subir imágenes:', uploadErr);
-        this.finishPublicacion(idGenerado);
-      },
-    });
+    from(files)
+      .pipe(
+        concatMap((file) => this.casoService.subirImagen(file, casoIdNum)),
+        toArray(),
+      )
+      .subscribe({
+        next: (): void => {
+          this.finishPublicacion(idGenerado);
+        },
+        error: (uploadErr: unknown): void => {
+          console.error('Error al subir imágenes:', uploadErr);
+          this.finishPublicacion(idGenerado);
+        },
+      });
   }
 
   private finishPublicacion(idGenerado: string): void {
