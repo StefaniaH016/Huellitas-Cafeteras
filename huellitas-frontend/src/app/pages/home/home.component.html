@@ -138,7 +138,7 @@
             >
               <div class="case-photo">
                 @if (caso.foto) {
-                  <img [src]="caso.foto" [alt]="caso.titulo" />
+                  <img [src]="caso.foto" [alt]="caso.titulo" (error)="caso.foto = ''" />
                 } @else {
                   <span style="color: var(--ink-soft)">Foto del animal</span>
                 }
@@ -232,20 +232,20 @@
       </section>
       <section class="dash-figures" aria-label="Resumen de tu fundación">
         <a class="figure" routerLink="/fundacion"
-          ><span class="figure-num">{{ casos().length }}</span
+          ><span class="figure-num">{{ casosEnCustodia().length }}</span
           ><span class="figure-label">En custodia, de 20 cupos</span
           ><progress
-            [value]="casos().length"
+            [value]="casosEnCustodia().length"
             max="20"
             aria-label="Cupos de albergue usados"
           ></progress
         ></a>
         <a class="figure" routerLink="/fundacion"
-          ><span class="figure-num">0</span
+          ><span class="figure-num">{{ esperandoAtencionMedica().length }}</span
           ><span class="figure-label">Esperando atención médica</span></a
         >
         <a class="figure is-urgent" routerLink="/casos"
-          ><span class="figure-num">0</span
+          ><span class="figure-num">{{ emergenciasZona().length }}</span
           ><span class="figure-label">Emergencias en tu municipio</span></a
         >
       </section>
@@ -255,14 +255,68 @@
             <h3>Emergencias sin custodia en tu zona</h3>
             <a class="panel-link" routerLink="/casos">Ver casos de mi zona</a>
           </div>
-          <p class="list-empty">No hay emergencias sin custodia en tu zona.</p>
+          @if (emergenciasZona().length === 0) {
+            <p class="list-empty">No hay emergencias sin custodia en tu zona.</p>
+          } @else {
+            @for (alerta of emergenciasZona(); track alerta.id) {
+              <div
+                class="list-row"
+                [routerLink]="['/caso-detalle', alerta.id]"
+                style="cursor: pointer"
+              >
+                <div class="list-thumb">🐾</div>
+                <div class="list-info">
+                  <p class="list-title">{{ alerta.titulo || alerta.descripcion }}</p>
+                  <p class="list-meta">
+                    {{ alerta.municipio }} · {{ alerta.barrio }} · sin custodia
+                  </p>
+                </div>
+                <span class="badge" [ngClass]="getBadgeClass(alerta.urgencia)">
+                  <span class="badge-dot"></span>
+                  {{ getBadgeLabel(alerta.urgencia) }}
+                </span>
+                <div class="list-actions">
+                  <button
+                    class="btn btn-primary btn-sm"
+                    [routerLink]="['/caso-detalle', alerta.id]"
+                  >
+                    Ver caso
+                  </button>
+                </div>
+              </div>
+            }
+          }
         </section>
         <section class="panel">
           <div class="panel-head">
             <h3>En custodia ahora</h3>
             <a class="panel-link" routerLink="/fundacion">Ver mi panel</a>
           </div>
-          <p class="list-empty">No hay animales en custodia actualmente.</p>
+          @if (casosEnCustodia().length === 0) {
+            <p class="list-empty">No hay animales en custodia actualmente.</p>
+          } @else {
+            @for (animal of casosEnCustodia(); track animal.id) {
+              <div
+                class="list-row"
+                [routerLink]="['/caso-detalle', animal.id]"
+                style="cursor: pointer"
+              >
+                <div class="list-thumb">🐾</div>
+                <div class="list-info">
+                  <p class="list-title">{{ animal.titulo || animal.descripcion }}</p>
+                  <p class="list-meta">{{ animal.municipio }} · {{ animal.barrio }}</p>
+                </div>
+                <div class="list-actions">
+                  <button
+                    class="btn btn-secondary btn-sm"
+                    [routerLink]="['/caso-detalle', animal.id]"
+                  >
+                    Ver caso
+                  </button>
+                </div>
+              </div>
+            }
+          }
         </section>
       </div>
     </div>
@@ -343,19 +397,61 @@
             </p>
           }
           @for (caso of casos(); track caso.id) {
-            <article class="case-card">
+            <article
+              class="case-card"
+              [routerLink]="['/caso-detalle', caso.id]"
+              style="cursor: pointer"
+            >
               <div class="case-photo">
                 @if (caso.foto) {
-                  <img [src]="caso.foto" [alt]="caso.titulo" />
+                  <img [src]="caso.foto" [alt]="caso.titulo" (error)="caso.foto = ''" />
                 } @else {
                   <span style="color: var(--ink-soft)">Foto del animal</span>
                 }
               </div>
               <div class="case-body">
-                <span class="badge" [ngClass]="getBadgeClass(caso.urgencia)">
-                  <span class="badge-dot"></span>
-                  {{ getBadgeLabel(caso.urgencia) }}
-                </span>
+                <div
+                  style="
+                    display: flex;
+                    gap: 0.4rem;
+                    align-items: center;
+                    margin-bottom: 0.4rem;
+                    flex-wrap: wrap;
+                  "
+                >
+                  <span class="badge" [ngClass]="getBadgeClass(caso.urgencia)">
+                    <span class="badge-dot"></span>
+                    {{ getBadgeLabel(caso.urgencia) }}
+                  </span>
+                  @if (caso.tipoCaso && getTipoLabel(caso.tipoCaso)) {
+                    <span
+                      class="badge"
+                      style="
+                        background: var(--lav-100, #f0ebfd);
+                        color: var(--lav-700, #5c35b8);
+                        font-size: 0.75rem;
+                        padding: 0.2rem 0.5rem;
+                        border-radius: 99px;
+                      "
+                    >
+                      {{ getTipoLabel(caso.tipoCaso) }}
+                    </span>
+                  }
+                  @if (caso.estado) {
+                    <span
+                      class="badge"
+                      style="
+                        background: var(--pine-100, #e6f6f0);
+                        color: var(--pine-700, #147253);
+                        font-size: 0.75rem;
+                        padding: 0.2rem 0.5rem;
+                        border-radius: 99px;
+                      "
+                    >
+                      {{ getEstadoLabel(caso.estado) }}
+                    </span>
+                  }
+                </div>
                 <p class="case-title">{{ caso.titulo || caso.descripcion }}</p>
                 <p class="case-meta">{{ caso.municipio }} · {{ caso.barrio }}</p>
               </div>
@@ -491,19 +587,61 @@
             </p>
           }
           @for (caso of casos(); track caso.id) {
-            <article class="case-card">
+            <article
+              class="case-card"
+              [routerLink]="['/caso-detalle', caso.id]"
+              style="cursor: pointer"
+            >
               <div class="case-photo">
                 @if (caso.foto) {
-                  <img [src]="caso.foto" [alt]="caso.titulo" />
+                  <img [src]="caso.foto" [alt]="caso.titulo" (error)="caso.foto = ''" />
                 } @else {
                   <span style="color: var(--ink-soft)">Foto del animal</span>
                 }
               </div>
               <div class="case-body">
-                <span class="badge" [ngClass]="getBadgeClass(caso.urgencia)">
-                  <span class="badge-dot"></span>
-                  {{ getBadgeLabel(caso.urgencia) }}
-                </span>
+                <div
+                  style="
+                    display: flex;
+                    gap: 0.4rem;
+                    align-items: center;
+                    margin-bottom: 0.4rem;
+                    flex-wrap: wrap;
+                  "
+                >
+                  <span class="badge" [ngClass]="getBadgeClass(caso.urgencia)">
+                    <span class="badge-dot"></span>
+                    {{ getBadgeLabel(caso.urgencia) }}
+                  </span>
+                  @if (caso.tipoCaso && getTipoLabel(caso.tipoCaso)) {
+                    <span
+                      class="badge"
+                      style="
+                        background: var(--lav-100, #f0ebfd);
+                        color: var(--lav-700, #5c35b8);
+                        font-size: 0.75rem;
+                        padding: 0.2rem 0.5rem;
+                        border-radius: 99px;
+                      "
+                    >
+                      {{ getTipoLabel(caso.tipoCaso) }}
+                    </span>
+                  }
+                  @if (caso.estado) {
+                    <span
+                      class="badge"
+                      style="
+                        background: var(--pine-100, #e6f6f0);
+                        color: var(--pine-700, #147253);
+                        font-size: 0.75rem;
+                        padding: 0.2rem 0.5rem;
+                        border-radius: 99px;
+                      "
+                    >
+                      {{ getEstadoLabel(caso.estado) }}
+                    </span>
+                  }
+                </div>
                 <p class="case-title">{{ caso.titulo || caso.descripcion }}</p>
                 <p class="case-meta">{{ caso.municipio }} · {{ caso.barrio }}</p>
               </div>

@@ -22,6 +22,7 @@ interface Caso {
   municipio: string;
   barrio: string;
   foto?: string;
+  fundacion?: string;
 }
 
 interface FiltrosCaso {
@@ -48,6 +49,8 @@ interface RawHomeCaso {
   fotoPrincipal?: string;
   foto?: string;
   fotografias?: { url?: string }[];
+  fundacion?: string;
+  fundacionCustodio?: string;
 }
 
 @Component({
@@ -91,6 +94,24 @@ export class HomeComponent implements OnInit {
   isFundacion = computed(() => this.rol() === 'FUNDACION_REFUGIO');
   isVeterinaria = computed(() => this.rol() === 'VETERINARIA');
   isAdmin = computed(() => this.rol() === 'ADMINISTRADOR');
+
+  casosEnCustodia = computed(() => {
+    const nombre = this.authService.getNombre();
+    if (!nombre) {
+      return [];
+    }
+    return this.casos().filter((c) => c.estado === 'EN_ATENCION' && c.fundacion === nombre);
+  });
+
+  emergenciasZona = computed(() =>
+    this.casos().filter((c) => c.urgencia === 'CRITICA' || c.urgencia === 'ALTA'),
+  );
+
+  esperandoAtencionMedica = computed(() =>
+    this.casos().filter(
+      (c) => c.estado === 'EN_ATENCION' && (c.tipoCaso === 'HERIDO' || c.urgencia === 'CRITICA'),
+    ),
+  );
 
   ngOnInit(): void {
     const rawRole = this.authService.getRol();
@@ -219,6 +240,7 @@ export class HomeComponent implements OnInit {
       municipio: this.fallbackStr(c.municipio),
       barrio: this.fallbackStr(c.barrio),
       foto: this.extractHomeFoto(c),
+      fundacion: this.fallbackStr(c.fundacion, this.fallbackStr(c.fundacionCustodio)),
     };
   }
 

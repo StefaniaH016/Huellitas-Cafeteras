@@ -195,6 +195,13 @@ export class CasoDetalleComponent implements OnInit {
     };
   }
 
+  onFotoError(): void {
+    const c = this.caso();
+    if (c) {
+      this.caso.set({ ...c, foto: '' });
+    }
+  }
+
   loadDetalle(id: string | number): void {
     this.cargando.set(true);
     this.casoService.getDetalle(Number(id)).subscribe({

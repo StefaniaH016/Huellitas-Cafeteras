@@ -46,6 +46,15 @@
       <div class="filter-group">
         <h4>Tipo de caso</h4>
         <div class="checklist">
+          <label for="check-tipo-herido">
+            <input
+              id="check-tipo-herido"
+              type="checkbox"
+              [checked]="tipos().includes('HERIDO')"
+              (change)="toggleTipo('HERIDO')"
+            />
+            Herido
+          </label>
           <label for="check-tipo-vulnerable">
             <input
               id="check-tipo-vulnerable"
@@ -134,7 +143,12 @@
           <div class="list-row">
             <div class="list-thumb">
               @if (caso.foto) {
-                <img [src]="caso.foto" [alt]="caso.titulo" class="list-thumb-img" />
+                <img
+                  [src]="caso.foto"
+                  [alt]="caso.titulo"
+                  class="list-thumb-img"
+                  (error)="caso.foto = ''"
+                />
               } @else {
                 🐾
               }

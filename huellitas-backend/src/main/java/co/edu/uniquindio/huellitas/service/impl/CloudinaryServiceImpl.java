@@ -43,13 +43,17 @@ public class CloudinaryServiceImpl implements CloudinaryService {
         String url;
         String publicId;
 
+        String cleanCloudName = cloudName != null ? cloudName.trim() : "";
+        String cleanApiKey = apiKey != null ? apiKey.trim() : "";
+        String cleanApiSecret = apiSecret != null ? apiSecret.trim() : "";
+
         // Si las credenciales reales de Cloudinary están configuradas y se envió archivo, subimos a la nube
-        if (archivo != null && !archivo.isEmpty() && cloudName != null && !cloudName.isBlank() && !cloudName.equals("test-cloud")) {
+        if (archivo != null && !archivo.isEmpty() && !cleanCloudName.isBlank() && !cleanCloudName.equals("test-cloud")) {
             try {
                 Cloudinary cloudinary = new Cloudinary(ObjectUtils.asMap(
-                        "cloud_name", cloudName,
-                        "api_key", apiKey,
-                        "api_secret", apiSecret,
+                        "cloud_name", cleanCloudName,
+                        "api_key", cleanApiKey,
+                        "api_secret", cleanApiSecret,
                         "secure", true
                 ));
                 Map<?, ?> uploadResult = cloudinary.uploader().upload(archivo.getBytes(), ObjectUtils.emptyMap());
@@ -58,7 +62,7 @@ public class CloudinaryServiceImpl implements CloudinaryService {
             } catch (Exception e) {
                 log.warn("Fallo en subida a Cloudinary, usando fallback simulado: {}", e.getMessage());
                 publicId = "huellitas_" + UUID.randomUUID();
-                url = "https://res.cloudinary.com/" + cloudName + "/image/upload/v1/" + publicId + ".jpg";
+                url = "https://res.cloudinary.com/" + cleanCloudName + "/image/upload/v1/" + publicId + ".jpg";
             }
         } else {
             // Modo local / test fallback

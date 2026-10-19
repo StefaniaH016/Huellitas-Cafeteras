@@ -57,7 +57,7 @@ export class CasosComponent implements OnInit {
   pageSize = 10;
 
   urgencias = signal<string[]>(['CRITICA', 'ALTA', 'MEDIA', 'BAJA']);
-  tipos = signal<string[]>(['VULNERABLE', 'EXTRAVIADO']);
+  tipos = signal<string[]>(['HERIDO', 'VULNERABLE', 'EXTRAVIADO']);
   estados = signal<string[]>(['REGISTRADO', 'EN_ATENCION']);
   deptoId = signal<number | null>(null);
   munId = signal<number | null>(null);
