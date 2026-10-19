@@ -1,59 +1,122 @@
 /* Google Fonts */
 @import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Public+Sans:wght@400;500;600;700&display=swap');
 
-/* CSS Variables */
+/* Design Tokens */
 :root {
-  --color-primary: #7b2fbe;
-  --color-primary-dark: #5a1f9a;
-  --color-primary-light: #f5f0fb;
-  --color-secondary: #e91e8c;
-  --color-bg: #f8f6fd;
-  --color-text: #1a1a2e;
-  --color-text-muted: #6b6b8a;
-  --color-white: #ffffff;
-  --color-border: #e2d9f3;
-  --color-success: #22c55e;
-  --color-warning: #f59e0b;
-  --color-danger: #ef4444;
-  --color-info: #3b82f6;
-  --font-heading: 'Baloo 2', cursive;
-  --font-body: 'Public Sans', sans-serif;
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 20px;
-  --shadow-sm: 0 2px 8px rgba(123, 47, 190, 0.08);
-  --shadow-md: 0 4px 16px rgba(123, 47, 190, 0.12);
+  --brown-900: #3a3166;
+  --brown-700: #6c5fd6;
+  --brown-500: #8b7fe8;
+  --paper: #ffffff;
+  --paper-2: #f6f3fe;
+  --pine-700: #6c5fd6;
+  --pine-700-rgb: 108, 95, 214;
+  --pine-500: #8b7fe8;
+  --pine-100: #efeafc;
+  --coral-600: #ff6b9d;
+  --coral-100: #ffebf1;
+  --amber-600: #f7b267;
+  --amber-100: #fff1de;
+  --sky-100: #e4f0ff;
+  --mint-100: #dff7ec;
+  --ink: #3a3166;
+  --ink-soft: #8880ac;
+  --line: #ddd6f3;
+  --card-bg: #ffffff;
+  --shadow: 0 10px 24px rgba(108, 95, 214, 0.15);
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --paper: #1c1830;
+    --paper-2: #221d3b;
+    --card-bg: #282249;
+    --ink: #efebff;
+    --ink-soft: #b4acd9;
+    --line: #3a3363;
+  }
+}
+
+:root[data-theme='dark'] {
+  --paper: #1c1830;
+  --paper-2: #221d3b;
+  --card-bg: #282249;
+  --ink: #efebff;
+  --ink-soft: #b4acd9;
+  --line: #3a3363;
+}
+
+:root[data-theme] .doodles span {
+  opacity: 0.14;
 }
 
 /* Reset */
+html {
+  scroll-padding-top: env(safe-area-inset-top, 0px);
+  scroll-behavior: smooth;
+}
+
 *,
 *::before,
 *::after {
   box-sizing: border-box;
+}
+
+body {
   margin: 0;
-  padding: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family:
+    'Public Sans',
+    system-ui,
+    -apple-system,
+    sans-serif;
+  line-height: 1.5;
 }
-html,
-body {
-  height: 100%;
+
+/* Doodles */
+.doodles {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  overflow: hidden;
 }
-body {
-  font-family: var(--font-body);
-  background-color: var(--color-bg);
-  color: var(--color-text);
-  line-height: 1.6;
+
+.doodles span {
+  position: absolute;
+  opacity: 0.16;
+  filter: saturate(1.1);
 }
+
+/* Headings */
+h1,
+h2,
+h3,
+.serif {
+  font-family: 'Baloo 2', 'Public Sans', sans-serif;
+  font-weight: 700;
+}
+
+/* Images */
+img,
+svg {
+  max-width: 100%;
+}
+
+/* Links */
 a {
-  color: var(--color-primary);
+  color: var(--ink);
   text-decoration: none;
 }
+
 a:hover {
   text-decoration: underline;
 }
-button {
-  cursor: pointer;
-  font-family: inherit;
-}
-img {
-  max-width: 100%;
+
+/* Hidden */
+[hidden] {
+  display: none !important;
 }

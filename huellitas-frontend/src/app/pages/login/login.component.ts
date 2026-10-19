@@ -37,9 +37,9 @@ export class LoginComponent {
     this.showError.set(false);
     const { email, password } = this.loginForm.value;
     this.authService.login(email!, password!).subscribe({
-      next: (rol) => {
+      next: () => {
         this.isLoading.set(false);
-        this.authService.navigateAfterLogin(rol);
+        this.authService.navigateAfterLogin();
       },
       error: () => {
         this.isLoading.set(false);
@@ -48,7 +48,8 @@ export class LoginComponent {
     });
   }
 
-  toggleRecovery(): void {
+  toggleRecovery($event?: Event): void {
+    $event?.preventDefault();
     this.showRecovery.update((v) => !v);
   }
 

@@ -4,20 +4,46 @@ import { Injectable } from '@angular/core';
   providedIn: 'root',
 })
 export class TokenService {
-  private readonly tokenKey = 'hc_token';
+  private readonly TOKEN_KEY = 'auth_token';
 
-  setToken(token: string): void {
-    localStorage.setItem(this.tokenKey, token);
-  }
-
+  /**
+   * Get JWT token from localStorage
+   */
   getToken(): string | null {
-    return localStorage.getItem(this.tokenKey);
+    return localStorage.getItem(this.TOKEN_KEY);
   }
 
+  /**
+   * Save JWT token to localStorage
+   */
+  setToken(token: string): void {
+    localStorage.setItem(this.TOKEN_KEY, token);
+  }
+
+  /**
+   * Remove JWT token from localStorage
+   */
   removeToken(): void {
-    localStorage.removeItem(this.tokenKey);
+    localStorage.removeItem(this.TOKEN_KEY);
   }
 
+  /**
+   * Clear JWT token from localStorage (alias for removeToken)
+   */
+  clearToken(): void {
+    this.removeToken();
+  }
+
+  /**
+   * Check if token exists
+   */
+  hasToken(): boolean {
+    return !!this.getToken();
+  }
+
+  /**
+   * Decode JWT token payload (without verification - client-side only)
+   */
   decodePayload(): Record<string, unknown> | null {
     const token = this.getToken();
     if (!token) {
@@ -27,17 +53,17 @@ export class TokenService {
     try {
       const parts = token.split('.');
       if (parts.length !== 3) {
+        console.warn('[TokenService] Invalid token format');
         return null;
       }
 
-      let b64 = parts[1];
-      // Fix base64 padding
-      b64 = b64.replace(/-/g, '+').replace(/_/g, '/');
-      b64 = b64.padEnd(b64.length + ((4 - (b64.length % 4)) % 4), '=');
-
-      const payload = JSON.parse(atob(b64));
-      return payload;
-    } catch {
+      const payload = parts[1];
+      // Add padding if needed
+      const padded = payload + '='.repeat((4 - (payload.length % 4)) % 4);
+      const decoded = atob(padded);
+      return JSON.parse(decoded) as Record<string, unknown>;
+    } catch (error) {
+      console.error('[TokenService] Error decoding token:', error);
       return null;
     }
   }

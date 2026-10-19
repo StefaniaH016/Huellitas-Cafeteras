@@ -21,9 +21,9 @@ interface FormValue {
   confirmPassword?: string;
   nombreEntidad?: string;
   nit?: string;
-  documentoLegal?: string;
+  tarjetaProf?: string;
   municipioOperacion?: string;
-  documentoSoporte?: string;
+  docSoporte?: string;
   aceptaDatos?: boolean;
 }
 
@@ -75,9 +75,9 @@ export class RegistroComponent {
     confirmPassword: ['', [Validators.required, confirmPasswordValidator]],
     nombreEntidad: [''],
     nit: [''],
-    documentoLegal: [''],
+    tarjetaProf: [''],
     municipioOperacion: [''],
-    documentoSoporte: [''],
+    docSoporte: [''],
     aceptaDatos: [false, Validators.requiredTrue],
   });
 
@@ -122,9 +122,9 @@ export class RegistroComponent {
     return {
       ...(formValue.nombreEntidad && { nombreEntidad: formValue.nombreEntidad }),
       ...(formValue.nit && { nit: formValue.nit }),
-      ...(formValue.documentoLegal && { documentoLegal: formValue.documentoLegal }),
+      ...(formValue.tarjetaProf && { documentoLegal: formValue.tarjetaProf }),
       ...(formValue.municipioOperacion && { municipioOperacion: formValue.municipioOperacion }),
-      ...(formValue.documentoSoporte && { documentoSoporte: formValue.documentoSoporte }),
+      ...(formValue.docSoporte && { documentoSoporte: formValue.docSoporte }),
     };
   }
 

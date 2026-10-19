@@ -89,7 +89,7 @@ public class AuthServiceImpl implements AuthService {
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con correo: " + correo));
 
         UserDetails userDetails = userDetailsService.loadUserByUsername(correo);
-        String token = jwtUtils.generateToken(userDetails);
+        String token = jwtUtils.generateToken(userDetails, usuario.getNombre());
 
         UsuarioDTO usuarioDTO = new UsuarioDTO(
                 usuario.getId(),

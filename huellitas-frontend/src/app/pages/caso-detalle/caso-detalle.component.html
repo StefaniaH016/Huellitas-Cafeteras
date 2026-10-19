@@ -1,0 +1,121 @@
+<section id="caso-detalle">
+  <div class="main-area wrap-1080">
+    <div class="back-row">
+      <button class="icon-btn" (click)="goBack()">←</button>
+      <div class="flex-1">
+        <h1 class="m-0">{{ caso()?.titulo || caso()?.descripcion }}</h1>
+        <p class="lead mt-2xs">Caso #{{ caso()?.id }} · Registrado el {{ caso()?.fechaReporte }}</p>
+      </div>
+      <span class="badge" [ngClass]="getBadgeClass(caso()?.urgencia)">
+        <span class="badge-dot"></span>{{ getBadgeLabel(caso()?.urgencia) }}
+      </span>
+    </div>
+
+    <div class="two-col">
+      <div>
+        <div class="tabs">
+          <button
+            class="tab"
+            [class.active]="activeTab() === 'informacion'"
+            (click)="selectTab('informacion')"
+            role="tab"
+            [attr.aria-selected]="activeTab() === 'informacion'"
+          >
+            Información
+          </button>
+          <button
+            class="tab"
+            [class.active]="activeTab() === 'seguimiento'"
+            (click)="selectTab('seguimiento')"
+            role="tab"
+            [attr.aria-selected]="activeTab() === 'seguimiento'"
+            aria-disabled="true"
+          >
+            Seguimiento
+          </button>
+          <button
+            class="tab"
+            [class.active]="activeTab() === 'bitacora'"
+            (click)="selectTab('bitacora')"
+            role="tab"
+            [attr.aria-selected]="activeTab() === 'bitacora'"
+            aria-disabled="true"
+          >
+            Bitácora médica
+          </button>
+        </div>
+
+        @if (activeTab() === 'informacion') {
+          <div class="case-photo"></div>
+          <p class="text-soft-md">{{ caso()?.descripcion }}</p>
+          <div class="data-grid">
+            <div>
+              <p class="k">Especie</p>
+              <p class="v">{{ caso()?.especie }}</p>
+            </div>
+            <div>
+              <p class="k">Tamaño / edad</p>
+              <p class="v">{{ caso()?.tamanio }} · {{ caso()?.edad }}</p>
+            </div>
+            <div>
+              <p class="k">Color y señas</p>
+              <p class="v">{{ caso()?.color }}</p>
+            </div>
+            <div>
+              <p class="k">Ubicación</p>
+              <p class="v">{{ caso()?.municipio }} · {{ caso()?.barrio }}</p>
+            </div>
+          </div>
+        }
+
+        @if (activeTab() === 'seguimiento') {
+          <p class="text-soft-md" style="padding: 1rem">Seguimiento próximamente disponible.</p>
+        }
+
+        @if (activeTab() === 'bitacora') {
+          <p class="text-soft-md" style="padding: 1rem">Bitácora médica próximamente disponible.</p>
+        }
+      </div>
+
+      <aside>
+        <div class="panel">
+          <div class="panel-head">
+            <h3>Acciones</h3>
+          </div>
+          <button class="btn btn-primary btn-block mb-sm">Asumir custodia</button>
+          <button class="btn btn-secondary btn-block mb-sm">Solicitar atención médica</button>
+          <button class="btn btn-secondary btn-block">Contactar al reportante</button>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h3>Responsables</h3>
+          </div>
+          @if (caso()?.fundacion) {
+            <div class="list-row">
+              <div class="avatar-dot">🏠</div>
+              <div class="list-info">
+                <p class="list-title">{{ caso()?.fundacion }}</p>
+                <p class="list-meta">A cargo</p>
+              </div>
+            </div>
+          }
+          @if (caso()?.veterinaria) {
+            <div class="list-row">
+              <div class="avatar-dot">🩺</div>
+              <div class="list-info">
+                <p class="list-title">{{ caso()?.veterinaria }}</p>
+                <p class="list-meta">Atención médica</p>
+              </div>
+            </div>
+          }
+          @if (!caso()?.fundacion && !caso()?.veterinaria) {
+            <p style="padding: 1rem; color: var(--ink-soft); font-size: 0.85rem">
+              Sin responsables asignados aún.
+            </p>
+          }
+        </div>
+      </aside>
+    </div>
+  </div>
+</section>

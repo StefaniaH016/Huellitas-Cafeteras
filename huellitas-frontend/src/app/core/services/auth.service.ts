@@ -5,6 +5,7 @@ import { Observable } from 'rxjs';
 import { tap, map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { TokenService } from './token.service';
+import { normalizeRole } from '../utils/role.utils';
 
 interface LoginResponse {
   token: string;
@@ -66,33 +67,36 @@ export class AuthService {
 
   getRol(): string | null {
     // First try to get from stored rol (from login response)
-    const storedRol = localStorage.getItem(this.rolKey);
-    if (storedRol) {
-      return storedRol;
+    let storedRol = localStorage.getItem(this.rolKey);
+    if (!storedRol) {
+      // Fallback to token payload (if backend later adds rol as claim)
+      const payload = this.tokenService.decodePayload();
+      storedRol = (payload?.['rol'] ?? null) as string | null;
     }
-    // Fallback to token payload (if backend later adds rol as claim)
-    const payload = this.tokenService.decodePayload();
-    return (payload?.['rol'] ?? null) as string | null;
+
+    // Normalize the role (handles both legacy short forms and current full enum names)
+    const normalized = normalizeRole(storedRol);
+    if (normalized) {
+      return normalized;
+    }
+
+    // If normalization fails, return null and log warning
+    if (storedRol) {
+      console.warn(`[AuthService] Unable to normalize role: "${storedRol}"`);
+    }
+    return null;
   }
 
   /**
-   * Navigate to role-specific dashboard after successful login.
-   * Centralizes redirect logic for use across components and guards.
+   * Navigate to /home for all roles after successful login.
+   * All roles land on /home with role-specific dashboards.
    */
-  navigateAfterLogin(rol: string): void {
-    switch (rol) {
-      case 'FUNDACION':
-        this.router.navigate(['/fundacion']);
-        break;
-      case 'VETERINARIA':
-        this.router.navigate(['/veterinaria']);
-        break;
-      case 'ADMIN':
-        this.router.navigate(['/admin']);
-        break;
-      case 'CIUDADANO_VOLUNTARIO':
-      default:
-        this.router.navigate(['/home']);
-    }
+  navigateAfterLogin(): void {
+    this.router.navigate(['/home']);
+  }
+
+  getNombre(): string | null {
+    const payload = this.tokenService.decodePayload();
+    return (payload?.['nombre'] ?? null) as string | null;
   }
 }

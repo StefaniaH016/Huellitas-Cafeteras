@@ -1,0 +1,200 @@
+.dash-layout {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+
+.sidebar-250 {
+  width: 250px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.filter-group h4 {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0 0 0.5rem;
+}
+
+.checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.checklist label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.main-area {
+  flex: 1;
+  min-width: 0;
+}
+
+.main-area h1 {
+  margin: 0 0 0.5rem;
+}
+
+.lead {
+  font-size: 0.95rem;
+  color: var(--ink-soft);
+  margin: 0 0 1.25rem;
+}
+
+.panel {
+  background: var(--card-bg);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  overflow: hidden;
+}
+
+.list-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.list-row:last-child {
+  border-bottom: none;
+}
+
+.list-thumb {
+  font-size: 2rem;
+  flex-shrink: 0;
+}
+
+.list-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.list-title {
+  font-weight: 600;
+  color: var(--ink);
+  margin: 0 0 0.2rem;
+}
+
+.list-meta {
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+  margin: 0;
+}
+
+.list-actions {
+  flex-shrink: 0;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.25rem 0.7rem;
+  border-radius: 20px;
+}
+
+.badge-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.badge-emergencia {
+  background: var(--coral-100);
+  color: var(--coral-600);
+}
+
+.badge-emergencia .badge-dot {
+  background: var(--coral-600);
+}
+
+.badge-alta {
+  background: var(--amber-100);
+  color: var(--amber-600);
+}
+
+.badge-alta .badge-dot {
+  background: var(--amber-600);
+}
+
+.badge-atencion,
+.badge-media {
+  background: var(--pine-100);
+  color: var(--pine-700);
+}
+
+.badge-atencion .badge-dot,
+.badge-media .badge-dot {
+  background: var(--pine-700);
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1.25rem;
+  justify-content: center;
+}
+
+.empty-msg {
+  text-align: center;
+  color: var(--ink-soft);
+  padding: 2rem;
+}
+
+.btn-block {
+  width: 100%;
+}
+
+/* Buttons */
+.btn {
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.6rem 1.2rem;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-sm {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.85rem;
+}
+
+.btn-primary {
+  background: var(--pine-700);
+  color: var(--paper);
+  box-shadow: 0 8px 18px rgba(108, 95, 214, 0.35);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--pine-500);
+}
+
+.btn-secondary {
+  background: var(--paper-2);
+  color: var(--ink);
+  border-color: transparent;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--paper-2);
+}

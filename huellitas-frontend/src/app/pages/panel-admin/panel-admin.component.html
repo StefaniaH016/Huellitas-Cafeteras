@@ -1,132 +1,89 @@
-<div class="admin-panel">
-  <div class="admin-header">
-    <h1>Administración</h1>
-    <div class="admin-avatar" aria-hidden="true">A1</div>
-  </div>
+<main>
+  <section class="dash-hello">
+    <div>
+      <h1>Hola, administrador</h1>
+      <p class="dash-summary">
+        Hay cuentas esperando validación y contenidos denunciados. Mantén la plataforma verificada y
+        segura.
+      </p>
+    </div>
+    <div class="dash-ctas">
+      <button class="btn btn-primary" (click)="setAdminTab('validar'); scrollToPanel()">
+        Validar cuentas
+      </button>
+      <button class="btn btn-secondary" (click)="setAdminTab('moderacion'); scrollToPanel()">
+        Moderar contenido
+      </button>
+    </div>
+  </section>
 
-  <nav class="admin-navbar" aria-label="Navegación de administración">
-    <button
-      type="button"
-      class="navbar-link"
-      [class.active]="activeSection() === 'resumen'"
-      (click)="setSection('resumen')"
-    >
-      Resumen
-    </button>
-    <button
-      type="button"
-      class="navbar-link"
-      [class.active]="activeSection() === 'validaciones'"
-      (click)="setSection('validaciones')"
-    >
-      Validaciones
-    </button>
-    <button
-      type="button"
-      class="navbar-link"
-      [class.active]="activeSection() === 'moderacion'"
-      (click)="setSection('moderacion')"
-    >
-      Moderación
-    </button>
-    <button
-      type="button"
-      class="navbar-link"
-      [class.active]="activeSection() === 'usuarios'"
-      (click)="setSection('usuarios')"
-    >
-      Usuarios
-    </button>
-    <button
-      type="button"
-      class="navbar-link"
-      [class.active]="activeSection() === 'casos'"
-      (click)="setSection('casos')"
-    >
-      Casos
-    </button>
-    <button
-      type="button"
-      class="navbar-link"
-      [class.active]="activeSection() === 'catalogos'"
-      (click)="setSection('catalogos')"
-    >
-      Catálogos
-    </button>
-    <button
-      type="button"
-      class="navbar-link"
-      [class.active]="activeSection() === 'reportes'"
-      (click)="setSection('reportes')"
-    >
-      Reportes y KPIs
-    </button>
-  </nav>
+  <section class="dash-figures" aria-label="Resumen de la plataforma">
+    <a href="#" class="figure">
+      <span class="figure-num">{{ adminStats().cuentasPorValidar }}</span>
+      <span class="figure-label">Cuentas por validar</span>
+    </a>
+    <a href="#" class="figure is-urgent">
+      <span class="figure-num">{{ adminStats().contenidosDenunciados }}</span>
+      <span class="figure-label">Contenidos denunciados</span>
+    </a>
+    <a href="#" class="figure">
+      <span class="figure-num">{{ adminStats().casosActivos }}</span>
+      <span class="figure-label">Casos activos</span>
+    </a>
+  </section>
 
-  <div class="admin-content">
-    @if (activeSection() === 'resumen') {
-      <div class="content-section">
-        <h2>Resumen de administración</h2>
-        @if (errorMensaje()) {
-          <p class="error-message">{{ errorMensaje() }}</p>
-        }
-        <div class="stats-row">
-          <div class="stat-card warning">
-            <div class="stat-value">{{ verificacionesPendientes().length }}</div>
-            <div class="stat-label">Cuentas por validar</div>
-          </div>
-          <div class="stat-card danger">
-            <div class="stat-value">{{ casosReportados().length }}</div>
-            <div class="stat-label">Contenidos denunciados</div>
-          </div>
-          <div class="stat-card info">
-            <div class="stat-value">{{ casosActivos().length }}</div>
-            <div class="stat-label">Casos activos</div>
-          </div>
+  <div class="dash-grid" id="mi-panel">
+    @if (adminActiveTab() === 'validar') {
+      <section class="panel">
+        <div class="panel-head">
+          <h3>Cuentas por validar</h3>
+          <a class="panel-link" href="#">Ver todas</a>
         </div>
-
-        <div class="section">
-          <h3>Validación de cuentas pendientes</h3>
-          @if (cargando()) {
-            <p class="loading-message">Cargando...</p>
-          }
-          <div class="validation-list">
-            @for (verificacion of verificacionesPendientes(); track verificacion.id) {
-              <div class="validation-item">
-                <div>
-                  <strong>{{
-                    verificacion.nombreOrgani || verificacion.nombre || 'Organización'
-                  }}</strong>
-                  <p>NIT: {{ verificacion.nit || 'No disponible' }}</p>
-                </div>
-                <div class="actions">
-                  <button
-                    class="btn-approve"
-                    (click)="aprobarVerificacion(verificacion.usuarioId || verificacion.id)"
-                  >
-                    Aprobar
-                  </button>
-                  <button
-                    class="btn-reject"
-                    (click)="rechazarVerificacion(verificacion.usuarioId || verificacion.id)"
-                  >
-                    Rechazar
-                  </button>
-                </div>
+        @if (adminValidaciones().length === 0) {
+          <p style="padding: 1rem; color: var(--ink-soft)">No hay cuentas por validar.</p>
+        } @else {
+          @for (cuenta of adminValidaciones(); track cuenta.id) {
+            <div class="list-row">
+              <div class="list-thumb">🏠</div>
+              <div class="list-info">
+                <p class="list-title">{{ cuenta.nombre }}</p>
+                <p class="list-meta">
+                  Documento soporte adjunto · {{ cuenta.municipio }} · {{ cuenta.tipo }}
+                </p>
               </div>
-            } @empty {
-              <p class="empty-message">No hay verificaciones pendientes.</p>
-            }
-          </div>
+              <div class="list-actions">
+                <button class="btn btn-secondary btn-sm">Revisar</button>
+              </div>
+            </div>
+          }
+        }
+      </section>
+    } @else if (adminActiveTab() === 'moderacion') {
+      <section class="panel">
+        <div class="panel-head">
+          <h3>Contenido denunciado</h3>
+          <a class="panel-link" href="#">Ver todo</a>
         </div>
-      </div>
-    }
-
-    @if (activeSection() !== 'resumen') {
-      <div class="content-section">
-        <h2>{{ activeSection() | titlecase }}</h2>
-        <p class="placeholder">Contenido de {{ activeSection() }} será cargado aquí.</p>
-      </div>
+        @if (adminModeraccion().length === 0) {
+          <p style="padding: 1rem; color: var(--ink-soft)">No hay contenidos por moderar.</p>
+        } @else {
+          @for (contenido of adminModeraccion(); track contenido.id) {
+            <div class="list-row">
+              <div class="list-thumb">⚑</div>
+              <div class="list-info">
+                <p class="list-title">
+                  Caso #{{ contenido.casoId }} · denunciado por
+                  {{ contenido.denunciadosPor }} usuarios
+                </p>
+                <p class="list-meta">Motivo: {{ contenido.motivo }}</p>
+              </div>
+              <div class="list-actions">
+                <button class="btn btn-secondary btn-sm">Revisar</button>
+              </div>
+            </div>
+          }
+        }
+      </section>
     }
   </div>
-</div>
+</main>

@@ -1,0 +1,65 @@
+<fieldset class="zone-fields">
+  <legend>Zona</legend>
+  <div class="grid-3">
+    <div class="form-field">
+      <label for="depto-sel">Departamento</label>
+      <select
+        #deptoSelect
+        id="depto-sel"
+        [ngModel]="selectedDeptoId()"
+        (change)="onDeptoChange(deptoSelect.value)"
+        aria-describedby="depto-error"
+      >
+        <option value="">Selecciona el departamento</option>
+        @for (depto of departamentos; track depto.id) {
+          <option [value]="depto.id">
+            {{ depto.nombre }}
+          </option>
+        }
+      </select>
+      <p class="field-error" id="depto-error" hidden></p>
+    </div>
+    <div class="form-field">
+      <label for="mun-sel">Municipio</label>
+      <select
+        #munSelect
+        id="mun-sel"
+        [ngModel]="selectedMunId()"
+        (change)="onMunChange(munSelect.value)"
+        [disabled]="!selectedDeptoId()"
+        aria-describedby="mun-error"
+      >
+        <option value="">
+          {{ selectedDeptoId() ? 'Selecciona el municipio' : 'Primero elige el departamento' }}
+        </option>
+        @for (mun of municipios; track mun.id) {
+          <option [value]="mun.id">
+            {{ mun.nombre }}
+          </option>
+        }
+      </select>
+      <p class="field-error" id="mun-error" hidden></p>
+    </div>
+    <div class="form-field">
+      <label for="barrio-sel">Barrio</label>
+      <select
+        #barrioSelect
+        id="barrio-sel"
+        [ngModel]="selectedBarrioId()"
+        (change)="onBarrioChange(barrioSelect.value)"
+        [disabled]="!selectedMunId()"
+        aria-describedby="barrio-error"
+      >
+        <option value="">
+          {{ selectedMunId() ? 'Selecciona el barrio' : 'Primero elige el municipio' }}
+        </option>
+        @for (barrio of barrios; track barrio.id) {
+          <option [value]="barrio.id">
+            {{ barrio.nombre }}
+          </option>
+        }
+      </select>
+      <p class="field-error" id="barrio-error" hidden></p>
+    </div>
+  </div>
+</fieldset>

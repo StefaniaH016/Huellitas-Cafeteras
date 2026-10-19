@@ -1,0 +1,158 @@
+<section id="casos">
+  <div class="dash-layout">
+    <aside class="sidebar sidebar-250">
+      <div class="filter-group">
+        <h4>Urgencia</h4>
+        <div class="checklist">
+          <label for="check-urgencia-critica">
+            <input
+              id="check-urgencia-critica"
+              type="checkbox"
+              [checked]="urgencias().includes('CRITICA')"
+              (change)="toggleUrgencia('CRITICA')"
+            />
+            Emergencia
+          </label>
+          <label for="check-urgencia-alta">
+            <input
+              id="check-urgencia-alta"
+              type="checkbox"
+              [checked]="urgencias().includes('ALTA')"
+              (change)="toggleUrgencia('ALTA')"
+            />
+            Alta
+          </label>
+          <label for="check-urgencia-media">
+            <input
+              id="check-urgencia-media"
+              type="checkbox"
+              [checked]="urgencias().includes('MEDIA')"
+              (change)="toggleUrgencia('MEDIA')"
+            />
+            Media
+          </label>
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <h4>Tipo de caso</h4>
+        <div class="checklist">
+          <label for="check-tipo-vulnerable">
+            <input
+              id="check-tipo-vulnerable"
+              type="checkbox"
+              [checked]="tipos().includes('VULNERABLE')"
+              (change)="toggleTipo('VULNERABLE')"
+            />
+            Vulnerable
+          </label>
+          <label for="check-tipo-extraviado">
+            <input
+              id="check-tipo-extraviado"
+              type="checkbox"
+              [checked]="tipos().includes('EXTRAVIADO')"
+              (change)="toggleTipo('EXTRAVIADO')"
+            />
+            Extraviado
+          </label>
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <h4>Ubicación</h4>
+        <app-ubicacion-selector
+          [deptoId]="deptoId()"
+          [munId]="munId()"
+          [barrioId]="barrioId()"
+          (deptoChange)="onDeptoChange($event)"
+          (munChange)="onMunChange($event)"
+          (barrioChange)="onBarrioChange($event)"
+        ></app-ubicacion-selector>
+      </div>
+
+      <div class="filter-group">
+        <h4>Estado</h4>
+        <div class="checklist">
+          <label for="check-estado-registrado">
+            <input
+              id="check-estado-registrado"
+              type="checkbox"
+              [checked]="estados().includes('REGISTRADO')"
+              (change)="toggleEstado('REGISTRADO')"
+            />
+            Registrado
+          </label>
+          <label for="check-estado-en-atencion">
+            <input
+              id="check-estado-en-atencion"
+              type="checkbox"
+              [checked]="estados().includes('EN_ATENCION')"
+              (change)="toggleEstado('EN_ATENCION')"
+            />
+            En atención
+          </label>
+          <label for="check-estado-resuelto">
+            <input
+              id="check-estado-resuelto"
+              type="checkbox"
+              [checked]="estados().includes('RESUELTO')"
+              (change)="toggleEstado('RESUELTO')"
+            />
+            Resuelto
+          </label>
+        </div>
+      </div>
+
+      <button class="btn btn-primary btn-block" (click)="onAplicarFiltros()">
+        Aplicar filtros
+      </button>
+    </aside>
+
+    <div class="main-area">
+      <h1>Casos activos</h1>
+      <p class="lead">{{ total() }} casos encontrados</p>
+
+      @if (cargando()) {
+        <p>Cargando...</p>
+      }
+
+      @if (!cargando() && casos().length === 0) {
+        <p class="empty-msg">No se encontraron casos con los filtros seleccionados.</p>
+      }
+
+      <div class="panel">
+        @for (caso of casos(); track caso.id) {
+          <div class="list-row">
+            <div class="list-thumb">🐾</div>
+            <div class="list-info">
+              <p class="list-title">{{ caso.titulo || caso.descripcion }}</p>
+              <p class="list-meta">
+                {{ caso.municipio }} · {{ caso.barrio }} · {{ caso.fechaReporte }}
+              </p>
+            </div>
+            <span class="badge" [ngClass]="getBadgeClass(caso.urgencia)">
+              <span class="badge-dot"></span>{{ getBadgeLabel(caso.urgencia) }}
+            </span>
+            <div class="list-actions">
+              <button class="btn btn-primary btn-sm" (click)="onVerCaso(caso.id)">Ver caso</button>
+            </div>
+          </div>
+        }
+      </div>
+
+      <div class="pagination">
+        <button class="btn btn-secondary btn-sm" [disabled]="page() === 0" (click)="prevPage()">
+          Anterior
+        </button>
+        <span>Página {{ page() + 1 }}</span>
+        <button
+          class="btn btn-secondary btn-sm"
+          [disabled]="casos().length < pageSize"
+          (click)="nextPage()"
+        >
+          Siguiente
+        </button>
+      </div>
+    </div>
+  </div>
+</section>

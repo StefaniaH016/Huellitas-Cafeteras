@@ -48,6 +48,23 @@ public class JwtUtils {
                 .compact();
     }
 
+    /** Genera un token JWT firmado incluyendo el nombre del usuario. */
+    public String generateToken(UserDetails userDetails, String nombre) {
+        String rol = userDetails.getAuthorities().stream()
+                .map(auth -> auth.getAuthority().replace("ROLE_", ""))
+                .findFirst()
+                .orElse("CIUDADANO");
+        
+        return Jwts.builder()
+                .subject(userDetails.getUsername())
+                .claim("rol", rol)
+                .claim("nombre", nombre)
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + expirationMs))
+                .signWith(secretKey)
+                .compact();
+    }
+
     /** Extrae el username (subject) del token. */
     public String extractUsername(String token) {
         return parseClaims(token).getSubject();

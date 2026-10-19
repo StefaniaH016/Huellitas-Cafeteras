@@ -1,121 +1,80 @@
-<div class="panel-wrapper">
-  <div class="panel-header">
-    <div class="org-info">
-      <div class="org-avatar" aria-hidden="true">
-        {{ perfil()?.nombre?.substring(0, 2).toUpperCase() || 'VJ' }}
-      </div>
-      <div>
-        <h1>{{ perfil()?.nombre || 'Veterinaria' }}</h1>
-        <span class="verified">Verificada ✓</span>
-      </div>
+<main>
+  <section class="dash-hello">
+    <div>
+      <h1>Hola, Veterinaria {{ authService.getNombre() }}</h1>
+      <p class="dash-summary">
+        Tienes solicitudes de atención por responder. Atiende a los pacientes activos.
+      </p>
     </div>
-  </div>
+    <div class="dash-ctas">
+      <button class="btn btn-primary" (click)="scrollToPanel()">Ir a mi panel</button>
+      <button class="btn btn-secondary" routerLink="/casos">Ver casos activos</button>
+    </div>
+  </section>
 
-  <div class="panel-layout">
-    <aside class="panel-sidebar">
-      <nav class="sidebar-nav">
-        <button
-          type="button"
-          class="sidebar-link"
-          [class.active]="activeSection() === 'solicitudes'"
-          (click)="setSection('solicitudes')"
-        >
-          Solicitudes
-        </button>
-        <button
-          type="button"
-          class="sidebar-link"
-          [class.active]="activeSection() === 'pacientes'"
-          (click)="setSection('pacientes')"
-        >
-          Pacientes activos
-        </button>
-        <button
-          type="button"
-          class="sidebar-link"
-          [class.active]="activeSection() === 'historial'"
-          (click)="setSection('historial')"
-        >
-          Historial clínico
-        </button>
-        <button
-          type="button"
-          class="sidebar-link"
-          [class.active]="activeSection() === 'informes'"
-          (click)="setSection('informes')"
-        >
-          Informes PDF
-        </button>
-        <button
-          type="button"
-          class="sidebar-link"
-          [class.active]="activeSection() === 'mensajes'"
-          (click)="setSection('mensajes')"
-        >
-          Mensajes
-        </button>
-        <button
-          type="button"
-          class="sidebar-link"
-          [class.active]="activeSection() === 'perfil'"
-          (click)="setSection('perfil')"
-        >
-          Perfil
-        </button>
-      </nav>
-    </aside>
+  <section class="dash-figures" aria-label="Resumen de tu consulta">
+    <a href="#" class="figure is-urgent">
+      <span class="figure-num">{{ veterinariaStats().solicitudes }}</span>
+      <span class="figure-label">Solicitud por responder</span>
+    </a>
+    <a href="#" class="figure">
+      <span class="figure-num">{{ veterinariaStats().pacientesActivos }}</span>
+      <span class="figure-label">Pacientes activos</span>
+    </a>
+    <a href="#" class="figure">
+      <span class="figure-num">1</span>
+      <span class="figure-label">Control programado</span>
+    </a>
+  </section>
 
-    <main class="panel-main">
-      @if (activeSection() === 'solicitudes') {
-        <div class="section-content">
-          <h2>{{ activeSection() | titlecase }}</h2>
-          @if (errorMensaje()) {
-            <p class="error-message">{{ errorMensaje() }}</p>
-          }
-          @if (cargando()) {
-            <p class="loading-message">Cargando solicitudes...</p>
-          }
-          <div class="solicitudes-list">
-            @for (solicitud of solicitudes(); track solicitud.id) {
-              <div class="solicitud-item">
-                <h3>{{ solicitud.titulo || solicitud.descripcion }}</h3>
-                <p>Ubicación: {{ solicitud.ubicacion || 'No especificada' }}</p>
-                <p>
-                  Urgencia: <strong>{{ solicitud.urgencia || 'Baja' }}</strong>
-                </p>
-                <p class="solicitud-desc">{{ solicitud.descripcion || 'Sin descripción' }}</p>
-                <button class="btn-tertiary">Atender solicitud</button>
-              </div>
-            } @empty {
-              <p class="empty-message">No hay solicitudes pendientes.</p>
-            }
-          </div>
-        </div>
-      }
-
-      @if (activeSection() === 'perfil') {
-        <div class="section-content">
-          <h2>Perfil</h2>
-          @if (cargando()) {
-            <p class="loading-message">Cargando perfil...</p>
-          }
-          @if (perfil()) {
-            <div class="profile-info">
-              <p><strong>Nombre:</strong> {{ perfil().nombre }}</p>
-              <p><strong>Correo:</strong> {{ perfil().correo }}</p>
-              <p><strong>Teléfono:</strong> {{ perfil().telefono || 'No disponible' }}</p>
-              <p><strong>Especialidad:</strong> {{ perfil().especialidad || 'No disponible' }}</p>
+  <div class="dash-grid" id="mi-panel">
+    <section class="panel">
+      <div class="panel-head">
+        <h3>Solicitudes de atención</h3>
+        <a class="panel-link" href="#">Ver mi panel</a>
+      </div>
+      @if (veterinariaSolicitudes().length === 0) {
+        <p style="padding: 1rem; color: var(--ink-soft)">No hay solicitudes pendientes.</p>
+      } @else {
+        @for (solicitud of veterinariaSolicitudes(); track solicitud.id) {
+          <div class="list-row">
+            <div class="list-thumb">🐾</div>
+            <div class="list-info">
+              <p class="list-title">Caso #{{ solicitud.id }} · {{ solicitud.tipo }}</p>
+              <p class="list-meta">
+                Solicitado por {{ solicitud.solicitadoPor }} · {{ solicitud.municipio }}
+              </p>
             </div>
-          }
-        </div>
+            <span class="badge badge-alta"><span class="badge-dot"></span>Alta</span>
+            <div class="list-actions">
+              <button class="btn btn-secondary btn-sm">Ver solicitud</button>
+            </div>
+          </div>
+        }
       }
+    </section>
 
-      @if (activeSection() !== 'solicitudes' && activeSection() !== 'perfil') {
-        <div class="section-content">
-          <h2>{{ activeSection() | titlecase }}</h2>
-          <p class="placeholder">Contenido de {{ activeSection() }} será cargado aquí.</p>
-        </div>
+    <section class="panel">
+      <div class="panel-head">
+        <h3>Pacientes activos</h3>
+        <a class="panel-link" href="#">Ver mi panel</a>
+      </div>
+      @if (veterinariaPacientes().length === 0) {
+        <p style="padding: 1rem; color: var(--ink-soft)">No hay pacientes activos.</p>
+      } @else {
+        @for (paciente of veterinariaPacientes(); track paciente.id) {
+          <div class="list-row">
+            <div class="list-thumb">🐾</div>
+            <div class="list-info">
+              <p class="list-title">{{ paciente.nombre }} · Caso #{{ paciente.casoId }}</p>
+              <p class="list-meta">Próximo control el {{ paciente.proximoControl }}</p>
+            </div>
+            <div class="list-actions">
+              <button class="btn btn-secondary btn-sm">Abrir bitácora</button>
+            </div>
+          </div>
+        }
       }
-    </main>
+    </section>
   </div>
-</div>
+</main>

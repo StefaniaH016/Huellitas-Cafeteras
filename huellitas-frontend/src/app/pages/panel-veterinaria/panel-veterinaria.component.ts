@@ -1,28 +1,42 @@
 import { Component, signal, inject, OnInit } from '@angular/core';
-import { CommonModule, TitleCasePipe } from '@angular/common';
-import { BitacoraService } from '../../core/services/bitacora.service';
-import { UsuarioService } from '../../core/services/usuario.service';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { CasoService } from '../../core/services/caso.service';
+import { AuthService } from '../../core/services/auth.service';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type ApiResponse = any;
-
-type VetSection = 'solicitudes' | 'pacientes' | 'historial' | 'informes' | 'mensajes' | 'perfil';
+interface Caso {
+  id: number;
+  titulo?: string;
+  descripcion: string;
+  urgencia: string;
+  municipio: string;
+  barrio: string;
+  foto?: string;
+  reportadoHace?: string;
+  estado?: string;
+  nombre?: string;
+  tipo?: string;
+  solicitadoPor?: string;
+  casoId?: number;
+  proximoControl?: string;
+}
 
 @Component({
   selector: 'app-panel-veterinaria',
-  imports: [CommonModule, TitleCasePipe],
+  imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './panel-veterinaria.component.html',
   styleUrl: './panel-veterinaria.component.css',
 })
 export class PanelVeterinariaComponent implements OnInit {
-  private bitacoraService = inject(BitacoraService);
-  private usuarioService = inject(UsuarioService);
   private casoService = inject(CasoService);
+  authService = inject(AuthService);
 
-  activeSection = signal<VetSection>('solicitudes');
-  solicitudes = signal<ApiResponse[]>([]);
-  perfil = signal<ApiResponse>(null);
+  // Stats
+  veterinariaStats = signal({ solicitudes: 0, pacientesActivos: 0 });
+  veterinariaSolicitudes = signal<Caso[]>([]);
+  veterinariaPacientes = signal<Caso[]>([]);
+
   cargando = signal(false);
   errorMensaje = signal('');
 
@@ -30,37 +44,43 @@ export class PanelVeterinariaComponent implements OnInit {
     this.cargarDatos();
   }
 
-  setSection(section: VetSection): void {
-    this.activeSection.set(section);
-  }
-
   cargarDatos(): void {
     this.cargando.set(true);
     this.errorMensaje.set('');
+    // TODO: Load data from backend (phase 2)
+    // For now, show empty state
+    this.veterinariaStats.set({ solicitudes: 0, pacientesActivos: 0 });
+    this.veterinariaSolicitudes.set([]);
+    this.veterinariaPacientes.set([]);
+    this.cargando.set(false);
+  }
 
-    // Cargar perfil del usuario
-    this.usuarioService.getMiPerfil().subscribe({
-      next: (response: ApiResponse) => {
-        this.perfil.set(response.usuario || response || {});
-      },
-      error: (error: ApiResponse) => {
-        console.error('Error al cargar perfil:', error);
-        this.errorMensaje.set('Error al cargar el perfil.');
-      },
-    });
+  getBadgeClass(urgencia: string): string {
+    const urgenciaLower = (urgencia || '').toLowerCase();
+    if (urgenciaLower === 'critica' || urgenciaLower === 'emergencia') {
+      return 'badge-emergencia';
+    }
+    if (urgenciaLower === 'alta' || urgenciaLower === 'extraviado') {
+      return 'badge-alta';
+    }
+    return 'badge-atencion';
+  }
 
-    // Cargar solicitudes (casos)
-    this.casoService.getFeed(0, 20).subscribe({
-      next: (response: ApiResponse) => {
-        const casos = response.casos || response.content || response || [];
-        this.solicitudes.set(casos);
-        this.cargando.set(false);
-      },
-      error: (error: ApiResponse) => {
-        console.error('Error al cargar solicitudes:', error);
-        this.errorMensaje.set('Error al cargar las solicitudes.');
-        this.cargando.set(false);
-      },
-    });
+  getBadgeLabel(urgencia: string): string {
+    const urgenciaLower = (urgencia || '').toLowerCase();
+    if (urgenciaLower === 'critica' || urgenciaLower === 'emergencia') {
+      return 'Emergencia';
+    }
+    if (urgenciaLower === 'alta' || urgenciaLower === 'extraviado') {
+      return 'Extraviado';
+    }
+    return 'En atención';
+  }
+
+  scrollToPanel(): void {
+    const element = document.getElementById('mi-panel');
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+    }
   }
 }

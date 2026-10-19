@@ -1,0 +1,299 @@
+<section id="reportar">
+  <div class="signup-wrap">
+    <ol class="steps" aria-label="Pasos del reporte">
+      <li
+        class="step"
+        [class.current]="currentStep() === 1"
+        [attr.aria-label]="
+          currentStep() === 1 ? 'Paso 1 de 3: Qué pasó (actual)' : 'Paso 1 de 3: Qué pasó'
+        "
+      >
+        <span class="step-num">1</span>Qué pasó
+      </li>
+      <li class="step-line" aria-hidden="true"></li>
+      <li
+        class="step"
+        [class.current]="currentStep() === 2"
+        [attr.aria-label]="
+          currentStep() === 2
+            ? 'Paso 2 de 3: Ubicación y fotos (actual)'
+            : 'Paso 2 de 3: Ubicación y fotos'
+        "
+      >
+        <span class="step-num">2</span>Ubicación y fotos
+      </li>
+      <li class="step-line" aria-hidden="true"></li>
+      <li
+        class="step"
+        [class.current]="currentStep() === 3"
+        [attr.aria-label]="
+          currentStep() === 3 ? 'Paso 3 de 3: Confirmar (actual)' : 'Paso 3 de 3: Confirmar'
+        "
+      >
+        <span class="step-num">3</span>Confirmar
+      </li>
+    </ol>
+
+    <!-- Paso 1: qué pasó -->
+    <section class="signup-card" [hidden]="currentStep() !== 1" aria-labelledby="titulo-paso-1">
+      <h2 id="titulo-paso-1">¿Qué le pasó al animal?</h2>
+      <p class="sub">Ayúdanos a priorizar la atención con esta información.</p>
+
+      <div class="field-group" id="campo-tipoCaso">
+        <fieldset class="chip-row" id="grupoTipo" aria-describedby="tipoHint error-tipoCaso">
+          <legend class="sr-only">Qué le pasó al animal</legend>
+          <label class="chip" [class.chip-selected]="formData.tipoCaso === 'HERIDO'">
+            <input
+              class="sr-only"
+              type="radio"
+              name="tipoCaso"
+              value="HERIDO"
+              [(ngModel)]="formData.tipoCaso"
+            />
+            Herido
+          </label>
+          <label class="chip" [class.chip-selected]="formData.tipoCaso === 'VULNERABLE'">
+            <input
+              class="sr-only"
+              type="radio"
+              name="tipoCaso"
+              value="VULNERABLE"
+              [(ngModel)]="formData.tipoCaso"
+            />
+            Vulnerable
+          </label>
+          <label class="chip" [class.chip-selected]="formData.tipoCaso === 'EXTRAVIADO'">
+            <input
+              class="sr-only"
+              type="radio"
+              name="tipoCaso"
+              value="EXTRAVIADO"
+              [(ngModel)]="formData.tipoCaso"
+            />
+            Extraviado
+          </label>
+        </fieldset>
+        <p class="type-hint" id="tipoHint">Elige la opción que mejor describe la situación.</p>
+        <p class="field-error" id="error-tipoCaso" [hidden]="!errors['tipoCaso']">
+          {{ errors['tipoCaso'] }}
+        </p>
+      </div>
+
+      <div class="grid-2">
+        <div class="form-field">
+          <label for="especie">Animal</label>
+          <select id="especie" [(ngModel)]="formData.especie" aria-describedby="error-especie">
+            <option value="">Selecciona</option>
+            <option value="PERRO">Perro</option>
+            <option value="GATO">Gato</option>
+            <option value="OTRO">Otro animal</option>
+          </select>
+          <p class="field-error" id="error-especie" [hidden]="!errors['especie']">
+            {{ errors['especie'] }}
+          </p>
+        </div>
+        <div class="form-field" id="campo-urgencia">
+          <label for="urgencia">Nivel de urgencia</label>
+          <select id="urgencia" [(ngModel)]="formData.urgencia" aria-describedby="error-urgencia">
+            <option value="">Selecciona</option>
+            <option value="CRITICA">Emergencia · riesgo inmediato</option>
+            <option value="ALTA">Alta · necesita atención pronto</option>
+            <option value="MEDIA">Media</option>
+            <option value="BAJA">Baja · puede esperar</option>
+          </select>
+          <p class="field-error" id="error-urgencia" [hidden]="!errors['urgencia']">
+            {{ errors['urgencia'] }}
+          </p>
+        </div>
+      </div>
+
+      <div class="form-field">
+        <label for="descripcion">Descripción del caso</label>
+        <textarea
+          id="descripcion"
+          rows="4"
+          maxlength="2000"
+          [(ngModel)]="formData.descripcion"
+          placeholder="¿Qué observaste? ¿Cómo está el animal?"
+          aria-describedby="error-descripcion"
+        ></textarea>
+        <p class="field-error" id="error-descripcion" [hidden]="!errors['descripcion']">
+          {{ errors['descripcion'] }}
+        </p>
+      </div>
+
+      <details class="more" id="masDatos">
+        <summary>Más datos del animal (opcional)</summary>
+        <div class="grid-2">
+          <div class="form-field">
+            <label for="nombre" id="etiqueta-nombre">Nombre (si lo conoces)</label>
+            <input id="nombre" type="text" [(ngModel)]="formData.nombre" maxlength="100" />
+          </div>
+          <div class="form-field">
+            <label for="raza">Raza</label>
+            <input id="raza" type="text" [(ngModel)]="formData.raza" maxlength="100" />
+          </div>
+          <div class="form-field">
+            <label for="color">Color</label>
+            <input id="color" type="text" [(ngModel)]="formData.color" maxlength="100" />
+          </div>
+          <div class="form-field">
+            <label for="sexo">Sexo</label>
+            <select id="sexo" [(ngModel)]="formData.sexo">
+              <option value="">Selecciona</option>
+              <option value="MACHO">Macho</option>
+              <option value="HEMBRA">Hembra</option>
+              <option value="DESCONOCIDO">No sé</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label for="edad">Edad aproximada</label>
+            <input
+              id="edad"
+              type="text"
+              [(ngModel)]="formData.edad"
+              maxlength="50"
+              placeholder="Ej: 2 años, cachorro"
+            />
+          </div>
+        </div>
+        <div class="form-field">
+          <label for="senas">Señas particulares</label>
+          <textarea
+            id="senas"
+            rows="2"
+            maxlength="1000"
+            [(ngModel)]="formData.senas"
+            placeholder="Manchas, collar, cicatrices…"
+          ></textarea>
+        </div>
+      </details>
+
+      <div class="step-actions">
+        <button class="btn btn-secondary" type="button" (click)="goHome()">Cancelar</button>
+        <button class="btn btn-primary" type="button" (click)="stepOneNext()">Continuar</button>
+      </div>
+    </section>
+
+    <!-- Paso 2: ubicación y fotos -->
+    <section class="signup-card" [hidden]="currentStep() !== 2" aria-labelledby="titulo-paso-2">
+      <h2 id="titulo-paso-2">¿Dónde está y cómo se ve?</h2>
+      <p class="sub">Escribe la dirección o un punto de referencia y buscamos la zona por ti.</p>
+
+      <div class="form-field">
+        <label for="direccion">Dirección o punto de referencia</label>
+        <input
+          id="direccion"
+          type="text"
+          [(ngModel)]="formData.direccion"
+          maxlength="300"
+          autocomplete="off"
+          placeholder="Ej: Granada, Armenia, cerca del parque principal"
+          aria-describedby="zonaEstado"
+        />
+        <p class="zone-status" id="zonaEstado" data-estado="idle" role="status">
+          Incluye el barrio y el municipio para que ubiquemos la zona.
+        </p>
+      </div>
+
+      <app-ubicacion-selector
+        [deptoId]="formData.deptoId"
+        [munId]="formData.munId"
+        [barrioId]="formData.barrioId"
+        (deptoChange)="onDeptoChange($event)"
+        (munChange)="onMunChange($event)"
+        (barrioChange)="onBarrioChange($event)"
+      ></app-ubicacion-selector>
+
+      <div class="field-group">
+        <p class="group-label" id="etiqueta-fotos">
+          Fotografías <span class="optional">(recomendado)</span>
+        </p>
+        <label class="dropzone" for="fotos" aria-disabled="true">
+          <span class="dropzone-title">Toca para elegir fotos o arrástralas aquí</span>
+          <span class="dropzone-hint">JPG, PNG o WebP · hasta 5 fotos de máximo 5 MB</span>
+          <input
+            class="sr-only"
+            id="fotos"
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            multiple
+            disabled
+            aria-describedby="error-fotos contadorFotos"
+          />
+        </label>
+        <p class="field-hint" id="contadorFotos">0 de 5 fotos</p>
+        <p class="field-note">Feature próximamente disponible</p>
+        <p class="field-error" id="error-fotos" hidden></p>
+      </div>
+
+      <div class="step-actions">
+        <button class="btn btn-secondary" type="button" (click)="currentStep.set(1)">Atrás</button>
+        <button class="btn btn-primary" type="button" (click)="stepTwoNext()">Continuar</button>
+      </div>
+    </section>
+
+    <!-- Paso 3: confirmar -->
+    <section class="signup-card" [hidden]="currentStep() !== 3" aria-labelledby="titulo-paso-3">
+      <h2 id="titulo-paso-3">Confirmar reporte</h2>
+      <p class="sub">Si todo está bien, publícalo. Te avisaremos cuando alguien lo atienda.</p>
+
+      <div id="resumen" class="summary">
+        <div class="summary-section">
+          <p class="summary-label">Tipo de caso</p>
+          <p class="summary-value">{{ getLabel(formData.tipoCaso, tipoCasoLabels) }}</p>
+        </div>
+        <div class="summary-section">
+          <p class="summary-label">Urgencia</p>
+          <p class="summary-value">{{ getLabel(formData.urgencia, urgenciaLabels) }}</p>
+        </div>
+        <div class="summary-section">
+          <p class="summary-label">Especie</p>
+          <p class="summary-value">{{ getLabel(formData.especie, especieLabels) }}</p>
+        </div>
+        <div class="summary-section">
+          <p class="summary-label">Descripción</p>
+          <p class="summary-value">{{ formData.descripcion }}</p>
+        </div>
+        <div class="summary-section">
+          <p class="summary-label">Ubicación</p>
+          <p class="summary-value">{{ deptoNombre() }}, {{ munNombre() }}</p>
+        </div>
+      </div>
+
+      @if (submitError()) {
+        <p class="field-error" style="text-align: center; margin-top: 1rem">{{ submitError() }}</p>
+      }
+
+      <div class="step-actions">
+        <button class="btn btn-secondary" type="button" (click)="currentStep.set(2)">Atrás</button>
+        <button
+          class="btn btn-primary"
+          type="button"
+          (click)="onPublicar()"
+          [disabled]="enviando()"
+        >
+          {{ enviando() ? 'Publicando...' : 'Publicar reporte' }}
+        </button>
+      </div>
+    </section>
+
+    <!-- Reporte enviado -->
+    <section
+      class="signup-card success-card"
+      [hidden]="currentStep() !== 4"
+      aria-labelledby="titulo-listo"
+    >
+      <div class="success-icon">🐾</div>
+      <h2 id="titulo-listo">¡Reporte publicado!</h2>
+      <p class="sub">
+        Tu caso <strong>{{ createdCasoId() }}</strong> fue registrado con estado
+        <strong>REGISTRADO</strong>. La comunidad ya puede verlo.
+      </p>
+      <div class="success-actions">
+        <button class="btn btn-secondary" routerLink="/casos">Ver casos</button>
+        <button class="btn btn-primary" routerLink="/home">Ir al inicio</button>
+      </div>
+    </section>
+  </div>
+</section>

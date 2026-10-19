@@ -91,6 +91,21 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./pages/not-found/not-found.component').then((m) => m.NotFoundComponent),
       },
+      // Feature routes
+      {
+        path: 'casos',
+        loadComponent: () => import('./pages/casos/casos.component').then((m) => m.CasosComponent),
+      },
+      {
+        path: 'reportar',
+        loadComponent: () =>
+          import('./pages/reportar/reportar.component').then((m) => m.ReportarComponent),
+      },
+      {
+        path: 'caso-detalle/:id',
+        loadComponent: () =>
+          import('./pages/caso-detalle/caso-detalle.component').then((m) => m.CasoDetalleComponent),
+      },
     ],
   },
   { path: '**', redirectTo: '/404' },

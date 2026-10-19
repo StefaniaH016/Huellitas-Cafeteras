@@ -13,11 +13,19 @@
       <span class="brand-name">Huellitas Cafeteras</span>
     </a>
     <nav class="header-nav" aria-label="Navegación principal">
-      <a routerLink="/mis-reportes" class="nav-link">Mis reportes</a>
-      <a routerLink="/mensajes" class="nav-link">
-        Mensajes
-        <span class="badge" aria-label="2 mensajes nuevos">2</span>
-      </a>
+      <!-- Inicio link for all roles -->
+      <a routerLink="/home" class="nav-link">Inicio</a>
+
+      <!-- Show "Mi panel" for non-ciudadano roles -->
+      @if (isFundacion() || isVeterinaria() || isAdmin()) {
+        <a routerLink="/home" fragment="mi-panel" class="nav-link">Mi panel</a>
+      }
+
+      <!-- Show "Mis reportes" for ciudadano -->
+      @if (isCiudadano()) {
+        <a routerLink="/mis-reportes" class="nav-link">Mis reportes</a>
+      }
+
       <a routerLink="/notificaciones" class="nav-link">
         Notificaciones
         <span class="badge" aria-label="3 notificaciones nuevas">3</span>

@@ -1,132 +1,87 @@
-<div class="panel-wrapper">
-  <div class="panel-header">
-    <div class="org-info">
-      <div class="org-avatar" aria-hidden="true">
-        {{ perfil()?.nombre?.substring(0, 2).toUpperCase() || 'FP' }}
-      </div>
-      <div>
-        <h1>{{ perfil()?.nombre || 'Fundación' }}</h1>
-        <span class="verified">Verificada ✓</span>
-      </div>
+<main>
+  <section class="dash-hello">
+    <div>
+      <h1>Hola, Fundación {{ authService.getNombre() }}</h1>
+      <p class="dash-summary">
+        Hay emergencias en tu municipio. Coordina rescates y gestiona los animales en custodia.
+      </p>
     </div>
-  </div>
+    <div class="dash-ctas">
+      <button class="btn btn-primary" routerLink="/casos">Ver casos de mi zona</button>
+      <button class="btn btn-secondary" (click)="scrollToPanel()">Ir a mi panel</button>
+    </div>
+  </section>
 
-  <div class="panel-layout">
-    <aside class="panel-sidebar">
-      <nav class="sidebar-nav">
-        <button
-          type="button"
-          class="sidebar-link"
-          [class.active]="activeSection() === 'resumen'"
-          (click)="setSection('resumen')"
-        >
-          Resumen
-        </button>
-        <button
-          type="button"
-          class="sidebar-link"
-          [class.active]="activeSection() === 'custodia'"
-          (click)="setSection('custodia')"
-        >
-          Casos en custodia
-        </button>
-        <button
-          type="button"
-          class="sidebar-link"
-          [class.active]="activeSection() === 'zona'"
-          (click)="setSection('zona')"
-        >
-          Casos de mi zona
-        </button>
-        <button
-          type="button"
-          class="sidebar-link"
-          [class.active]="activeSection() === 'medicas'"
-          (click)="setSection('medicas')"
-        >
-          Solicitudes médicas
-        </button>
-        <button
-          type="button"
-          class="sidebar-link"
-          [class.active]="activeSection() === 'adopcion'"
-          (click)="setSection('adopcion')"
-        >
-          Animales en adopción
-        </button>
-        <button
-          type="button"
-          class="sidebar-link"
-          [class.active]="activeSection() === 'mensajes'"
-          (click)="setSection('mensajes')"
-        >
-          Mensajes
-        </button>
-        <button
-          type="button"
-          class="sidebar-link"
-          [class.active]="activeSection() === 'perfil'"
-          (click)="setSection('perfil')"
-        >
-          Perfil de la entidad
-        </button>
-      </nav>
-    </aside>
+  <section class="dash-figures" aria-label="Resumen de tu fundación">
+    <a href="#" class="figure">
+      <span class="figure-num">{{ fundacionStats().enCustodia }}</span>
+      <span class="figure-label">En custodia</span>
+      <progress
+        class="figure-meter"
+        [value]="fundacionStats().enCustodia"
+        max="20"
+        aria-label="Cupos de albergue usados"
+      ></progress>
+    </a>
+    <a href="#" class="figure">
+      <span class="figure-num">{{ fundacionStats().esperandoAtencion }}</span>
+      <span class="figure-label">Esperando atención médica</span>
+    </a>
+    <a href="#" class="figure is-urgent">
+      <span class="figure-num">{{ fundacionStats().emergenciasZona }}</span>
+      <span class="figure-label">Emergencias en tu municipio</span>
+    </a>
+  </section>
 
-    <main class="panel-main">
-      @if (activeSection() === 'resumen') {
-        <div class="section-content">
-          <h2>Resumen de actividad</h2>
-          @if (errorMensaje()) {
-            <p class="error-message">{{ errorMensaje() }}</p>
-          }
-          @if (cargando()) {
-            <p class="loading-message">Cargando datos...</p>
-          }
-          <div class="stats-row">
-            <div class="stat-card">
-              <div class="stat-value">{{ resumen().enCustodia }}</div>
-              <div class="stat-label">Animales en custodia</div>
+  <div class="dash-grid" id="mi-panel">
+    <section class="panel">
+      <div class="panel-head">
+        <h3>Emergencias sin custodia en tu zona</h3>
+        <a class="panel-link" href="#">Ver casos de mi zona</a>
+      </div>
+      @if (fundacionAlertas().length === 0) {
+        <p style="padding: 1rem; color: var(--ink-soft)">No hay emergencias en tu zona.</p>
+      } @else {
+        @for (alerta of fundacionAlertas(); track alerta.id) {
+          <div class="list-row">
+            <div class="list-thumb">🐾</div>
+            <div class="list-info">
+              <p class="list-title">{{ alerta.titulo }}</p>
+              <p class="list-meta">{{ alerta.reportadoHace }} · sin custodia</p>
             </div>
-            <div class="stat-card">
-              <div class="stat-value">{{ resumen().esperandoAtencion }}</div>
-              <div class="stat-label">Esperando atención médica</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-value">{{ resumen().emergencias }}</div>
-              <div class="stat-label">Emergencias registradas</div>
+            <span class="badge" [ngClass]="getBadgeClass(alerta.urgencia)">
+              <span class="badge-dot"></span>
+              {{ getBadgeLabel(alerta.urgencia) }}
+            </span>
+            <div class="list-actions">
+              <button class="btn btn-secondary btn-sm">Ver caso</button>
             </div>
           </div>
-          <div class="alerts-section">
-            <h3>Alertas de zona</h3>
-            <p class="placeholder">No hay alertas nuevas en tu zona de operación.</p>
-          </div>
-        </div>
+        }
       }
+    </section>
 
-      @if (activeSection() === 'perfil') {
-        <div class="section-content">
-          <h2>Perfil de la entidad</h2>
-          @if (cargando()) {
-            <p class="loading-message">Cargando perfil...</p>
-          }
-          @if (perfil()) {
-            <div class="profile-info">
-              <p><strong>Nombre:</strong> {{ perfil().nombre }}</p>
-              <p><strong>Correo:</strong> {{ perfil().correo }}</p>
-              <p><strong>Teléfono:</strong> {{ perfil().telefono || 'No disponible' }}</p>
-              <p><strong>Ubicación:</strong> {{ perfil().ubicacion || 'No disponible' }}</p>
+    <section class="panel">
+      <div class="panel-head">
+        <h3>En custodia ahora</h3>
+        <a class="panel-link" href="#">Ver mi panel</a>
+      </div>
+      @if (fundacionAnimales().length === 0) {
+        <p style="padding: 1rem; color: var(--ink-soft)">No hay animales en custodia.</p>
+      } @else {
+        @for (animal of fundacionAnimales(); track animal.id) {
+          <div class="list-row">
+            <div class="list-thumb">🐾</div>
+            <div class="list-info">
+              <p class="list-title">{{ animal.nombre || animal.titulo }}</p>
+              <p class="list-meta">{{ animal.estado || animal.descripcion }}</p>
             </div>
-          }
-        </div>
+            <div class="list-actions">
+              <button class="btn btn-secondary btn-sm">Ver caso</button>
+            </div>
+          </div>
+        }
       }
-
-      @if (activeSection() !== 'resumen' && activeSection() !== 'perfil') {
-        <div class="section-content">
-          <h2>{{ activeSection() | titlecase }}</h2>
-          <p class="placeholder">Contenido de {{ activeSection() }} será cargado aquí.</p>
-        </div>
-      }
-    </main>
+    </section>
   </div>
-</div>
+</main>

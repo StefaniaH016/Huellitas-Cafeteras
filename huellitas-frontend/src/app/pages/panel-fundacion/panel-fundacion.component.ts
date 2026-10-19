@@ -1,82 +1,82 @@
 import { Component, signal, inject, OnInit } from '@angular/core';
-import { CommonModule, TitleCasePipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { CasoService } from '../../core/services/caso.service';
-import { UsuarioService } from '../../core/services/usuario.service';
+import { AuthService } from '../../core/services/auth.service';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type ApiResponse = any;
-
-type SideSection = 'resumen' | 'custodia' | 'zona' | 'medicas' | 'adopcion' | 'mensajes' | 'perfil';
+interface Caso {
+  id: number;
+  titulo?: string;
+  descripcion: string;
+  urgencia: string;
+  municipio: string;
+  barrio: string;
+  foto?: string;
+  reportadoHace?: string;
+  estado?: string;
+  nombre?: string;
+}
 
 @Component({
   selector: 'app-panel-fundacion',
-  imports: [CommonModule, TitleCasePipe],
+  imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './panel-fundacion.component.html',
   styleUrl: './panel-fundacion.component.css',
 })
 export class PanelFundacionComponent implements OnInit {
   private casoService = inject(CasoService);
-  private usuarioService = inject(UsuarioService);
+  authService = inject(AuthService);
 
-  activeSection = signal<SideSection>('resumen');
-  resumen = signal<{ enCustodia: number; esperandoAtencion: number; emergencias: number }>({
-    enCustodia: 0,
-    esperandoAtencion: 0,
-    emergencias: 0,
-  });
-  perfil = signal<ApiResponse>(null);
+  // Stats
+  fundacionStats = signal({ enCustodia: 0, esperandoAtencion: 0, emergenciasZona: 0 });
+  fundacionAlertas = signal<Caso[]>([]);
+  fundacionAnimales = signal<Caso[]>([]);
+
   cargando = signal(false);
   errorMensaje = signal('');
-  casos = signal<ApiResponse[]>([]);
 
   ngOnInit(): void {
     this.cargarDatos();
   }
 
-  setSection(section: SideSection): void {
-    this.activeSection.set(section);
-  }
-
   cargarDatos(): void {
     this.cargando.set(true);
     this.errorMensaje.set('');
+    // TODO: Load data from backend (phase 2)
+    // For now, show empty state
+    this.fundacionStats.set({ enCustodia: 0, esperandoAtencion: 0, emergenciasZona: 0 });
+    this.fundacionAlertas.set([]);
+    this.fundacionAnimales.set([]);
+    this.cargando.set(false);
+  }
 
-    // Cargar perfil
-    this.usuarioService.getMiPerfil().subscribe({
-      next: (response: ApiResponse) => {
-        this.perfil.set(response.usuario || response || {});
-      },
-      error: (error: ApiResponse) => {
-        console.error('Error al cargar perfil:', error);
-        this.errorMensaje.set('Error al cargar el perfil.');
-      },
-    });
+  getBadgeClass(urgencia: string): string {
+    const urgenciaLower = (urgencia || '').toLowerCase();
+    if (urgenciaLower === 'critica' || urgenciaLower === 'emergencia') {
+      return 'badge-emergencia';
+    }
+    if (urgenciaLower === 'alta' || urgenciaLower === 'extraviado') {
+      return 'badge-alta';
+    }
+    return 'badge-atencion';
+  }
 
-    // Cargar casos
-    this.casoService.getFeed(0, 20).subscribe({
-      next: (response: ApiResponse) => {
-        const casos = response.casos || response.content || response || [];
-        this.casos.set(casos);
+  getBadgeLabel(urgencia: string): string {
+    const urgenciaLower = (urgencia || '').toLowerCase();
+    if (urgenciaLower === 'critica' || urgenciaLower === 'emergencia') {
+      return 'Emergencia';
+    }
+    if (urgenciaLower === 'alta' || urgenciaLower === 'extraviado') {
+      return 'Extraviado';
+    }
+    return 'En atención';
+  }
 
-        // Calcular estadísticas basadas en los casos
-        const enCustodia = casos.filter((c: ApiResponse) => c.estado === 'EN_CUSTODIA').length;
-        const esperandoAtencion = casos.filter(
-          (c: ApiResponse) => c.estado === 'ESPERANDO_ATENCION',
-        ).length;
-        const emergencias = casos.filter((c: ApiResponse) => c.urgencia === 'ALTA').length;
-
-        this.resumen.set({
-          enCustodia,
-          esperandoAtencion,
-          emergencias,
-        });
-        this.cargando.set(false);
-      },
-      error: (error: ApiResponse) => {
-        console.error('Error al cargar casos:', error);
-        this.errorMensaje.set('Error al cargar los casos.');
-        this.cargando.set(false);
-      },
-    });
+  scrollToPanel(): void {
+    const element = document.getElementById('mi-panel');
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+    }
   }
 }
