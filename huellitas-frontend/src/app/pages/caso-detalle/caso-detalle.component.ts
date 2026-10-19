@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { CasoService } from '../../core/services/caso.service';
@@ -18,6 +18,7 @@ interface Caso {
   municipio?: string;
   barrio?: string;
   foto?: string;
+  fotos: string[];
   fundacion?: string;
   veterinaria?: string;
 }
@@ -87,6 +88,17 @@ export class CasoDetalleComponent implements OnInit {
   cargando = signal(true);
   activeTab = signal<'informacion' | 'seguimiento' | 'bitacora'>('informacion');
 
+  fotos = signal<string[]>([]);
+  selectedFotoIndex = signal<number>(0);
+  fotoActual = computed(() => {
+    const list = this.fotos();
+    const idx = this.selectedFotoIndex();
+    if (idx >= 0 && idx < list.length) {
+      return list[idx];
+    }
+    return this.caso()?.foto || '';
+  });
+
   ngOnInit(): void {
     this.activatedRoute.params.subscribe((params) => {
       const id = params['id'];
@@ -141,12 +153,36 @@ export class CasoDetalleComponent implements OnInit {
     }
   }
 
-  private extractFotoUrl(fotografias?: FotoResponse[]): string {
-    if (!fotografias || fotografias.length === 0) {
-      return '';
+  private extractFotos(response: CasoResponse): string[] {
+    const urls: string[] = [];
+
+    if (Array.isArray(response.fotografias) && response.fotografias.length > 0) {
+      const sorted = [...response.fotografias].sort((a, b) => {
+        if (a.principal && !b.principal) {
+          return -1;
+        }
+        if (!a.principal && b.principal) {
+          return 1;
+        }
+        return 0;
+      });
+
+      for (const f of sorted) {
+        if (f?.url && typeof f.url === 'string' && f.url.trim().length > 0) {
+          urls.push(f.url.trim());
+        }
+      }
     }
-    const principal = fotografias.find((f) => f.principal);
-    return principal?.url || fotografias[0]?.url || '';
+
+    if (urls.length === 0) {
+      const respRecord = response as Record<string, unknown>;
+      const single = respRecord['fotoPrincipal'] || respRecord['foto'];
+      if (typeof single === 'string' && single.trim().length > 0) {
+        urls.push(single.trim());
+      }
+    }
+
+    return urls;
   }
 
   private extractAnimalInfo(a?: AnimalResponse): {
@@ -174,6 +210,8 @@ export class CasoDetalleComponent implements OnInit {
     const desc = response.descripcion ? response.descripcion : '';
     const titulo = desc ? desc : response.titulo ? response.titulo : '';
     const idVal = response.id !== undefined && response.id !== null ? response.id : fallbackId;
+    const fotos = this.extractFotos(response);
+    const fotoPrincipal = fotos.length > 0 ? fotos[0] : '';
 
     return {
       id: idVal,
@@ -189,16 +227,48 @@ export class CasoDetalleComponent implements OnInit {
       color: ai.color,
       municipio: u.mun,
       barrio: u.bar,
-      foto: this.extractFotoUrl(response.fotografias),
+      foto: fotoPrincipal,
+      fotos,
       fundacion: response.fundacion ? response.fundacion : '',
       veterinaria: response.veterinaria ? response.veterinaria : '',
     };
   }
 
+  selectFoto(index: number): void {
+    if (index >= 0 && index < this.fotos().length) {
+      this.selectedFotoIndex.set(index);
+    }
+  }
+
+  prevFoto(): void {
+    const total = this.fotos().length;
+    if (total <= 1) {
+      return;
+    }
+    const current = this.selectedFotoIndex();
+    this.selectedFotoIndex.set((current - 1 + total) % total);
+  }
+
+  nextFoto(): void {
+    const total = this.fotos().length;
+    if (total <= 1) {
+      return;
+    }
+    const current = this.selectedFotoIndex();
+    this.selectedFotoIndex.set((current + 1) % total);
+  }
+
   onFotoError(): void {
-    const c = this.caso();
-    if (c) {
-      this.caso.set({ ...c, foto: '' });
+    const current = this.selectedFotoIndex();
+    const list = this.fotos();
+    if (list.length > 0) {
+      const updated = list.filter((_, idx) => idx !== current);
+      this.fotos.set(updated);
+      this.selectedFotoIndex.set(0);
+      const c = this.caso();
+      if (c) {
+        this.caso.set({ ...c, foto: updated[0] || '', fotos: updated });
+      }
     }
   }
 
@@ -206,7 +276,10 @@ export class CasoDetalleComponent implements OnInit {
     this.cargando.set(true);
     this.casoService.getDetalle(Number(id)).subscribe({
       next: (response: CasoResponse): void => {
-        this.caso.set(this.mapResponseToCaso(response, id));
+        const mapped = this.mapResponseToCaso(response, id);
+        this.caso.set(mapped);
+        this.fotos.set(mapped.fotos);
+        this.selectedFotoIndex.set(0);
         this.cargando.set(false);
       },
       error: (err: unknown): void => {

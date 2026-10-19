@@ -9,4 +9,5 @@ import java.util.List;
 @Repository
 public interface FotoRepository extends JpaRepository<Foto, Long> {
     List<Foto> findByCasoId(Long casoId);
+    boolean existsByCasoId(Long casoId);
 }

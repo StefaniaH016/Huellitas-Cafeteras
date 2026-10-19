@@ -74,11 +74,11 @@ public class CloudinaryServiceImpl implements CloudinaryService {
             Caso caso = casoRepository.findById(casoId)
                     .orElseThrow(() -> new ResourceNotFoundException("Caso", casoId));
 
-            boolean esPrincipal = caso.getFotos() == null || caso.getFotos().isEmpty();
+            boolean yaTieneFotos = fotoRepository.existsByCasoId(casoId);
             Foto foto = Foto.builder()
                     .url(url)
                     .publicId(publicId)
-                    .principal(esPrincipal)
+                    .principal(!yaTieneFotos)
                     .caso(caso)
                     .build();
 
