@@ -53,7 +53,7 @@ export class AuthService {
   logout(): void {
     this.tokenService.removeToken();
     localStorage.removeItem(this.rolKey);
-    this.router.navigate(['/login']);
+    void this.router.navigate(['/login']);
   }
 
   registro(correo: string, contrasena: string, nombre: string): Observable<RegistroResponse> {
@@ -92,7 +92,7 @@ export class AuthService {
    * All roles land on /home with role-specific dashboards.
    */
   navigateAfterLogin(): void {
-    this.router.navigate(['/home']);
+    void this.router.navigate(['/home']);
   }
 
   getNombre(): string | null {

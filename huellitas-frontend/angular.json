@@ -84,6 +84,7 @@
             "coverage": {
               "watch": false,
               "coverage": true,
+              "coverageInclude": ["src/**/*.ts"],
               "coverageReporters": ["lcov", "text-summary", "html"]
             }
           }

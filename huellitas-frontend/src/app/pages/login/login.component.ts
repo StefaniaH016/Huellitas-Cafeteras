@@ -2,10 +2,11 @@ import { Component, inject, signal } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
+import { AuthBrandHeaderComponent } from '../../shared/components/auth-brand-header/auth-brand-header.component';
 
 @Component({
   selector: 'app-login',
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, AuthBrandHeaderComponent],
   templateUrl: './login.component.html',
   styleUrl: './login.component.css',
 })

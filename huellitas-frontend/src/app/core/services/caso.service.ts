@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { BitacoraService } from './bitacora.service';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ApiResponse = any;
@@ -11,6 +12,7 @@ type ApiResponse = any;
 })
 export class CasoService {
   private httpClient = inject(HttpClient);
+  private bitacoraService = inject(BitacoraService);
   private readonly apiUrl = `${environment.apiUrl}/casos`;
 
   getFeed(page = 0, size = 10): Observable<ApiResponse> {
@@ -54,18 +56,18 @@ export class CasoService {
   }
 
   getBitacora(casoId: number): Observable<ApiResponse> {
-    return this.httpClient.get<ApiResponse>(`${this.apiUrl}/${casoId}/bitacora`);
+    return this.bitacoraService.getBitacora(casoId);
   }
 
   abrirBitacora(casoId: number, dto?: ApiResponse): Observable<ApiResponse> {
-    return this.httpClient.post<ApiResponse>(`${this.apiUrl}/${casoId}/bitacora`, dto || {});
+    return this.bitacoraService.abrirBitacora(casoId, dto);
   }
 
   agregarEvolucion(casoId: number, dto: ApiResponse): Observable<ApiResponse> {
-    return this.httpClient.post<ApiResponse>(`${this.apiUrl}/${casoId}/bitacora/evoluciones`, dto);
+    return this.bitacoraService.agregarEvolucion(casoId, dto);
   }
 
   registrarAlta(casoId: number, dto: ApiResponse): Observable<ApiResponse> {
-    return this.httpClient.patch<ApiResponse>(`${this.apiUrl}/${casoId}/bitacora/alta`, dto);
+    return this.bitacoraService.registrarAlta(casoId, dto);
   }
 }

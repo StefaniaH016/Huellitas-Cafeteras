@@ -3,6 +3,12 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { CasoService } from '../../core/services/caso.service';
+import {
+  fallbackCaseString,
+  getUrgencyBadgeClass,
+  getUrgencyBadgeLabel,
+  normalizeCasoDisplay,
+} from '../../core/utils/caso-display.utils';
 import { UbicacionSelectorComponent } from '../../shared/components/ubicacion-selector/ubicacion-selector.component';
 
 interface Caso {
@@ -108,13 +114,6 @@ export class CasosComponent implements OnInit {
     return fechaReporte || new Date().toLocaleDateString('es-CO');
   }
 
-  private fallbackStr(val?: string, defaultVal = ''): string {
-    if (val) {
-      return val;
-    }
-    return defaultVal;
-  }
-
   private extractTipo(caso: RawCasoItem): string {
     if (caso.tipoCaso) {
       return caso.tipoCaso.toUpperCase();
@@ -126,22 +125,12 @@ export class CasosComponent implements OnInit {
   }
 
   private mapRawCaso(caso: RawCasoItem): Caso {
-    const urg = caso.urgencia ? caso.urgencia.toUpperCase() : 'MEDIA';
-    const est = this.fallbackStr(caso.estado, 'REGISTRADO').toUpperCase();
-    const titulo = this.fallbackStr(caso.titulo, this.fallbackStr(caso.descripcion));
-    const foto = this.fallbackStr(caso.fotoPrincipal, this.fallbackStr(caso.foto));
-
+    const display = normalizeCasoDisplay(caso);
     return {
-      id: caso.id,
-      titulo,
-      descripcion: this.fallbackStr(caso.descripcion),
-      urgencia: urg,
+      ...display,
       tipo: this.extractTipo(caso),
-      estado: est,
-      municipio: this.fallbackStr(caso.municipio),
-      barrio: this.fallbackStr(caso.barrio),
       fechaReporte: this.formatCasoFecha(caso.fechaCreacion, caso.fechaReporte),
-      foto,
+      foto: fallbackCaseString(caso.fotoPrincipal, fallbackCaseString(caso.foto)),
     };
   }
 
@@ -217,7 +206,7 @@ export class CasosComponent implements OnInit {
   }
 
   onVerCaso(id: string | number): void {
-    this.router.navigate(['/caso-detalle', id]);
+    void this.router.navigate(['/caso-detalle', id]);
   }
 
   onDeptoChange(deptoId: number | null): void {
@@ -247,32 +236,10 @@ export class CasosComponent implements OnInit {
   }
 
   getBadgeClass(urgencia: string): string {
-    switch (urgencia?.toUpperCase()) {
-      case 'CRITICA':
-        return 'badge-emergencia';
-      case 'ALTA':
-        return 'badge-alta';
-      case 'MEDIA':
-        return 'badge-atencion';
-      case 'BAJA':
-        return 'badge-media';
-      default:
-        return 'badge-atencion';
-    }
+    return getUrgencyBadgeClass(urgencia);
   }
 
   getBadgeLabel(urgencia: string): string {
-    switch (urgencia?.toUpperCase()) {
-      case 'CRITICA':
-        return 'Emergencia';
-      case 'ALTA':
-        return 'Alta';
-      case 'MEDIA':
-        return 'Media';
-      case 'BAJA':
-        return 'Baja';
-      default:
-        return urgencia || 'Media';
-    }
+    return getUrgencyBadgeLabel(urgencia);
   }
 }

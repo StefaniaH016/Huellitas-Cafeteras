@@ -1,8 +1,8 @@
-import { Component, OnDestroy, inject, signal } from '@angular/core';
+import { Component, OnDestroy, WritableSignal, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { from, concatMap, toArray } from 'rxjs';
+import { Observable, from, concatMap, toArray } from 'rxjs';
 import { CasoService } from '../../core/services/caso.service';
 import { UbicacionService } from '../../core/services/ubicacion.service';
 import { UbicacionSelectorComponent } from '../../shared/components/ubicacion-selector/ubicacion-selector.component';
@@ -110,7 +110,7 @@ export class ReportarComponent implements OnDestroy {
   }
 
   goHome(): void {
-    this.router.navigate(['/home']);
+    void this.router.navigate(['/home']);
   }
 
   cancelar(): void {
@@ -122,41 +122,64 @@ export class ReportarComponent implements OnDestroy {
   }
 
   stepOneNext(): void {
-    this.errors = {};
-
-    if (!this.formData.tipoCaso) {
-      this.errors['tipoCaso'] = 'Selecciona qué le pasó al animal';
-    }
-    if (!this.formData.urgencia) {
-      this.errors['urgencia'] = 'Selecciona el nivel de urgencia';
-    }
-    if (!this.formData.especie) {
-      this.errors['especie'] = 'Selecciona el tipo de animal';
-    }
-    if (!this.formData.descripcion) {
-      this.errors['descripcion'] = 'Describe lo que observaste';
-    }
-
-    if (Object.keys(this.errors).length === 0) {
-      this.currentStep.set(2);
-    }
+    this.validateStep(2, [
+      {
+        field: 'tipoCaso',
+        valid: Boolean(this.formData.tipoCaso),
+        message: 'Selecciona qué le pasó al animal',
+      },
+      {
+        field: 'urgencia',
+        valid: Boolean(this.formData.urgencia),
+        message: 'Selecciona el nivel de urgencia',
+      },
+      {
+        field: 'especie',
+        valid: Boolean(this.formData.especie),
+        message: 'Selecciona el tipo de animal',
+      },
+      {
+        field: 'descripcion',
+        valid: Boolean(this.formData.descripcion),
+        message: 'Describe lo que observaste',
+      },
+    ]);
   }
 
   stepTwoNext(): void {
+    this.validateStep(3, [
+      {
+        field: 'departamento',
+        valid: Boolean(this.formData.deptoId),
+        message: 'Selecciona el departamento',
+      },
+      {
+        field: 'municipio',
+        valid: Boolean(this.formData.munId),
+        message: 'Selecciona el municipio',
+      },
+      {
+        field: 'barrio',
+        valid: Boolean(this.formData.barrioId),
+        message: 'Selecciona el barrio',
+      },
+    ]);
+  }
+
+  private validateStep(
+    nextStep: number,
+    validations: { field: string; valid: boolean; message: string }[],
+  ): void {
     this.errors = {};
 
-    if (!this.formData.deptoId) {
-      this.errors['departamento'] = 'Selecciona el departamento';
-    }
-    if (!this.formData.munId) {
-      this.errors['municipio'] = 'Selecciona el municipio';
-    }
-    if (!this.formData.barrioId) {
-      this.errors['barrio'] = 'Selecciona el barrio';
+    for (const { field, valid, message } of validations) {
+      if (!valid) {
+        this.errors[field] = message;
+      }
     }
 
     if (Object.keys(this.errors).length === 0) {
-      this.currentStep.set(3);
+      this.currentStep.set(nextStep);
     }
   }
 
@@ -293,7 +316,7 @@ export class ReportarComponent implements OnDestroy {
     const files = this.fotos();
     const casoIdNum = Number(idGenerado);
 
-    if (files.length === 0 || isNaN(casoIdNum)) {
+    if (files.length === 0 || Number.isNaN(casoIdNum)) {
       this.finishPublicacion(idGenerado);
       return;
     }
@@ -322,37 +345,42 @@ export class ReportarComponent implements OnDestroy {
 
   onDeptoChange(deptoId: number | null): void {
     this.formData.deptoId = deptoId;
-    if (deptoId) {
-      this.ubicacionService.getDepartamentos().subscribe((deptos): void => {
-        const depto = deptos.find((d) => d.id === deptoId);
-        this.deptoNombre.set(depto?.nombre || '');
-      });
-    } else {
-      this.deptoNombre.set('');
-    }
+    this.updateLocationName(deptoId, this.deptoNombre, () =>
+      this.ubicacionService.getDepartamentos(),
+    );
   }
 
   onMunChange(munId: number | null): void {
     this.formData.munId = munId;
-    if (munId && this.formData.deptoId) {
-      this.ubicacionService.getMunicipios(this.formData.deptoId).subscribe((muns): void => {
-        const mun = muns.find((m) => m.id === munId);
-        this.munNombre.set(mun?.nombre || '');
-      });
-    } else {
-      this.munNombre.set('');
-    }
+    this.updateLocationName(munId, this.munNombre, () => {
+      const departamentoId = this.formData.deptoId;
+      return departamentoId ? this.ubicacionService.getMunicipios(departamentoId) : null;
+    });
   }
 
   onBarrioChange(barrioId: number | null): void {
     this.formData.barrioId = barrioId;
-    if (barrioId && this.formData.munId) {
-      this.ubicacionService.getBarrios(this.formData.munId).subscribe((barrios): void => {
-        const barrio = barrios.find((b) => b.id === barrioId);
-        this.barrioNombre.set(barrio?.nombre || '');
-      });
-    } else {
-      this.barrioNombre.set('');
+    this.updateLocationName(barrioId, this.barrioNombre, () => {
+      const municipioId = this.formData.munId;
+      return municipioId ? this.ubicacionService.getBarrios(municipioId) : null;
+    });
+  }
+
+  private updateLocationName<T extends { id: number; nombre: string }>(
+    selectedId: number | null,
+    name: WritableSignal<string>,
+    loadLocations: () => Observable<T[]> | null,
+  ): void {
+    const locations = selectedId ? loadLocations() : null;
+
+    if (!locations) {
+      name.set('');
+      return;
     }
+
+    locations.subscribe((items): void => {
+      const selectedLocation = items.find((item) => item.id === selectedId);
+      name.set(selectedLocation?.nombre || '');
+    });
   }
 }
