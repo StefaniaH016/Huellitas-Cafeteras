@@ -78,6 +78,14 @@ it('deletes a report', () => {
   request.flush(null);
 });
 
+it('deletes an existing photo from a report', () => {
+  service.eliminarFoto(8, 25).subscribe();
+
+  const request = http.expectOne(`${baseUrl}/8/fotos/25`);
+  expect(request.request.method).toBe('DELETE');
+  request.flush(null);
+});
+
 it('uploads an image and includes an optional case id', () => {
   const file = new File(['image'], 'animal.png', { type: 'image/png' });
   service.subirImagen(file, 8).subscribe();

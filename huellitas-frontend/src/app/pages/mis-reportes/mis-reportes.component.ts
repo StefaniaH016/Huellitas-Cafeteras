@@ -1,4 +1,5 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { CasoService } from '../../core/services/caso.service';
@@ -67,9 +68,13 @@ export class MisReportesComponent implements OnInit {
         this.reportes.update((items) => items.filter((item) => item.id !== caso.id));
         this.eliminandoId.set(null);
       },
-      error: (err: unknown): void => {
+      error: (err: HttpErrorResponse): void => {
         console.error('Error eliminando el caso:', err);
-        this.error.set('No fue posible eliminar el caso. Intenta de nuevo.');
+        this.error.set(
+          err.status === 405
+            ? 'El servidor al que está conectada esta versión todavía no acepta la eliminación de casos. Verifica que la app use Azure y que allí esté desplegada la última versión del backend.'
+            : 'No fue posible eliminar el caso. Intenta de nuevo.',
+        );
         this.eliminandoId.set(null);
       },
     });

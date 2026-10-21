@@ -217,14 +217,29 @@
       <div class="field-group">
         <p class="group-label" id="etiqueta-fotos">
           Fotografías
-          <span class="optional">{{ editando() ? '(opcional al editar)' : '(obligatorio)' }}</span>
+          <span class="optional">
+            {{ editando() ? '(conserva al menos una foto)' : '(obligatorio)' }}
+          </span>
         </p>
-        @if (existingPhotoUrls().length > 0) {
+        @if (existingPhotos().length > 0) {
           <p class="field-hint">Fotos registradas en el caso:</p>
           <div class="preview-grid">
-            @for (url of existingPhotoUrls(); track $index) {
+            @for (foto of existingPhotos(); track foto.id) {
               <div class="preview-card">
-                <img [src]="url" [alt]="'Foto registrada ' + ($index + 1)" class="preview-thumb" />
+                <img
+                  [src]="foto.url"
+                  [alt]="'Foto registrada ' + ($index + 1)"
+                  class="preview-thumb"
+                />
+                <button
+                  type="button"
+                  class="preview-remove-btn"
+                  [disabled]="totalFotos() <= 1 || removingPhotoId() === foto.id"
+                  [attr.aria-label]="'Eliminar foto registrada ' + ($index + 1)"
+                  (click)="eliminarFotoExistente(foto)"
+                >
+                  {{ removingPhotoId() === foto.id ? '…' : '✕' }}
+                </button>
               </div>
             }
           </div>
@@ -248,7 +263,7 @@
             aria-describedby="error-fotos contadorFotos"
           />
         </label>
-        <p class="field-hint" id="contadorFotos">{{ fotos().length }} de 5 fotos</p>
+        <p class="field-hint" id="contadorFotos">{{ totalFotos() }} de 5 fotos</p>
 
         @if (fotoError()) {
           <p class="field-error" id="error-fotos">{{ fotoError() }}</p>

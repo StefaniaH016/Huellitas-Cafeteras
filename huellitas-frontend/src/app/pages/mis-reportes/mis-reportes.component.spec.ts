@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
@@ -69,4 +70,19 @@ it('shows an error when report deletion fails', () => {
   fixture.componentInstance.eliminar(fixture.componentInstance.reportes()[0]);
 
   expect(fixture.componentInstance.error()).toContain('No fue posible eliminar');
+});
+
+it('explains when the backend has not deployed case deletion support', () => {
+  vi.spyOn(globalThis, 'confirm').mockReturnValue(true);
+  vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  vi.mocked(casoService.eliminarCaso).mockReturnValue(
+    throwError(() => new HttpErrorResponse({ status: 405 })),
+  );
+  const fixture = TestBed.createComponent(MisReportesComponent);
+  fixture.detectChanges();
+
+  fixture.componentInstance.eliminar(fixture.componentInstance.reportes()[0]);
+
+  expect(fixture.componentInstance.error()).toContain('eliminación de casos');
+  expect(fixture.componentInstance.eliminandoId()).toBeNull();
 });

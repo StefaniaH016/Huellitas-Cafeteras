@@ -1,4 +1,4 @@
 export const environment = {
   production: true,
-  apiUrl: 'https://huellitas-cafeteras-production.up.railway.app/v1',
+  apiUrl: 'https://huellitas-cafeteras-prod.azurewebsites.net/v1',
 };

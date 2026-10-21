@@ -1,5 +1,6 @@
 import { Component, OnDestroy, OnInit, WritableSignal, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Observable, from, concatMap, tap, toArray } from 'rxjs';
@@ -30,6 +31,11 @@ interface CrearReporteResponse {
   id?: string | number;
 }
 
+interface FotoExistente {
+  id: number;
+  url: string;
+}
+
 interface CasoEdicionResponse {
   id: number;
   estado: string;
@@ -45,7 +51,7 @@ interface CasoEdicionResponse {
     departamento?: string;
     municipio?: string;
   };
-  fotografias?: { url?: string }[];
+  fotografias?: { id?: number; url?: string }[];
 }
 
 interface ReporteFormData {
@@ -84,7 +90,8 @@ export class ReportarComponent implements OnInit, OnDestroy {
   casoCargado = signal(false);
   editando = signal(false);
   casoId = signal<number | null>(null);
-  existingPhotoUrls = signal<string[]>([]);
+  existingPhotos = signal<FotoExistente[]>([]);
+  removingPhotoId = signal<number | null>(null);
   createdCasoId = signal('');
   submitError = signal('');
   submitWarning = signal('');
@@ -161,10 +168,10 @@ export class ReportarComponent implements OnInit, OnDestroy {
     this.formData = this.obtenerDatosFormulario(caso);
     this.deptoNombre.set(caso.ubicacion?.departamento ?? '');
     this.munNombre.set(caso.ubicacion?.municipio ?? '');
-    this.existingPhotoUrls.set(
+    this.existingPhotos.set(
       (caso.fotografias ?? [])
-        .map((foto) => foto.url?.trim())
-        .filter((url): url is string => Boolean(url)),
+        .map((foto) => ({ id: foto.id, url: foto.url?.trim() }))
+        .filter((foto): foto is FotoExistente => Boolean(foto.id && foto.url)),
     );
     this.casoCargado.set(true);
     this.cargandoCaso.set(false);
@@ -286,7 +293,7 @@ export class ReportarComponent implements OnInit, OnDestroy {
       },
     ]);
 
-    if (!this.editando() && this.fotos().length === 0) {
+    if (this.totalFotos() === 0) {
       this.errors['fotos'] = 'La foto es obligatoria. Agrega al menos una fotografía del animal.';
     }
 
@@ -385,7 +392,7 @@ export class ReportarComponent implements OnInit, OnDestroy {
     this.fotoError.set('');
     delete this.errors['fotos'];
     const currentCount = this.fotos().length;
-    if (currentCount + files.length > 5) {
+    if (this.existingPhotos().length + currentCount + files.length > 5) {
       this.fotoError.set('Puedes subir un máximo de 5 fotos.');
       return;
     }
@@ -414,6 +421,39 @@ export class ReportarComponent implements OnInit, OnDestroy {
     }
     this.fotos.update((prev) => prev.filter((_, i) => i !== index));
     this.previewUrls.update((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  totalFotos(): number {
+    return this.existingPhotos().length + this.fotos().length;
+  }
+
+  eliminarFotoExistente(foto: FotoExistente): void {
+    const casoId = this.casoId();
+    if (casoId === null || this.removingPhotoId() !== null) {
+      return;
+    }
+    if (this.totalFotos() <= 1) {
+      this.fotoError.set('El caso debe conservar al menos una foto.');
+      return;
+    }
+
+    this.fotoError.set('');
+    this.removingPhotoId.set(foto.id);
+    this.casoService.eliminarFoto(casoId, foto.id).subscribe({
+      next: (): void => {
+        this.existingPhotos.update((fotos) => fotos.filter((item) => item.id !== foto.id));
+        this.removingPhotoId.set(null);
+      },
+      error: (err: HttpErrorResponse): void => {
+        console.error('Error eliminando la foto del caso:', err);
+        this.fotoError.set(
+          err.status === 405
+            ? 'El servidor todavía no tiene habilitada la eliminación de fotos. Debe desplegarse la última versión del backend.'
+            : 'No fue posible eliminar la foto. Intenta de nuevo.',
+        );
+        this.removingPhotoId.set(null);
+      },
+    });
   }
 
   ngOnDestroy(): void {
@@ -458,7 +498,7 @@ export class ReportarComponent implements OnInit, OnDestroy {
   }
 
   private validarPublicacion(): boolean {
-    if (!this.editando() && this.fotos().length === 0) {
+    if (this.totalFotos() === 0) {
       this.currentStep.set(2);
       this.errors['fotos'] = 'La foto es obligatoria. Agrega al menos una fotografía del animal.';
       return false;
@@ -478,7 +518,12 @@ export class ReportarComponent implements OnInit, OnDestroy {
       next: (): void => this.handleUploadImages(id.toString()),
       error: (err: unknown): void => {
         console.error('Error actualizando el caso:', err);
-        this.submitError.set('No fue posible guardar los cambios. Intenta de nuevo.');
+        const status = (err as HttpErrorResponse).status;
+        this.submitError.set(
+          status === 405
+            ? 'El servidor todavía no acepta la edición de casos. Debe desplegarse la última versión del backend.'
+            : 'No fue posible guardar los cambios. Intenta de nuevo.',
+        );
         this.enviando.set(false);
       },
     });

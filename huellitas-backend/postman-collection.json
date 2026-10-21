@@ -22,6 +22,11 @@
       "type": "string"
     },
     {
+      "key": "fotoId",
+      "value": "1",
+      "type": "string"
+    },
+    {
       "key": "usuarioId",
       "value": "1",
       "type": "string"
@@ -299,6 +304,15 @@
             },
             "url": "{{baseUrl}}/v1/casos/{{casoId}}",
             "description": "Solo el usuario que reportó el caso puede editarlo y únicamente mientras esté REGISTRADO."
+          }
+        },
+        {
+          "name": "Eliminar foto de caso propio (requiere token)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/v1/casos/{{casoId}}/fotos/{{fotoId}}",
+            "description": "Solo el reportante puede eliminar fotos mientras el caso esté REGISTRADO. El caso debe conservar al menos una foto."
           }
         },
         {

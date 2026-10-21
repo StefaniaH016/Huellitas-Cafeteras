@@ -47,6 +47,10 @@ export class CasoService {
     return this.httpClient.delete<void>(`${this.apiUrl}/${id}`);
   }
 
+  eliminarFoto(casoId: number, fotoId: number): Observable<void> {
+    return this.httpClient.delete<void>(`${this.apiUrl}/${casoId}/fotos/${fotoId}`);
+  }
+
   subirImagen(archivo: File, casoId?: string | number): Observable<ApiResponse> {
     const formData = new FormData();
     formData.append('archivo', archivo);

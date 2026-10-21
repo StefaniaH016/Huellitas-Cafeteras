@@ -116,6 +116,28 @@ public class CasoServiceImpl implements CasoService {
     }
 
     @Override
+    public void eliminarFoto(Long casoId, Long fotoId, String correoUsuario) {
+        Caso caso = obtenerCasoEditable(casoId, correoUsuario);
+        Foto foto = caso.getFotos().stream()
+                .filter(item -> item.getId().equals(fotoId))
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("Foto", fotoId));
+
+        if (caso.getFotos().size() <= 1) {
+            throw new ConflictException("El caso debe conservar al menos una foto.");
+        }
+
+        cloudinaryService.eliminarFotos(List.of(foto));
+        if (foto.isPrincipal()) {
+            caso.getFotos().stream()
+                    .filter(item -> !item.getId().equals(fotoId))
+                    .findFirst()
+                    .ifPresent(item -> item.setPrincipal(true));
+        }
+        caso.getFotos().remove(foto);
+    }
+
+    @Override
     public void eliminarCaso(Long id, String correoUsuario) {
         Caso caso = obtenerCasoEditable(id, correoUsuario);
         if (casoRepository.existsByCasoOriginalId(id)) {

@@ -12,6 +12,8 @@ public interface CasoService {
 
     CasoResponseDTO actualizarReporte(Long id, CrearReporteDTO dto, String correoUsuario);
 
+    void eliminarFoto(Long casoId, Long fotoId, String correoUsuario);
+
     void eliminarCaso(Long id, String correoUsuario);
 
     Page<CasoListItemDTO> listarCasos(FiltrosCasoDTO filtros, Pageable pageable);

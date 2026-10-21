@@ -60,6 +60,19 @@ public class ReporteController {
         return ResponseEntity.noContent().build();
     }
 
+    @DeleteMapping("/{id}/fotos/{fotoId}")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Void> eliminarFoto(
+            @PathVariable Long id,
+            @PathVariable Long fotoId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        if (userDetails == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        casoService.eliminarFoto(id, fotoId, userDetails.getUsername());
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping
     public ResponseEntity<Page<CasoListItemDTO>> listarCasos(
             @ModelAttribute FiltrosCasoDTO filtros,

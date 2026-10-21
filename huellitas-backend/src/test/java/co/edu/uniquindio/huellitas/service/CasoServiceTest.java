@@ -20,6 +20,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -186,6 +188,59 @@ class CasoServiceTest {
         assertEquals(Especie.GATO, animal.getEspecie());
         assertEquals(barrioMock, caso.getBarrio());
         verify(animalRepository).save(animal);
+    }
+
+    @Test
+    @DisplayName("El reportante puede eliminar una foto conservando otra como principal")
+    void debeEliminarFotoDelCasoYReasignarFotoPrincipal() {
+        Foto fotoPrincipal = Foto.builder().id(5L).url("https://example.test/1.jpg").principal(true).build();
+        Foto fotoRestante = Foto.builder().id(6L).url("https://example.test/2.jpg").build();
+        Caso caso = Caso.builder()
+                .id(12L)
+                .estado(EstadoCaso.REGISTRADO)
+                .reportante(usuarioMock)
+                .fotos(new ArrayList<>(List.of(fotoPrincipal, fotoRestante)))
+                .build();
+        when(casoRepository.findById(12L)).thenReturn(Optional.of(caso));
+
+        casoService.eliminarFoto(12L, 5L, "usuario@test.com");
+
+        verify(cloudinaryService).eliminarFotos(List.of(fotoPrincipal));
+        assertEquals(List.of(fotoRestante), caso.getFotos());
+        assertTrue(fotoRestante.isPrincipal());
+    }
+
+    @Test
+    @DisplayName("Debe conservar al menos una foto en el caso")
+    void debeRechazarEliminacionDeLaUltimaFoto() {
+        Foto foto = Foto.builder().id(5L).url("https://example.test/1.jpg").principal(true).build();
+        Caso caso = Caso.builder()
+                .id(12L)
+                .estado(EstadoCaso.REGISTRADO)
+                .reportante(usuarioMock)
+                .fotos(new ArrayList<>(List.of(foto)))
+                .build();
+        when(casoRepository.findById(12L)).thenReturn(Optional.of(caso));
+
+        assertThrows(ConflictException.class,
+                () -> casoService.eliminarFoto(12L, 5L, "usuario@test.com"));
+        verifyNoInteractions(cloudinaryService);
+    }
+
+    @Test
+    @DisplayName("No permite eliminar una foto que pertenece a otro caso")
+    void debeRechazarFotoAjenaAlCaso() {
+        Caso caso = Caso.builder()
+                .id(12L)
+                .estado(EstadoCaso.REGISTRADO)
+                .reportante(usuarioMock)
+                .fotos(new ArrayList<>())
+                .build();
+        when(casoRepository.findById(12L)).thenReturn(Optional.of(caso));
+
+        assertThrows(ResourceNotFoundException.class,
+                () -> casoService.eliminarFoto(12L, 999L, "usuario@test.com"));
+        verifyNoInteractions(cloudinaryService);
     }
 
     @Test

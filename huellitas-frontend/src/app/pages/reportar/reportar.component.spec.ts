@@ -7,7 +7,12 @@ import { ReportarComponent } from './reportar.component';
 
 let casoService: Pick<
   CasoService,
-  'actualizarReporte' | 'crearReporte' | 'eliminarCaso' | 'getDetalle' | 'subirImagen'
+  | 'actualizarReporte'
+  | 'crearReporte'
+  | 'eliminarCaso'
+  | 'eliminarFoto'
+  | 'getDetalle'
+  | 'subirImagen'
 >;
 let ubicacionService: Pick<UbicacionService, 'getBarrios' | 'getDepartamentos' | 'getMunicipios'>;
 let router: Router;
@@ -17,6 +22,7 @@ beforeEach(() => {
     actualizarReporte: vi.fn().mockReturnValue(of({ id: 21 })),
     crearReporte: vi.fn().mockReturnValue(of({ id: 21 })),
     eliminarCaso: vi.fn().mockReturnValue(of(undefined)),
+    eliminarFoto: vi.fn().mockReturnValue(of(undefined)),
     getDetalle: vi.fn().mockReturnValue(of({})),
     subirImagen: vi.fn().mockReturnValue(of({ url: 'https://example.test/photo.jpg' })),
   };
@@ -279,6 +285,7 @@ it('updates a report without requiring a new photo', () => {
   component.editando.set(true);
   component.casoId.set(21);
   component.casoCargado.set(true);
+  component.existingPhotos.set([{ id: 5, url: 'https://example.test/photo.jpg' }]);
 
   component.onPublicar();
 
@@ -288,6 +295,39 @@ it('updates a report without requiring a new photo', () => {
   );
   expect(casoService.crearReporte).not.toHaveBeenCalled();
   expect(component.currentStep()).toBe(4);
+});
+
+it('deletes a registered photo but keeps at least one photo in the case', () => {
+  const component = createComponent();
+  component.editando.set(true);
+  component.casoId.set(21);
+  component.existingPhotos.set([
+    { id: 5, url: 'https://example.test/first.jpg' },
+    { id: 6, url: 'https://example.test/second.jpg' },
+  ]);
+
+  component.eliminarFotoExistente(component.existingPhotos()[0]);
+
+  expect(casoService.eliminarFoto).toHaveBeenCalledWith(21, 5);
+  expect(component.existingPhotos()).toEqual([{ id: 6, url: 'https://example.test/second.jpg' }]);
+  component.eliminarFotoExistente(component.existingPhotos()[0]);
+  expect(casoService.eliminarFoto).toHaveBeenCalledTimes(1);
+});
+
+it('reports when the backend has not deployed the photo removal endpoint', () => {
+  const component = createComponent();
+  component.editando.set(true);
+  component.casoId.set(21);
+  component.existingPhotos.set([
+    { id: 5, url: 'https://example.test/first.jpg' },
+    { id: 6, url: 'https://example.test/second.jpg' },
+  ]);
+  vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  vi.mocked(casoService.eliminarFoto).mockReturnValue(throwError(() => ({ status: 405 })));
+
+  component.eliminarFotoExistente(component.existingPhotos()[0]);
+
+  expect(component.fotoError()).toContain('Debe desplegarse la última versión del backend');
 });
 
 it('deletes the newly created case if no photo could be saved', () => {
