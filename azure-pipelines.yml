@@ -35,7 +35,7 @@ stages:
             inputs:
               command: buildAndPush
               repository: $(imageRepository)
-              dockerfile: '$(Build.SourcesDirectory)/Dockerfile'
+              dockerfile: '$(Build.SourcesDirectory)/huellitas-backend/Dockerfile'
               containerRegistry: $(dockerRegistryConnection)
               tags: |
                 $(tag)
