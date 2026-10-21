@@ -1,34 +1,86 @@
 {
   "info": {
+    "_postman_id": "7fcb0b16-1377-4a0d-a8b8-8a632998f498",
     "name": "Huellitas Cafeteras API",
-    "description": "Colección de endpoints para probar la API de Huellitas Cafeteras en Producción (Railway)",
+    "description": "Colección de pruebas para la API. Cambia baseUrl si el backend se despliega en otra dirección. Los endpoints marcados como protegidos requieren iniciar sesión y usar el token JWT.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://huellitas-cafeteras-prod.azurewebsites.net",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "casoId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "usuarioId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "departamentoId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "municipioId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "barrioId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "notificacionId",
+      "value": "1",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
   },
   "item": [
     {
-      "name": "Health",
+      "name": "Estado",
       "item": [
         {
-          "name": "Health Check",
+          "name": "Health check",
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "https://huellitas-cafeteras-production.up.railway.app/health",
-              "protocol": "https",
-              "host": ["huellitas-cafeteras-production", "up", "railway", "app"],
-              "path": ["health"]
-            }
+            "url": "{{baseUrl}}/actuator/health",
+            "description": "Público. Debe responder status UP."
           }
         }
       ]
     },
     {
-      "name": "Auth",
+      "name": "Autenticación",
       "item": [
         {
-          "name": "Registro",
+          "name": "Registrar usuario",
           "request": {
+            "auth": {
+              "type": "noauth"
+            },
             "method": "POST",
             "header": [
               {
@@ -38,19 +90,35 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"correo\": \"usuario@example.com\",\n  \"contrasena\": \"Password123!\",\n  \"nombre\": \"Juan Pérez\"\n}"
+              "raw": "{\n  \"nombre\": \"Usuario de prueba\",\n  \"correo\": \"prueba@example.com\",\n  \"contrasena\": \"Cambiar123!\",\n  \"telefono\": \"3001234567\",\n  \"barrioId\": {{barrioId}},\n  \"rol\": \"CIUDADANO_VOLUNTARIO\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": {
-              "raw": "https://huellitas-cafeteras-production.up.railway.app/v1/auth/registro",
-              "protocol": "https",
-              "host": ["huellitas-cafeteras-production", "up", "railway", "app"],
-              "path": ["v1", "auth", "registro"]
-            }
+            "url": "{{baseUrl}}/v1/auth/registro",
+            "description": "Público. correo debe ser único; contraseña requiere mínimo 8 caracteres. Roles disponibles en el código: ADMINISTRADOR, CIUDADANO_VOLUNTARIO, FUNDACION_REFUGIO, VETERINARIA. No solicites ADMINISTRADOR para un usuario normal."
           }
         },
         {
-          "name": "Login",
+          "name": "Iniciar sesión (guarda token)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const data = pm.response.json();",
+                  "if (data.token) pm.collectionVariables.set('token', data.token);"
+                ]
+              }
+            }
+          ],
           "request": {
+            "auth": {
+              "type": "noauth"
+            },
             "method": "POST",
             "header": [
               {
@@ -60,51 +128,85 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"correo\": \"usuario@example.com\",\n  \"contrasena\": \"Password123!\"\n}"
+              "raw": "{\n  \"correo\": \"prueba@example.com\",\n  \"contrasena\": \"Cambiar123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": {
-              "raw": "https://huellitas-cafeteras-production.up.railway.app/v1/auth/login",
-              "protocol": "https",
-              "host": ["huellitas-cafeteras-production", "up", "railway", "app"],
-              "path": ["v1", "auth", "login"]
-            }
+            "url": "{{baseUrl}}/v1/auth/login",
+            "description": "Público. IMPORTANTE: es POST (no GET). Si la respuesta contiene token, la colección lo guarda automáticamente para las peticiones protegidas."
           }
         },
         {
-          "name": "Obtener Usuario Actual",
+          "name": "Usuario autenticado actual",
           "request": {
             "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}",
-                "description": "Reemplaza {{token}} con el JWT del login"
-              }
-            ],
-            "url": {
-              "raw": "https://huellitas-cafeteras-production.up.railway.app/v1/auth/me",
-              "protocol": "https",
-              "host": ["huellitas-cafeteras-production", "up", "railway", "app"],
-              "path": ["v1", "auth", "me"]
-            }
+            "header": [],
+            "url": "{{baseUrl}}/v1/auth/me",
+            "description": "Requiere token JWT."
           }
         }
       ]
     },
     {
-      "name": "Ubicaciones",
+      "name": "Ubicaciones (públicas)",
       "item": [
         {
-          "name": "Obtener Departamentos",
+          "name": "Listar departamentos",
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "https://huellitas-cafeteras-production.up.railway.app/v1/ubicaciones/departamentos",
-              "protocol": "https",
-              "host": ["huellitas-cafeteras-production", "up", "railway", "app"],
-              "path": ["v1", "ubicaciones", "departamentos"]
-            }
+            "url": "{{baseUrl}}/v1/ubicaciones/departamentos"
+          }
+        },
+        {
+          "name": "Listar municipios",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/v1/ubicaciones/municipios"
+          }
+        },
+        {
+          "name": "Listar municipios por query departamentoId",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/v1/ubicaciones/municipios?departamentoId={{departamentoId}}"
+          }
+        },
+        {
+          "name": "Municipios por departamento",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/v1/ubicaciones/departamentos/{{departamentoId}}/municipios"
+          }
+        },
+        {
+          "name": "Listar barrios",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/v1/ubicaciones/barrios"
+          }
+        },
+        {
+          "name": "Listar barrios por query municipioId",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/v1/ubicaciones/barrios?municipioId={{municipioId}}"
+          }
+        },
+        {
+          "name": "Barrios por municipio",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/v1/ubicaciones/municipios/{{municipioId}}/barrios"
           }
         }
       ]
@@ -113,43 +215,472 @@
       "name": "Casos",
       "item": [
         {
-          "name": "Crear Caso (Autenticado)",
+          "name": "Listar casos (público, filtros opcionales)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/v1/casos?page=0&size=10&sort=fechaCreacion,desc&departamentoId={{departamentoId}}&municipioId={{municipioId}}&barrioId={{barrioId}}&estado=REGISTRADO&especie=PERRO&urgencia=ALTA&tipoCaso=HERIDO",
+            "description": "Todos los filtros de query son opcionales; quita los que no uses. Enum especie: PERRO, GATO, OTRO. estado: REGISTRADO, EN_ATENCION, RESUELTO, ARCHIVADO. urgencia: BAJA, MEDIA, ALTA, CRITICA. tipoCaso: EXTRAVIADO, VULNERABLE, HERIDO, EN_ADOPCION."
+          }
+        },
+        {
+          "name": "Feed de casos (público)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/v1/casos/feed?page=0&size=10"
+          }
+        },
+        {
+          "name": "Detalle de caso (público)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/v1/casos/{{casoId}}"
+          }
+        },
+        {
+          "name": "Historial de estados (público)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/v1/casos/{{casoId}}/historial"
+          }
+        },
+        {
+          "name": "Mis reportes (requiere token)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/v1/casos/mis-reportes?page=0&size=10"
+          }
+        },
+        {
+          "name": "Crear caso (requiere token)",
           "request": {
             "method": "POST",
             "header": [
               {
                 "key": "Content-Type",
                 "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}",
-                "description": "Reemplaza {{token}} con el JWT del login"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"titulo\": \"Gato extraviado\",\n  \"descripcion\": \"Gato negro extraviado en el barrio Centro\",\n  \"ubicacion\": \"Calle 10 #5-20\"\n}"
+              "raw": "{\n  \"tipoCaso\": \"HERIDO\",\n  \"urgencia\": \"ALTA\",\n  \"descripcion\": \"Animal encontrado y necesita valoración.\",\n  \"direccionReferencia\": \"Cerca del parque principal\",\n  \"barrioId\": {{barrioId}},\n  \"animal\": {\n    \"nombre\": \"Luna\",\n    \"especie\": \"PERRO\",\n    \"raza\": \"Criollo\",\n    \"color\": \"Café\",\n    \"sexo\": \"HEMBRA\",\n    \"edadAproximada\": \"2 años\",\n    \"senasParticulares\": \"Mancha blanca en el pecho\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": {
-              "raw": "https://huellitas-cafeteras-production.up.railway.app/v1/casos",
-              "protocol": "https",
-              "host": ["huellitas-cafeteras-production", "up", "railway", "app"],
-              "path": ["v1", "casos"]
-            }
+            "url": "{{baseUrl}}/v1/casos",
+            "description": "Especie: PERRO, GATO, OTRO. Sexo: MACHO, HEMBRA, DESCONOCIDO. Tipo: EXTRAVIADO, VULNERABLE, HERIDO, EN_ADOPCION. Urgencia: BAJA, MEDIA, ALTA, CRITICA."
           }
         },
         {
-          "name": "Obtener Feed de Casos",
+          "name": "Editar caso propio en estado REGISTRADO (requiere token)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipoCaso\": \"HERIDO\",\n  \"urgencia\": \"ALTA\",\n  \"descripcion\": \"Descripción actualizada del caso.\",\n  \"direccionReferencia\": \"Nueva dirección de referencia\",\n  \"barrioId\": {{barrioId}},\n  \"animal\": {\n    \"nombre\": \"Luna\",\n    \"especie\": \"PERRO\",\n    \"raza\": \"Criollo\",\n    \"color\": \"Café\",\n    \"sexo\": \"HEMBRA\",\n    \"edadAproximada\": \"2 años\",\n    \"senasParticulares\": \"Mancha blanca en el pecho\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/v1/casos/{{casoId}}",
+            "description": "Solo el usuario que reportó el caso puede editarlo y únicamente mientras esté REGISTRADO."
+          }
+        },
+        {
+          "name": "Eliminar caso propio en estado REGISTRADO (requiere token)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/v1/casos/{{casoId}}",
+            "description": "Eliminación física, solo permitida al reportante mientras el caso esté REGISTRADO. Respuesta esperada: 204."
+          }
+        },
+        {
+          "name": "Actualizar estado de caso (requiere token)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estado\": \"EN_ATENCION\",\n  \"observacion\": \"Un voluntario está atendiendo el caso.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/v1/casos/{{casoId}}/estado"
+          }
+        },
+        {
+          "name": "Cerrar caso (requiere token)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"motivoCierre\": \"RECUPERADO\",\n  \"observacion\": \"El animal se recuperó satisfactoriamente.\",\n  \"entregadoA\": \"Persona responsable\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/v1/casos/{{casoId}}/cierre",
+            "description": "motivoCierre: REENCUENTRO, ENTREGADO_A_CUIDADOR, RECUPERADO, FALLECIDO."
+          }
+        },
+        {
+          "name": "Archivar caso (requiere token)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"motivo\": \"Caso duplicado\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/v1/casos/{{casoId}}/archivar"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Aportes",
+      "item": [
+        {
+          "name": "Listar aportes (público)",
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "https://huellitas-cafeteras-production.up.railway.app/v1/casos/feed",
-              "protocol": "https",
-              "host": ["huellitas-cafeteras-production", "up", "railway", "app"],
-              "path": ["v1", "casos", "feed"]
-            }
+            "url": "{{baseUrl}}/v1/casos/{{casoId}}/aportes"
+          }
+        },
+        {
+          "name": "Crear aporte (requiere token)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"descripcion\": \"Puedo ofrecer transporte para la valoración.\",\n  \"ubicacionTexto\": \"Armenia, Quindío\",\n  \"barrioId\": {{barrioId}},\n  \"fotografias\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/v1/casos/{{casoId}}/aportes"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Bitácora médica",
+      "item": [
+        {
+          "name": "Ver bitácora (público)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/v1/casos/{{casoId}}/bitacora"
+          }
+        },
+        {
+          "name": "Descargar resumen PDF (público)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/v1/casos/{{casoId}}/bitacora/pdf"
+          }
+        },
+        {
+          "name": "Abrir bitácora (veterinaria/admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"observacionInicial\": \"Valoración inicial del animal.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/v1/casos/{{casoId}}/bitacora",
+            "description": "Requiere token de rol VETERINARIA o ADMINISTRADOR. El cuerpo puede omitirse."
+          }
+        },
+        {
+          "name": "Agregar evolución (veterinaria/admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"diagnostico\": \"Deshidratación leve\",\n  \"procedimientos\": \"Examen clínico\",\n  \"tratamiento\": \"Hidratación y observación\",\n  \"medicamentos\": \"Ninguno\",\n  \"observaciones\": \"Control en 24 horas\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/v1/casos/{{casoId}}/bitacora/evoluciones",
+            "description": "Requiere token de rol VETERINARIA o ADMINISTRADOR."
+          }
+        },
+        {
+          "name": "Registrar alta (veterinaria/admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"condicionAlta\": \"Estable y recuperado\",\n  \"indicaciones\": \"Continuar controles y tratamiento según indicación veterinaria.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/v1/casos/{{casoId}}/bitacora/alta",
+            "description": "Requiere token de rol VETERINARIA o ADMINISTRADOR."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Perfil y notificaciones",
+      "item": [
+        {
+          "name": "Ver perfil (requiere token)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/v1/usuarios/me"
+          }
+        },
+        {
+          "name": "Actualizar perfil (requiere token)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Usuario de prueba actualizado\",\n  \"telefono\": \"3001234567\",\n  \"barrioId\": {{barrioId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/v1/usuarios/me"
+          }
+        },
+        {
+          "name": "Listar notificaciones (requiere token)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/v1/notificaciones?page=0&size=10"
+          }
+        },
+        {
+          "name": "Listar notificaciones no leídas (requiere token)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/v1/notificaciones?leidas=false&page=0&size=10"
+          }
+        },
+        {
+          "name": "Marcar notificación como leída (requiere token)",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/v1/notificaciones/{{notificacionId}}/leer"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Administración",
+      "item": [
+        {
+          "name": "Listar casos para moderación (admin)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/v1/moderacion/casos",
+            "description": "Requiere token con rol ADMINISTRADOR."
+          }
+        },
+        {
+          "name": "Moderar caso (admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"decision\": \"MANTENER\",\n  \"motivo\": \"El reporte cumple las reglas de la comunidad.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/v1/moderacion/casos/{{casoId}}",
+            "description": "Requiere token con rol ADMINISTRADOR. decision: MANTENER u OCULTAR."
+          }
+        },
+        {
+          "name": "Listar verificaciones pendientes (admin)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/v1/verificaciones/pendientes",
+            "description": "Requiere token con rol ADMINISTRADOR."
+          }
+        },
+        {
+          "name": "Resolver verificación (admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"decision\": \"APROBAR\",\n  \"observacion\": \"Documentación verificada.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/v1/verificaciones/{{usuarioId}}",
+            "description": "Requiere token con rol ADMINISTRADOR. decision: APROBAR o RECHAZAR."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Imágenes",
+      "item": [
+        {
+          "name": "Subir imagen (requiere token)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "archivo",
+                  "type": "file",
+                  "src": ""
+                },
+                {
+                  "key": "casoId",
+                  "value": "{{casoId}}",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/v1/imagenes",
+            "description": "Requiere token. Selecciona un archivo en el campo archivo. No establezcas Content-Type manualmente; Postman agrega el multipart boundary."
+          }
+        },
+        {
+          "name": "Subir imagen - alias API (requiere token)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "archivo",
+                  "type": "file",
+                  "src": ""
+                },
+                {
+                  "key": "casoId",
+                  "value": "{{casoId}}",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/api/v1/imagenes",
+            "description": "Alias del endpoint para subir imágenes. Requiere token y multipart/form-data."
           }
         }
       ]

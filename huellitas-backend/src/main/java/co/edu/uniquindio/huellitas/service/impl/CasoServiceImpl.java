@@ -5,14 +5,17 @@ import co.edu.uniquindio.huellitas.entity.*;
 import co.edu.uniquindio.huellitas.entity.enums.EstadoCaso;
 import co.edu.uniquindio.huellitas.entity.enums.TipoAporte;
 import co.edu.uniquindio.huellitas.entity.enums.Urgencia;
+import co.edu.uniquindio.huellitas.exception.ConflictException;
 import co.edu.uniquindio.huellitas.exception.ResourceNotFoundException;
 import co.edu.uniquindio.huellitas.repository.*;
 import co.edu.uniquindio.huellitas.service.CasoService;
+import co.edu.uniquindio.huellitas.service.CloudinaryService;
 import co.edu.uniquindio.huellitas.specification.CasoSpecification;
 import co.edu.uniquindio.huellitas.util.FechaUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,6 +35,8 @@ public class CasoServiceImpl implements CasoService {
     private final HistorialEstadoRepository historialEstadoRepository;
     private final SeguimientoRepository seguimientoRepository;
     private final CierreCasoRepository cierreCasoRepository;
+    private final NotificacionRepository notificacionRepository;
+    private final CloudinaryService cloudinaryService;
 
     @Override
     public CasoResponseDTO crearCaso(CrearReporteDTO dto, String correoUsuario) {
@@ -81,6 +86,67 @@ public class CasoServiceImpl implements CasoService {
         historialEstadoRepository.save(historial);
 
         return mapearACasoResponseDTO(caso);
+    }
+
+    @Override
+    public CasoResponseDTO actualizarReporte(Long id, CrearReporteDTO dto, String correoUsuario) {
+        Caso caso = obtenerCasoEditable(id, correoUsuario);
+        Barrio barrio = barrioRepository.findById(dto.barrioId())
+                .orElseThrow(() -> new ResourceNotFoundException("Barrio", dto.barrioId()));
+
+        AnimalReporteDTO animalDto = dto.animal();
+        Animal animal = caso.getAnimal();
+        animal.setNombre(animalDto.nombre());
+        animal.setEspecie(animalDto.especie());
+        animal.setRaza(animalDto.raza());
+        animal.setColor(animalDto.color());
+        animal.setSexo(animalDto.sexo());
+        animal.setEdadAproximada(animalDto.edadAproximada());
+        animal.setSenasParticulares(animalDto.senasParticulares());
+        animalRepository.save(animal);
+
+        caso.setTipoCaso(dto.tipoCaso());
+        caso.setUrgencia(dto.urgencia());
+        caso.setDescripcion(dto.descripcion());
+        caso.setDireccionReferencia(dto.direccionReferencia());
+        caso.setBarrio(barrio);
+        caso.setFechaUltimaActividad(Instant.now());
+
+        return mapearACasoResponseDTO(casoRepository.save(caso));
+    }
+
+    @Override
+    public void eliminarCaso(Long id, String correoUsuario) {
+        Caso caso = obtenerCasoEditable(id, correoUsuario);
+        if (casoRepository.existsByCasoOriginalId(id)) {
+            throw new ConflictException("No se puede eliminar el caso porque tiene casos relacionados.");
+        }
+
+        Animal animal = caso.getAnimal();
+        boolean animalCompartido = casoRepository.existsByAnimalIdAndIdNot(animal.getId(), id);
+        cloudinaryService.eliminarFotos(caso.getFotos());
+        notificacionRepository.desvincularCaso(id);
+        historialEstadoRepository.deleteByCasoId(id);
+        casoRepository.delete(caso);
+        casoRepository.flush();
+        if (!animalCompartido) {
+            animalRepository.delete(animal);
+        }
+    }
+
+    private Caso obtenerCasoEditable(Long id, String correoUsuario) {
+        Caso caso = casoRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Caso", id));
+
+        String correoNormalizado = correoUsuario.trim().toLowerCase();
+        if (caso.getReportante() == null
+                || !correoNormalizado.equals(caso.getReportante().getCorreo().trim().toLowerCase())) {
+            throw new AccessDeniedException("Solo el reportante puede modificar o eliminar este caso.");
+        }
+        if (caso.getEstado() != EstadoCaso.REGISTRADO) {
+            throw new ConflictException("Solo se pueden modificar o eliminar casos en estado REGISTRADO.");
+        }
+        return caso;
     }
 
     @Override

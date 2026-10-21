@@ -39,6 +39,14 @@ export class CasoService {
     return this.httpClient.post<ApiResponse>(`${this.apiUrl}`, dto);
   }
 
+  actualizarReporte(id: number, dto: ApiResponse): Observable<ApiResponse> {
+    return this.httpClient.put<ApiResponse>(`${this.apiUrl}/${id}`, dto);
+  }
+
+  eliminarCaso(id: number): Observable<void> {
+    return this.httpClient.delete<void>(`${this.apiUrl}/${id}`);
+  }
+
   subirImagen(archivo: File, casoId?: string | number): Observable<ApiResponse> {
     const formData = new FormData();
     formData.append('archivo', archivo);

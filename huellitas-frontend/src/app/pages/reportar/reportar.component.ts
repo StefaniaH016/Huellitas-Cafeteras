@@ -1,8 +1,8 @@
-import { Component, OnDestroy, WritableSignal, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, WritableSignal, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
-import { Observable, from, concatMap, toArray } from 'rxjs';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { Observable, from, concatMap, tap, toArray } from 'rxjs';
 import { CasoService } from '../../core/services/caso.service';
 import { UbicacionService } from '../../core/services/ubicacion.service';
 import { UbicacionSelectorComponent } from '../../shared/components/ubicacion-selector/ubicacion-selector.component';
@@ -30,6 +30,41 @@ interface CrearReporteResponse {
   id?: string | number;
 }
 
+interface CasoEdicionResponse {
+  id: number;
+  estado: string;
+  tipoCaso: string;
+  urgencia: string;
+  descripcion: string;
+  animal?: AnimalReportePayload;
+  ubicacion?: {
+    departamentoId?: number;
+    municipioId?: number;
+    barrioId?: number;
+    direccionReferencia?: string;
+    departamento?: string;
+    municipio?: string;
+  };
+  fotografias?: { url?: string }[];
+}
+
+interface ReporteFormData {
+  tipoCaso: string;
+  urgencia: string;
+  especie: string;
+  descripcion: string;
+  nombre: string;
+  raza: string;
+  color: string;
+  sexo: string;
+  edad: string;
+  senas: string;
+  direccion: string;
+  deptoId: number | null;
+  munId: number | null;
+  barrioId: number | null;
+}
+
 @Component({
   selector: 'app-reportar',
   standalone: true,
@@ -37,15 +72,23 @@ interface CrearReporteResponse {
   templateUrl: './reportar.component.html',
   styleUrls: ['./reportar.component.css'],
 })
-export class ReportarComponent implements OnDestroy {
+export class ReportarComponent implements OnInit, OnDestroy {
   private casoService = inject(CasoService);
   private ubicacionService = inject(UbicacionService);
   private router = inject(Router);
+  private activatedRoute = inject(ActivatedRoute);
 
   currentStep = signal(1);
   enviando = signal(false);
+  cargandoCaso = signal(false);
+  casoCargado = signal(false);
+  editando = signal(false);
+  casoId = signal<number | null>(null);
+  existingPhotoUrls = signal<string[]>([]);
   createdCasoId = signal('');
   submitError = signal('');
+  submitWarning = signal('');
+  pendingPhotoCaseId = signal<number | null>(null);
   fotos = signal<File[]>([]);
   previewUrls = signal<string[]>([]);
   fotoError = signal('');
@@ -73,7 +116,7 @@ export class ReportarComponent implements OnDestroy {
   munNombre = signal('');
   barrioNombre = signal('');
 
-  formData = {
+  formData: ReporteFormData = {
     tipoCaso: '',
     urgencia: '',
     especie: '',
@@ -91,6 +134,84 @@ export class ReportarComponent implements OnDestroy {
   };
 
   errors: Record<string, string> = {};
+
+  ngOnInit(): void {
+    const id = Number(this.activatedRoute.snapshot.paramMap.get('id'));
+    if (!Number.isInteger(id) || id <= 0) {
+      return;
+    }
+
+    this.editando.set(true);
+    this.casoId.set(id);
+    this.cargandoCaso.set(true);
+    this.casoService.getDetalle(id).subscribe({
+      next: (response: unknown): void => this.cargarDatosCaso(response),
+      error: (err: unknown): void => this.errorAlCargarCaso(err),
+    });
+  }
+
+  private cargarDatosCaso(response: unknown): void {
+    const caso = response as CasoEdicionResponse;
+    if (caso.estado !== 'REGISTRADO') {
+      this.submitError.set('Solo puedes editar casos que estén en estado REGISTRADO.');
+      this.cargandoCaso.set(false);
+      return;
+    }
+
+    this.formData = this.obtenerDatosFormulario(caso);
+    this.deptoNombre.set(caso.ubicacion?.departamento ?? '');
+    this.munNombre.set(caso.ubicacion?.municipio ?? '');
+    this.existingPhotoUrls.set(
+      (caso.fotografias ?? [])
+        .map((foto) => foto.url?.trim())
+        .filter((url): url is string => Boolean(url)),
+    );
+    this.casoCargado.set(true);
+    this.cargandoCaso.set(false);
+  }
+
+  private obtenerDatosFormulario(caso: CasoEdicionResponse): ReporteFormData {
+    return {
+      tipoCaso: caso.tipoCaso,
+      urgencia: caso.urgencia,
+      descripcion: caso.descripcion,
+      ...this.obtenerDatosAnimal(caso.animal),
+      ...this.obtenerDatosUbicacion(caso.ubicacion),
+    };
+  }
+
+  private obtenerDatosAnimal(
+    animal: CasoEdicionResponse['animal'],
+  ): Pick<ReporteFormData, 'especie' | 'nombre' | 'raza' | 'color' | 'sexo' | 'edad' | 'senas'> {
+    const datos = animal ?? { especie: '' };
+    return {
+      especie: datos.especie ?? '',
+      nombre: datos.nombre ?? '',
+      raza: datos.raza ?? '',
+      color: datos.color ?? '',
+      sexo: datos.sexo ?? '',
+      edad: datos.edadAproximada ?? '',
+      senas: datos.senasParticulares ?? '',
+    };
+  }
+
+  private obtenerDatosUbicacion(
+    ubicacion: CasoEdicionResponse['ubicacion'],
+  ): Pick<ReporteFormData, 'direccion' | 'deptoId' | 'munId' | 'barrioId'> {
+    const datos = ubicacion ?? {};
+    return {
+      direccion: datos.direccionReferencia ?? '',
+      deptoId: datos.departamentoId ?? null,
+      munId: datos.municipioId ?? null,
+      barrioId: datos.barrioId ?? null,
+    };
+  }
+
+  private errorAlCargarCaso(error: unknown): void {
+    console.error('Error cargando el caso para editar:', error);
+    this.submitError.set('No fue posible cargar el caso para editar.');
+    this.cargandoCaso.set(false);
+  }
 
   buildDTO(): Record<string, unknown> {
     return {
@@ -164,6 +285,14 @@ export class ReportarComponent implements OnDestroy {
         message: 'Selecciona el barrio',
       },
     ]);
+
+    if (!this.editando() && this.fotos().length === 0) {
+      this.errors['fotos'] = 'La foto es obligatoria. Agrega al menos una fotografía del animal.';
+    }
+
+    if (Object.keys(this.errors).length > 0) {
+      this.currentStep.set(2);
+    }
   }
 
   private validateStep(
@@ -254,6 +383,7 @@ export class ReportarComponent implements OnDestroy {
 
   private addFiles(files: File[]): void {
     this.fotoError.set('');
+    delete this.errors['fotos'];
     const currentCount = this.fotos().length;
     if (currentCount + files.length > 5) {
       this.fotoError.set('Puedes subir un máximo de 5 fotos.');
@@ -294,11 +424,67 @@ export class ReportarComponent implements OnDestroy {
 
   onPublicar(): void {
     this.submitError.set('');
+    this.submitWarning.set('');
+    if (this.reintentarCargaPendiente()) {
+      return;
+    }
+    if (!this.validarPublicacion()) {
+      return;
+    }
+
     this.enviando.set(true);
+    const dto = this.buildReporteDTO(this.buildAnimalPayload());
+    if (this.editando()) {
+      this.actualizarReporte(dto);
+    } else {
+      this.crearReporte(dto);
+    }
+  }
 
-    const animal = this.buildAnimalPayload();
-    const dto = this.buildReporteDTO(animal);
+  private reintentarCargaPendiente(): boolean {
+    const pendingCaseId = this.pendingPhotoCaseId();
+    if (pendingCaseId === null) {
+      return false;
+    }
 
+    if (this.fotos().length === 0) {
+      this.currentStep.set(2);
+      this.submitError.set('Agrega al menos una foto para poder reintentar la publicación.');
+      return true;
+    }
+    this.enviando.set(true);
+    this.handleUploadImages(pendingCaseId.toString());
+    return true;
+  }
+
+  private validarPublicacion(): boolean {
+    if (!this.editando() && this.fotos().length === 0) {
+      this.currentStep.set(2);
+      this.errors['fotos'] = 'La foto es obligatoria. Agrega al menos una fotografía del animal.';
+      return false;
+    }
+    return !this.editando() || (this.casoCargado() && !this.cargandoCaso());
+  }
+
+  private actualizarReporte(dto: CrearReporteDTO): void {
+    const id = this.casoId();
+    if (id === null) {
+      this.submitError.set('No se pudo identificar el caso que deseas editar.');
+      this.enviando.set(false);
+      return;
+    }
+
+    this.casoService.actualizarReporte(id, dto).subscribe({
+      next: (): void => this.handleUploadImages(id.toString()),
+      error: (err: unknown): void => {
+        console.error('Error actualizando el caso:', err);
+        this.submitError.set('No fue posible guardar los cambios. Intenta de nuevo.');
+        this.enviando.set(false);
+      },
+    });
+  }
+
+  private crearReporte(dto: CrearReporteDTO): void {
     this.casoService.crearReporte(dto).subscribe({
       next: (response: unknown): void => {
         const idGenerado = (response as CrearReporteResponse).id?.toString() || '#NUEVO';
@@ -316,25 +502,77 @@ export class ReportarComponent implements OnDestroy {
     const files = this.fotos();
     const casoIdNum = Number(idGenerado);
 
-    if (files.length === 0 || Number.isNaN(casoIdNum)) {
+    if (files.length === 0) {
       this.finishPublicacion(idGenerado);
       return;
     }
+    if (!Number.isInteger(casoIdNum) || casoIdNum <= 0) {
+      this.submitError.set(
+        'El caso se registró, pero no se pudo identificar para guardar las fotos.',
+      );
+      this.enviando.set(false);
+      return;
+    }
 
+    let uploadedCount = 0;
     from(files)
       .pipe(
-        concatMap((file) => this.casoService.subirImagen(file, casoIdNum)),
+        concatMap((file) =>
+          this.casoService.subirImagen(file, casoIdNum).pipe(tap(() => uploadedCount++)),
+        ),
         toArray(),
       )
       .subscribe({
         next: (): void => {
+          this.pendingPhotoCaseId.set(null);
           this.finishPublicacion(idGenerado);
         },
         error: (uploadErr: unknown): void => {
-          console.error('Error al subir imágenes:', uploadErr);
-          this.finishPublicacion(idGenerado);
+          this.handleUploadFailure(idGenerado, casoIdNum, uploadedCount, uploadErr);
         },
       });
+  }
+
+  private handleUploadFailure(
+    idGenerado: string,
+    casoIdNum: number,
+    uploadedCount: number,
+    error: unknown,
+  ): void {
+    console.error('Error al subir imágenes:', error);
+    if (uploadedCount > 0 || this.editando()) {
+      this.submitWarning.set(
+        uploadedCount > 0
+          ? 'Algunas fotos no pudieron guardarse. El caso conserva las fotos que sí se cargaron.'
+          : 'Los cambios se guardaron, pero no se pudo agregar la nueva foto. Las fotos anteriores se conservan.',
+      );
+      this.pendingPhotoCaseId.set(null);
+      this.finishPublicacion(idGenerado);
+      return;
+    }
+
+    this.eliminarCasoSinFoto(casoIdNum);
+  }
+
+  private eliminarCasoSinFoto(casoId: number): void {
+    this.casoService.eliminarCaso(casoId).subscribe({
+      next: (): void => {
+        this.pendingPhotoCaseId.set(null);
+        this.currentStep.set(3);
+        this.submitError.set(
+          'No se pudo registrar la foto y el caso no se publicó. Intenta cargarla de nuevo.',
+        );
+        this.enviando.set(false);
+      },
+      error: (error: unknown): void => {
+        console.error('Error eliminando el caso sin foto:', error);
+        this.pendingPhotoCaseId.set(casoId);
+        this.submitError.set(
+          'No se pudo guardar la foto ni eliminar el caso. Intenta publicar de nuevo para reintentar la carga.',
+        );
+        this.enviando.set(false);
+      },
+    });
   }
 
   private finishPublicacion(idGenerado: string): void {

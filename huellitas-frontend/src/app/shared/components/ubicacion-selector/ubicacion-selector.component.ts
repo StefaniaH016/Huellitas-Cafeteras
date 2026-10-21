@@ -64,10 +64,23 @@ export class UbicacionSelectorComponent implements OnInit, OnChanges {
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['deptoId'] && !changes['deptoId'].firstChange) {
-      this.selectedDeptoId.set(changes['deptoId'].currentValue);
+      const deptoId = changes['deptoId'].currentValue as number | null;
+      this.selectedDeptoId.set(deptoId);
+      if (deptoId) {
+        this.loadMunicipios(deptoId);
+      } else {
+        this.municipios = [];
+        this.barrios = [];
+      }
     }
     if (changes['munId'] && !changes['munId'].firstChange) {
-      this.selectedMunId.set(changes['munId'].currentValue);
+      const munId = changes['munId'].currentValue as number | null;
+      this.selectedMunId.set(munId);
+      if (munId) {
+        this.loadBarrios(munId);
+      } else {
+        this.barrios = [];
+      }
     }
     if (changes['barrioId'] && !changes['barrioId'].firstChange) {
       this.selectedBarrioId.set(changes['barrioId'].currentValue);

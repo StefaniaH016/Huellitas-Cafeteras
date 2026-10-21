@@ -60,6 +60,24 @@ it('creates a report', () => {
   request.flush({ id: 1 });
 });
 
+it('updates a report', () => {
+  const dto = { descripcion: 'Actualizado' };
+  service.actualizarReporte(8, dto).subscribe();
+
+  const request = http.expectOne(`${baseUrl}/8`);
+  expect(request.request.method).toBe('PUT');
+  expect(request.request.body).toEqual(dto);
+  request.flush({ id: 8 });
+});
+
+it('deletes a report', () => {
+  service.eliminarCaso(8).subscribe();
+
+  const request = http.expectOne(`${baseUrl}/8`);
+  expect(request.request.method).toBe('DELETE');
+  request.flush(null);
+});
+
 it('uploads an image and includes an optional case id', () => {
   const file = new File(['image'], 'animal.png', { type: 'image/png' });
   service.subirImagen(file, 8).subscribe();

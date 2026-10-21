@@ -114,6 +114,27 @@ public class CloudinaryServiceImpl implements CloudinaryService {
         return new ImagenResponseDTO(url, publicId);
     }
 
+    @Override
+    public void eliminarFotos(List<Foto> fotos) {
+        String cleanCloudName = cloudName != null ? cloudName.trim() : "";
+        for (Foto foto : fotos) {
+            String publicId = foto.getPublicId();
+            if (publicId == null || publicId.isBlank() || esModoSimulado(cleanCloudName)) {
+                continue;
+            }
+            try {
+                Map<?, ?> result = cloudinary.uploader().destroy(publicId, ObjectUtils.emptyMap());
+                Object status = result.get("result");
+                if (!"ok".equals(status) && !"not found".equals(status)) {
+                    throw new IllegalStateException("Cloudinary no confirmó la eliminación de la foto.");
+                }
+            } catch (Exception e) {
+                log.error("Fallo al eliminar la imagen de Cloudinary con publicId: {}", publicId, e);
+                throw new IllegalStateException("No fue posible eliminar todas las fotos del caso.", e);
+            }
+        }
+    }
+
     private void validarArchivo(MultipartFile archivo) {
         if (archivo == null || archivo.isEmpty()) {
             throw new IllegalArgumentException("El archivo de imagen es obligatorio y no puede estar vacío");

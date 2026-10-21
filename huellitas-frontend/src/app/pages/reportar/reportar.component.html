@@ -1,5 +1,11 @@
 <section id="reportar">
   <div class="signup-wrap">
+    @if (editando()) {
+      <h1>{{ cargandoCaso() ? 'Cargando caso...' : 'Editar caso' }}</h1>
+      @if (submitError() && !cargandoCaso()) {
+        <p class="field-error" role="alert">{{ submitError() }}</p>
+      }
+    }
     <ol class="steps" aria-label="Pasos del reporte">
       <li
         class="step"
@@ -77,6 +83,9 @@
         <p class="field-error" id="error-tipoCaso" [hidden]="!errors['tipoCaso']">
           {{ errors['tipoCaso'] }}
         </p>
+        @if (submitWarning()) {
+          <p class="field-error" role="status">{{ submitWarning() }}</p>
+        }
       </div>
 
       <div class="grid-2">
@@ -207,8 +216,19 @@
 
       <div class="field-group">
         <p class="group-label" id="etiqueta-fotos">
-          Fotografías <span class="optional">(recomendado)</span>
+          Fotografías
+          <span class="optional">{{ editando() ? '(opcional al editar)' : '(obligatorio)' }}</span>
         </p>
+        @if (existingPhotoUrls().length > 0) {
+          <p class="field-hint">Fotos registradas en el caso:</p>
+          <div class="preview-grid">
+            @for (url of existingPhotoUrls(); track $index) {
+              <div class="preview-card">
+                <img [src]="url" [alt]="'Foto registrada ' + ($index + 1)" class="preview-thumb" />
+              </div>
+            }
+          </div>
+        }
         <label
           class="dropzone"
           for="fotos"
@@ -232,6 +252,9 @@
 
         @if (fotoError()) {
           <p class="field-error" id="error-fotos">{{ fotoError() }}</p>
+        }
+        @if (errors['fotos']) {
+          <p class="field-error" id="error-fotos" role="alert">{{ errors['fotos'] }}</p>
         }
 
         @if (previewUrls().length > 0) {
@@ -307,9 +330,17 @@
           class="btn btn-primary"
           type="button"
           (click)="onPublicar()"
-          [disabled]="enviando()"
+          [disabled]="enviando() || cargandoCaso() || (editando() && !casoCargado())"
         >
-          {{ enviando() ? 'Publicando...' : 'Publicar reporte' }}
+          {{
+            enviando()
+              ? editando()
+                ? 'Guardando...'
+                : 'Publicando...'
+              : editando()
+                ? 'Guardar cambios'
+                : 'Publicar reporte'
+          }}
         </button>
       </div>
     </section>
@@ -321,12 +352,17 @@
       aria-labelledby="titulo-listo"
     >
       <div class="success-icon">🐾</div>
-      <h2 id="titulo-listo">¡Reporte publicado!</h2>
+      <h2 id="titulo-listo">{{ editando() ? '¡Cambios guardados!' : '¡Reporte publicado!' }}</h2>
       <p class="sub">
-        Tu caso <strong>{{ createdCasoId() }}</strong> fue registrado con estado
-        <strong>REGISTRADO</strong>. La comunidad ya puede verlo.
+        @if (editando()) {
+          Los cambios del caso <strong>{{ createdCasoId() }}</strong> fueron guardados.
+        } @else {
+          Tu caso <strong>{{ createdCasoId() }}</strong> fue registrado con estado
+          <strong>REGISTRADO</strong>. La comunidad ya puede verlo.
+        }
       </p>
       <div class="success-actions">
+        <button class="btn btn-secondary" routerLink="/mis-reportes">Mis reportes</button>
         <button class="btn btn-secondary" routerLink="/casos">Ver casos</button>
         <button class="btn btn-primary" routerLink="/home">Ir al inicio</button>
       </div>

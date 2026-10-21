@@ -35,6 +35,31 @@ public class ReporteController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    @PutMapping("/{id}")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<CasoResponseDTO> actualizarReporte(
+            @PathVariable Long id,
+            @Valid @RequestBody CrearReporteDTO dto,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        if (userDetails == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        CasoResponseDTO response = casoService.actualizarReporte(id, dto, userDetails.getUsername());
+        return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Void> eliminarCaso(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        if (userDetails == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        casoService.eliminarCaso(id, userDetails.getUsername());
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping
     public ResponseEntity<Page<CasoListItemDTO>> listarCasos(
             @ModelAttribute FiltrosCasoDTO filtros,

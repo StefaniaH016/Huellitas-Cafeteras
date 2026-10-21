@@ -5,13 +5,19 @@ import { CasoService } from '../../core/services/caso.service';
 import { UbicacionService } from '../../core/services/ubicacion.service';
 import { ReportarComponent } from './reportar.component';
 
-let casoService: Pick<CasoService, 'crearReporte' | 'subirImagen'>;
+let casoService: Pick<
+  CasoService,
+  'actualizarReporte' | 'crearReporte' | 'eliminarCaso' | 'getDetalle' | 'subirImagen'
+>;
 let ubicacionService: Pick<UbicacionService, 'getBarrios' | 'getDepartamentos' | 'getMunicipios'>;
 let router: Router;
 
 beforeEach(() => {
   casoService = {
+    actualizarReporte: vi.fn().mockReturnValue(of({ id: 21 })),
     crearReporte: vi.fn().mockReturnValue(of({ id: 21 })),
+    eliminarCaso: vi.fn().mockReturnValue(of(undefined)),
+    getDetalle: vi.fn().mockReturnValue(of({})),
     subirImagen: vi.fn().mockReturnValue(of({ url: 'https://example.test/photo.jpg' })),
   };
   ubicacionService = {
@@ -98,11 +104,17 @@ it('validates location fields in step two and advances when complete', () => {
     departamento: 'Selecciona el departamento',
     municipio: 'Selecciona el municipio',
     barrio: 'Selecciona el barrio',
+    fotos: 'La foto es obligatoria. Agrega al menos una fotografía del animal.',
   });
 
   component.formData.deptoId = 1;
   component.formData.munId = 2;
   component.formData.barrioId = 3;
+  vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:photo');
+  component.onFileDrop({
+    preventDefault: vi.fn(),
+    dataTransfer: { files: [new File(['photo'], 'animal.jpg', { type: 'image/jpeg' })] },
+  } as unknown as DragEvent);
   component.stepTwoNext();
 
   expect(component.currentStep()).toBe(3);
@@ -204,9 +216,29 @@ it('prevents default drag behavior', () => {
   expect(preventDefault).toHaveBeenCalledOnce();
 });
 
-it('creates a report and completes publication when there are no photos', () => {
+it('requires at least one photo before advancing or creating a report', () => {
   const component = createComponent();
   completeForm(component);
+
+  component.stepTwoNext();
+  expect(component.currentStep()).toBe(2);
+  expect(component.errors['fotos']).toContain('La foto es obligatoria');
+
+  component.onPublicar();
+
+  expect(casoService.crearReporte).not.toHaveBeenCalled();
+  expect(component.currentStep()).toBe(2);
+  expect(component.enviando()).toBe(false);
+});
+
+it('creates a report and uploads selected photos sequentially', () => {
+  const component = createComponent();
+  completeForm(component);
+  vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:photo');
+  component.onFileDrop({
+    preventDefault: vi.fn(),
+    dataTransfer: { files: [new File(['photo'], 'animal.jpg', { type: 'image/jpeg' })] },
+  } as unknown as DragEvent);
 
   component.onPublicar();
 
@@ -219,22 +251,6 @@ it('creates a report and completes publication when there are no photos', () => 
       animal: expect.objectContaining({ especie: 'PERRO', nombre: 'Luna' }),
     }),
   );
-  expect(component.currentStep()).toBe(4);
-  expect(component.createdCasoId()).toBe('21');
-  expect(component.enviando()).toBe(false);
-});
-
-it('uploads selected photos sequentially and completes the report', () => {
-  const component = createComponent();
-  completeForm(component);
-  vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:photo');
-  component.onFileDrop({
-    preventDefault: vi.fn(),
-    dataTransfer: { files: [new File(['photo'], 'animal.jpg', { type: 'image/jpeg' })] },
-  } as unknown as DragEvent);
-
-  component.onPublicar();
-
   expect(casoService.subirImagen).toHaveBeenCalledWith(component.fotos()[0], 21);
   expect(component.currentStep()).toBe(4);
   expect(component.createdCasoId()).toBe('21');
@@ -244,6 +260,11 @@ it('finishes the report and reports an error when report creation fails', () => 
   const component = createComponent();
   const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
   vi.mocked(casoService.crearReporte).mockReturnValue(throwError(() => new Error('create')));
+  vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:photo');
+  component.onFileDrop({
+    preventDefault: vi.fn(),
+    dataTransfer: { files: [new File(['photo'], 'animal.jpg', { type: 'image/jpeg' })] },
+  } as unknown as DragEvent);
 
   component.onPublicar();
 
@@ -252,8 +273,26 @@ it('finishes the report and reports an error when report creation fails', () => 
   expect(error).toHaveBeenCalled();
 });
 
-it('finishes publication even when image upload fails', () => {
+it('updates a report without requiring a new photo', () => {
   const component = createComponent();
+  completeForm(component);
+  component.editando.set(true);
+  component.casoId.set(21);
+  component.casoCargado.set(true);
+
+  component.onPublicar();
+
+  expect(casoService.actualizarReporte).toHaveBeenCalledWith(
+    21,
+    expect.objectContaining({ descripcion: 'Necesita atención', barrioId: 3 }),
+  );
+  expect(casoService.crearReporte).not.toHaveBeenCalled();
+  expect(component.currentStep()).toBe(4);
+});
+
+it('deletes the newly created case if no photo could be saved', () => {
+  const component = createComponent();
+  completeForm(component);
   const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
   vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:photo');
   vi.mocked(casoService.subirImagen).mockReturnValue(throwError(() => new Error('upload')));
@@ -264,9 +303,34 @@ it('finishes publication even when image upload fails', () => {
 
   component.onPublicar();
 
-  expect(component.currentStep()).toBe(4);
+  expect(casoService.eliminarCaso).toHaveBeenCalledWith(21);
+  expect(component.currentStep()).toBe(3);
+  expect(component.submitError()).toContain('el caso no se publicó');
   expect(component.enviando()).toBe(false);
   expect(error).toHaveBeenCalled();
+});
+
+it('keeps the case pending and retries image upload if cleanup fails', () => {
+  const component = createComponent();
+  completeForm(component);
+  vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:photo');
+  vi.mocked(casoService.subirImagen).mockReturnValue(throwError(() => new Error('upload')));
+  vi.mocked(casoService.eliminarCaso).mockReturnValue(throwError(() => new Error('delete')));
+  component.onFileDrop({
+    preventDefault: vi.fn(),
+    dataTransfer: { files: [new File(['photo'], 'animal.jpg', { type: 'image/jpeg' })] },
+  } as unknown as DragEvent);
+
+  component.onPublicar();
+  expect(component.pendingPhotoCaseId()).toBe(21);
+  vi.mocked(casoService.subirImagen).mockReturnValue(of({ url: 'https://example.test/photo.jpg' }));
+
+  component.onPublicar();
+
+  expect(casoService.crearReporte).toHaveBeenCalledOnce();
+  expect(component.pendingPhotoCaseId()).toBeNull();
+  expect(component.currentStep()).toBe(4);
 });
 
 it('resolves location names and clears them when a selection is removed', () => {
