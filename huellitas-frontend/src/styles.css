@@ -66,7 +66,7 @@ html {
 
 body {
   margin: 0;
-  background: var(--paper);
+  background: var(--paper-2);
   color: var(--ink);
   font-family:
     'Public Sans',

@@ -18,6 +18,11 @@ module.exports = defineConfig([
       angular.configs.tsRecommended,
     ],
     processor: angular.processInlineTemplates,
+    languageOptions: {
+      parserOptions: {
+        projectService: true,
+      },
+    },
     rules: {
       // ===== REGLAS ANGULAR - SELECTORES =====
       '@angular-eslint/directive-selector': [
@@ -46,13 +51,20 @@ module.exports = defineConfig([
 
       // ===== REGLAS TYPESCRIPT - TYPE SAFETY =====
       '@typescript-eslint/no-explicit-any': 'error', // NO usar 'any'
-      '@typescript-eslint/no-unused-vars': ['error', {
-        argsIgnorePattern: '^_', // Permitir parámetros con prefijo _
-        varsIgnorePattern: '^_'  // Permitir variables con prefijo _
-      }],
-      '@typescript-eslint/no-empty-function': ['error', {
-        allow: ['constructors'] // Permitir constructores vacíos
-      }],
+      '@typescript-eslint/no-floating-promises': 'error',
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_', // Permitir parámetros con prefijo _
+          varsIgnorePattern: '^_', // Permitir variables con prefijo _
+        },
+      ],
+      '@typescript-eslint/no-empty-function': [
+        'error',
+        {
+          allow: ['constructors'], // Permitir constructores vacíos
+        },
+      ],
       '@typescript-eslint/explicit-function-return-type': 'warn', // Avisar si falta tipo retorno
       '@typescript-eslint/array-type': ['error', { default: 'array' }], // Usar string[] en lugar de Array<string>
       '@typescript-eslint/consistent-type-definitions': ['error', 'interface'], // Usar interface, no type
@@ -62,21 +74,18 @@ module.exports = defineConfig([
       'no-var': 'error', // NO usar var (usar const/let)
       'no-console': ['warn', { allow: ['warn', 'error'] }], // console.log solo si es error
       'no-debugger': 'error', // NO dejar debugger en código
-      'eqeqeq': ['error', 'always'], // Usar === en lugar de ==
-      'curly': ['error', 'all'], // Llaves en todos los bloques
+      eqeqeq: ['error', 'always'], // Usar === en lugar de ==
+      curly: ['error', 'all'], // Llaves en todos los bloques
 
       // ===== REGLAS DE COMPLEJIDAD =====
-      'complexity': ['warn', 10], // Función no más de 10 complejidad ciclomática
+      complexity: ['warn', 10], // Función no más de 10 complejidad ciclomática
       'max-lines-per-function': ['warn', 50], // Función no más de 50 líneas
       'max-depth': ['warn', 4], // Máximo 4 niveles de anidación
     },
   },
   {
     files: ['**/*.html'],
-    extends: [
-      angular.configs.templateRecommended,
-      angular.configs.templateAccessibility
-    ],
+    extends: [angular.configs.templateRecommended, angular.configs.templateAccessibility],
     rules: {
       // ===== CONTROL FLOW - ANGULAR 17+ =====
       '@angular-eslint/template/prefer-control-flow': 'error', // Usar @if, @for, @switch en lugar de *ngIf, *ngFor

@@ -2,14 +2,15 @@
 
 main {
   max-width: 1080px;
+  width: 100%;
   margin: 0 auto;
-  padding: 2.4rem 2rem 0.6rem;
+  padding: 2.4rem 0 0.6rem;
 }
 
 /* Search bar for ciudadano */
 .search-bar {
-  width: calc(100% - 4rem);
-  max-width: 1016px;
+  width: 100%;
+  max-width: none;
   margin: 0 auto 2.4rem;
   padding: 1.1rem;
   background: var(--card-bg);
@@ -52,9 +53,10 @@ main {
 }
 
 section.block {
-  max-width: 1080px;
+  width: 100%;
+  max-width: none;
   margin: 0 auto;
-  padding: 0 2rem 3rem;
+  padding: 0 0 3rem;
 }
 
 .block-head {
@@ -249,7 +251,7 @@ section.block {
 
 .dash-grid {
   display: grid;
-  grid-template-columns: 1.4fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1.2rem;
   align-items: start;
 }
@@ -528,7 +530,7 @@ progress::-moz-progress-bar {
 
 @media (max-width: 760px) {
   main {
-    padding: 1.6rem 1.2rem 0.4rem;
+    padding: 1.6rem 0 0.4rem;
   }
 
   .dash-hello h1 {
@@ -554,7 +556,7 @@ progress::-moz-progress-bar {
 
   .search-bar {
     grid-template-columns: 1fr;
-    width: auto;
+    width: 100%;
     margin: 0 auto 1.5rem;
   }
 
@@ -572,11 +574,11 @@ progress::-moz-progress-bar {
   }
 
   section.block {
-    padding: 0 1.2rem 2rem;
+    padding: 0 0 2rem;
   }
 
   .zone-block {
-    padding: 0 1.2rem;
+    padding: 0;
   }
 
   .list-row {

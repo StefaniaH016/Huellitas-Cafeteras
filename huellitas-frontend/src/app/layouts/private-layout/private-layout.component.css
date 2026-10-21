@@ -2,6 +2,70 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  position: relative;
+}
+.doodles {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.doodles span {
+  position: absolute;
+  opacity: 0.1;
+  filter: saturate(0.7);
+  user-select: none;
+}
+.doodles span:nth-child(1) {
+  top: 8%;
+  left: 5%;
+  font-size: 2.4rem;
+}
+.doodles span:nth-child(2) {
+  top: 28%;
+  left: 88%;
+  font-size: 1.8rem;
+}
+.doodles span:nth-child(3) {
+  top: 18%;
+  left: 25%;
+  font-size: 1.6rem;
+}
+.doodles span:nth-child(4) {
+  top: 48%;
+  left: 84%;
+  font-size: 2rem;
+}
+.doodles span:nth-child(5) {
+  top: 42%;
+  left: 8%;
+  font-size: 1.4rem;
+}
+.doodles span:nth-child(6) {
+  top: 68%;
+  left: 18%;
+  font-size: 1.8rem;
+}
+.doodles span:nth-child(7) {
+  top: 78%;
+  left: 76%;
+  font-size: 2.2rem;
+}
+.doodles span:nth-child(8) {
+  top: 88%;
+  left: 42%;
+  font-size: 1.5rem;
+}
+.doodles span:nth-child(9) {
+  top: 57%;
+  left: 53%;
+  font-size: 1.5rem;
+}
+.doodles span:nth-child(10) {
+  top: 12%;
+  left: 68%;
+  font-size: 1.7rem;
 }
 .private-main {
   flex: 1;
@@ -9,6 +73,13 @@
   max-width: 1200px;
   width: 100%;
   margin: 0 auto;
+  position: relative;
+  z-index: 1;
+}
+app-header,
+app-footer {
+  position: relative;
+  z-index: 1;
 }
 @media (max-width: 768px) {
   .private-main {
