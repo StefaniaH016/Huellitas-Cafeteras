@@ -4,9 +4,11 @@
 # https://aka.ms/yaml
 
 trigger:
-- main
+  - main
+
 pool:
-vmImage: 'ubuntu-latest'
+  vmImage: 'ubuntu-latest'
+  
 variables:
    # Conexión ARM para la gestión de App Service
    azureARMConnection: 'azure-connection'
