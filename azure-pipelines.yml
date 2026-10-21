@@ -8,48 +8,48 @@ trigger:
 pool:
 vmImage: 'ubuntu-latest'
 variables:
-# Conexión ARM para la gestión de App Service
-azureARMConnection: 'azure-connection'
-# Conexión Docker Registry para autenticar con ACR
-dockerRegistryConnection: 'docker-registry-connection'
-# Servidor del registro de contenedores (ACR)
-containerRegistry: 'acrhuellitascafeteras.azurecr.io'
-# Nombre del repositorio dentro de ACR
-imageRepository: 'huellitas-cafeteras'
-# Nombre de tu Azure App Service
-webAppName: 'huellitas-cafeteras-prod'
-# Etiqueta de la imagen Docker basada en el ID de compilación
-tag: '$(Build.BuildId)'
+   # Conexión ARM para la gestión de App Service
+   azureARMConnection: 'azure-connection'
+   # Conexión Docker Registry para autenticar con ACR
+   dockerRegistryConnection: 'docker-registry-connection'
+   # Servidor del registro de contenedores (ACR)
+   containerRegistry: 'acrhuellitascafeteras.azurecr.io'
+   # Nombre del repositorio dentro de ACR
+   imageRepository: 'huellitas-cafeteras'
+   # Nombre de tu Azure App Service
+   webAppName: 'huellitas-cafeteras-prod'
+   # Etiqueta de la imagen Docker basada en el ID de compilación
+   tag: '$(Build.BuildId)'
 stages:
-- stage: BuildAndPush
-displayName: 'Compilar e Impulsar Imagen Docker a ACR'
-jobs:
-- job: Build
-displayName: 'Build and Push Job'
-steps:
-# Tarea para construir y subir la imagen Docker usando la conexión de Docker Regist
-ry
-- task: Docker@2
-displayName: 'Construir y subir la imagen a ACR'
-inputs:
-command: buildAndPush
-repository: $(imageRepository)
-dockerfile: '$(Build.SourcesDirectory)/Dockerfile'
-containerRegistry: $(dockerRegistryConnection)
-tags: |
-$(tag)
-latest
-- stage: Deploy
-displayName: 'Desplegar a Azure App Service'
-dependsOn: BuildAndPush
-jobs:
-- job: Deploy
-displayName: 'Deploy Job'
-steps:
-# Tarea para desplegar el contenedor usando la conexión de Azure Resource Manager
-- task: AzureWebAppContainer@1
-displayName: 'Desplegar contenedor en Azure App Service'
-inputs:
-azureSubscription: $(azureARMConnection)
-appName: $(webAppName)
-containers: '$(containerRegistry)/$(imageRepository):$(tag)'
+  - stage: BuildAndPush
+    displayName: 'Compilar e Impulsar Imagen Docker a ACR'
+    jobs:
+      - job: Build
+        displayName: 'Build and Push Job'
+        steps:
+          # Tarea para construir y subir la imagen Docker usando la conexión de Docker Registry
+          - task: Docker@2
+            displayName: 'Construir y subir la imagen a ACR'
+            inputs:
+              command: buildAndPush
+              repository: $(imageRepository)
+              dockerfile: '$(Build.SourcesDirectory)/Dockerfile'
+              containerRegistry: $(dockerRegistryConnection)
+              tags: |
+                $(tag)
+                latest
+
+  - stage: Deploy
+    displayName: 'Desplegar a Azure App Service'
+    dependsOn: BuildAndPush
+    jobs:
+      - job: Deploy
+        displayName: 'Deploy Job'
+        steps:
+          # Tarea para desplegar el contenedor usando la conexión de Azure Resource Manager
+          - task: AzureWebAppContainer@1
+            displayName: 'Desplegar contenedor en Azure App Service'
+            inputs:
+              azureSubscription: $(azureARMConnection)
+              appName: $(webAppName)
+              containers: '$(containerRegistry)/$(imageRepository):$(tag)'
