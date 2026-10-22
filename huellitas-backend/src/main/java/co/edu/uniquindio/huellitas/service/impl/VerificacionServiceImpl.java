@@ -30,15 +30,19 @@ public class VerificacionServiceImpl implements VerificacionService {
         List<Rol> rolesInstitucionales = List.of(Rol.FUNDACION_REFUGIO, Rol.VETERINARIA);
         List<Usuario> pendientes = usuarioRepository.findByVerificadoFalseAndRolIn(rolesInstitucionales);
 
-        return pendientes.stream().map(u -> {
-            String nombreEntidad = (u.getOrganizacion() != null && u.getOrganizacion().getNombre() != null)
-                    ? u.getOrganizacion().getNombre()
-                    : u.getNombre();
-            String estado = (u.getOrganizacion() != null)
-                    ? u.getOrganizacion().getEstadoVerificacion().name()
-                    : "PENDIENTE";
-            return new VerificacionPendienteDTO(u.getId(), nombreEntidad, u.getRol().name(), estado);
-        }).toList();
+        return pendientes.stream()
+                .filter(u -> u.getOrganizacion() == null
+                        || u.getOrganizacion().getEstadoVerificacion() == EstadoVerificacion.PENDIENTE)
+                .map(u -> {
+                    String nombreEntidad = (u.getOrganizacion() != null
+                            && u.getOrganizacion().getNombre() != null)
+                            ? u.getOrganizacion().getNombre()
+                            : u.getNombre();
+                    String estado = (u.getOrganizacion() != null)
+                            ? u.getOrganizacion().getEstadoVerificacion().name()
+                            : "PENDIENTE";
+                    return new VerificacionPendienteDTO(u.getId(), nombreEntidad, u.getRol().name(), estado);
+                }).toList();
     }
 
     @Override

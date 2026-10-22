@@ -22,14 +22,14 @@ describe('VerificacionService', () => {
     service.getPendientes().subscribe();
     const request = http.expectOne(`${environment.apiUrl}/verificaciones/pendientes`);
     expect(request.request.method).toBe('GET');
-    request.flush({ verificaciones: [] });
+    request.flush([]);
   });
 
   it('submits a verification resolution', () => {
-    const dto = { aprobado: true, motivo: 'Documentación completa' };
+    const dto = { decision: 'APROBAR' as const, observacion: 'Documentación completa' };
     service.resolverVerificacion(5, dto).subscribe();
-    const request = http.expectOne(`${environment.apiUrl}/verificaciones/5/resolver`);
-    expect(request.request.method).toBe('POST');
+    const request = http.expectOne(`${environment.apiUrl}/verificaciones/5`);
+    expect(request.request.method).toBe('PATCH');
     expect(request.request.body).toEqual(dto);
     request.flush(null);
   });

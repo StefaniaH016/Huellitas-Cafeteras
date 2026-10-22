@@ -3,15 +3,19 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
-interface VerificacionPendiente {
-  id: number;
+export interface VerificacionPendiente {
   usuarioId: number;
+  nombreEntidad: string;
+  rolSolicitado: string;
   estado: string;
 }
 
-interface ResolucionVerificacionDto {
-  aprobado: boolean;
-  motivo?: string;
+export type DecisionVerificacion = 'APROBAR' | 'RECHAZAR';
+
+export interface VerificacionResponse {
+  usuarioId: number;
+  estado: string;
+  verificado: boolean;
 }
 
 @Injectable({
@@ -21,13 +25,17 @@ export class VerificacionService {
   private httpClient = inject(HttpClient);
   private apiUrl = environment.apiUrl;
 
-  getPendientes(): Observable<{ verificaciones: VerificacionPendiente[] }> {
-    return this.httpClient.get<{ verificaciones: VerificacionPendiente[] }>(
-      `${this.apiUrl}/verificaciones/pendientes`,
-    );
+  getPendientes(): Observable<VerificacionPendiente[]> {
+    return this.httpClient.get<VerificacionPendiente[]>(`${this.apiUrl}/verificaciones/pendientes`);
   }
 
-  resolverVerificacion(usuarioId: number, dto: ResolucionVerificacionDto): Observable<void> {
-    return this.httpClient.post<void>(`${this.apiUrl}/verificaciones/${usuarioId}/resolver`, dto);
+  resolverVerificacion(
+    usuarioId: number,
+    dto: { decision: DecisionVerificacion; observacion?: string },
+  ): Observable<VerificacionResponse> {
+    return this.httpClient.patch<VerificacionResponse>(
+      `${this.apiUrl}/verificaciones/${usuarioId}`,
+      dto,
+    );
   }
 }

@@ -99,11 +99,14 @@ header.site.with-actions {
   height: 36px;
   border-radius: 12px;
   background: var(--pine-700);
+  border: 2px solid var(--paper);
+  outline: 2px solid var(--pine-500);
+  outline-offset: 1px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  box-shadow: 0 6px 14px rgba(108, 95, 214, 0.35);
+  box-shadow: 0 6px 14px rgba(var(--pine-700-rgb), 0.25);
 }
 
 .brand-name {
