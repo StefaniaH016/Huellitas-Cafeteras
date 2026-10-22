@@ -37,6 +37,15 @@ it('loads and displays the current user reports', () => {
   expect(fixture.nativeElement.textContent).toContain('Caso de prueba');
 });
 
+it('shows edit and delete actions for registered cases', () => {
+  const fixture = TestBed.createComponent(MisReportesComponent);
+  fixture.detectChanges();
+  const actions = fixture.nativeElement.querySelector('.report-actions');
+
+  expect(actions.textContent).toContain('Editar');
+  expect(actions.textContent).toContain('Eliminar');
+});
+
 it('deletes a registered case after user confirmation', () => {
   vi.spyOn(globalThis, 'confirm').mockReturnValue(true);
   const fixture = TestBed.createComponent(MisReportesComponent);
