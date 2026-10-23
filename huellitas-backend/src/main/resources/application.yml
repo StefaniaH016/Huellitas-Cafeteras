@@ -37,10 +37,10 @@ spring:
     restart:
       enabled: false
 
-  # ── CORS - Permitir requests desde Vercel, Railway y localhost ──
+  # ── CORS - Permitir requests desde Vercel, azure y localhost ──
   web:
     cors:
-      allowed-origins: https://huellitas-cafeteras.vercel.app,https://*.vercel.app,https://*.railway.app,http://localhost:*
+      allowed-origins: https://huellitas-cafeteras.vercel.app,https://*.railway.app,http://localhost:*,https://huellitas-cafeteras-prod.azurewebsites.net/*
       allowed-methods: GET,POST,PUT,DELETE,OPTIONS,PATCH
       allowed-headers: "*"
       allow-credentials: true

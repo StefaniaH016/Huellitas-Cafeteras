@@ -16,9 +16,8 @@ services:
       - huellitas-network
 
   backend:
-    build:
-      context: ./huellitas-backend
-      dockerfile: Dockerfile
+    image: ${DOCKER_HUB_USERNAME:?Define DOCKER_HUB_USERNAME in .env}/huellitas-backend:latest
+    pull_policy: always
     container_name: huellitas-api
     environment:
       SPRING_PROFILES_ACTIVE: prod
@@ -42,9 +41,8 @@ services:
       - huellitas-network
 
   frontend:
-    build:
-      context: ./huellitas-frontend
-      dockerfile: Dockerfile
+    image: ${DOCKER_HUB_USERNAME:?Define DOCKER_HUB_USERNAME in .env}/huellitas-frontend:latest
+    pull_policy: always
     container_name: huellitas-web
     ports:
       - '80:80'
