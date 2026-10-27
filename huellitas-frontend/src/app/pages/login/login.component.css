@@ -115,30 +115,31 @@
   align-items: center;
   gap: 1.25rem;
   color: var(--brown-900);
-  font-family: 'Baloo 2', 'Public Sans', sans-serif;
-  font-size: 1.3rem;
-  font-weight: 700;
+}
+
+.login-brand .brand-name {
+  display: flex;
+  flex-direction: column;
+  font-family: 'Roboto Slab', Georgia, serif;
+  font-weight: 800;
+  font-size: 1.45rem;
+  line-height: 0.9;
 }
 
 .login-brand .brand-mark {
   width: 58px;
   height: 58px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   flex: 0 0 auto;
-  border: 2px solid var(--paper);
   border-radius: 17px;
-  outline: 2px solid var(--pine-500);
-  outline-offset: 1px;
-  background: var(--pine-700);
-  box-shadow: 0 6px 14px rgba(var(--pine-700-rgb), 0.25);
+  overflow: hidden;
 }
 
-.login-brand svg {
-  width: 34px;
-  height: 34px;
-  fill: #f5f2fe;
+.login-brand img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
 }
 
 .login-intro-copy {
@@ -356,18 +357,17 @@
   }
 
   .login-brand {
-    font-size: 1rem;
+    gap: 0.85rem;
+  }
+
+  .login-brand .brand-name {
+    font-size: 1.15rem;
   }
 
   .login-brand .brand-mark {
     width: 48px;
     height: 48px;
     border-radius: 14px;
-  }
-
-  .login-brand svg {
-    width: 29px;
-    height: 29px;
   }
 
   .login-intro-copy h1 {

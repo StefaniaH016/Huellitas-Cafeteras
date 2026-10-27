@@ -30,25 +30,27 @@
 .brand:hover {
   text-decoration: none;
 }
+.brand-name {
+  display: flex;
+  flex-direction: column;
+  font-family: 'Roboto Slab', Georgia, serif;
+  font-weight: 800;
+  font-size: 0.9rem;
+  line-height: 0.9;
+}
 .brand-mark {
   width: 38px;
   height: 38px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   flex-shrink: 0;
-  border: 2px solid var(--paper);
   border-radius: 12px;
-  background: var(--pine-700);
-  outline: 2px solid var(--pine-500);
-  outline-offset: 1px;
-  box-shadow: 0 6px 14px rgba(var(--pine-700-rgb), 0.25);
+  overflow: hidden;
 }
-.brand-mark svg {
+.brand-mark img {
   display: block;
-  fill: #f5f2fe;
-  width: 22px;
-  height: 22px;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
 }
 .header-nav {
   display: flex;
