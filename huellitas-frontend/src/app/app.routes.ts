@@ -24,6 +24,20 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./pages/registro/registro.component').then((m) => m.RegistroComponent),
       },
+      {
+        path: 'politica-datos',
+        title: 'Política de tratamiento de datos · Huellitas Cafeteras',
+        loadComponent: () =>
+          import('./pages/politica-datos/politica-datos.component').then(
+            (m) => m.PoliticaDatosComponent,
+          ),
+      },
+      {
+        path: 'terminos',
+        title: 'Términos y condiciones · Huellitas Cafeteras',
+        loadComponent: () =>
+          import('./pages/terminos/terminos.component').then((m) => m.TerminosComponent),
+      },
     ],
   },
   // Private routes

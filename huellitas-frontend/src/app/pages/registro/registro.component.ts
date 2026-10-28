@@ -39,6 +39,7 @@ interface RegistroRequest {
   documentoLegal?: string;
   municipioOperacion?: string;
   documentoSoporte?: string;
+  aceptoTratamientoDatos: boolean;
 }
 
 function confirmPasswordValidator(control: AbstractControl): ValidationErrors | null {
@@ -136,6 +137,8 @@ export class RegistroComponent {
       telefono: formValue.telefono || '',
       contrasena: formValue.password || '',
       rol: this.tipoCuenta() || 'CIUDADANO_VOLUNTARIO',
+      // Ley 1581: el backend guarda aceptoTratamientoDatos y fechaAceptacionDatos
+      aceptoTratamientoDatos: formValue.aceptaDatos === true,
     };
 
     // Agregar campos institucionales si aplica

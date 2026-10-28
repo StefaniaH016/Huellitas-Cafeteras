@@ -1,0 +1,168 @@
+<article class="policy">
+  <header class="policy-head">
+    <button type="button" class="policy-back" (click)="volver()">← Volver</button>
+    <p class="policy-kicker">Huellitas Cafeteras</p>
+    <h1>Política de Tratamiento de Datos Personales</h1>
+    <p class="policy-meta">Versión {{ version }} · Vigente desde el {{ vigenteDesde }}</p>
+    <p class="policy-lead">
+      Usamos tus datos solo para reportar, atender y cerrar casos de animales en riesgo. No los
+      vendemos ni los usamos para publicidad. Puedes consultarlos, corregirlos o pedir que los
+      borremos cuando quieras.
+    </p>
+  </header>
+
+  <nav class="policy-toc" aria-label="Contenido de la política">
+    <ol>
+      @for (s of secciones; track s.id) {
+        <li><a [href]="'#' + s.id" (click)="irA(s.id, $event)">{{ s.titulo }}</a></li>
+      }
+    </ol>
+  </nav>
+
+  <section id="responsable">
+    <h2>1. Responsable y marco legal</h2>
+    <p>
+      Huellitas Cafeteras, proyecto académico de Software III de la Universidad del Quindío, con
+      domicilio en Armenia, Quindío, es responsable de los datos que se recogen en esta plataforma.
+      Contacto para datos personales:
+      <a [href]="'mailto:' + correoContacto">{{ correoContacto }}</a>.
+    </p>
+    <p>
+      Esta política cumple la Constitución Política (artículo 15), la Ley 1581 de 2012, el Decreto
+      1074 de 2015 (capítulo 25) y, para la bitácora médica, la reserva de la Ley 576 de 2000.
+    </p>
+  </section>
+
+  <section id="datos">
+    <h2>2. Datos que recogemos y para qué</h2>
+    <div class="policy-table">
+      <table>
+        <thead>
+          <tr><th>Quién</th><th>Datos</th><th>Para qué</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Todo usuario</td>
+            <td>Nombre, correo, contraseña (cifrada), teléfono, rol</td>
+            <td>Crear la cuenta, iniciar sesión y contactarte por un caso</td>
+          </tr>
+          <tr>
+            <td>Todo usuario</td>
+            <td>Municipio de interés y disponibilidad para rescate</td>
+            <td>Enviarte alertas de emergencias cercanas</td>
+          </tr>
+          <tr>
+            <td>Fundación o refugio</td>
+            <td>Nombre, NIT, dirección, sede, documento soporte, capacidad</td>
+            <td>Verificar la entidad y asignarle custodias</td>
+          </tr>
+          <tr>
+            <td>Veterinaria</td>
+            <td>Nombre, NIT, registro profesional, especialidad, documento soporte</td>
+            <td>Verificar la entidad y firmar la bitácora médica</td>
+          </tr>
+          <tr>
+            <td>Quien reporta o aporta</td>
+            <td>Dirección de referencia, barrio, fotos, comentarios y avistamientos</td>
+            <td>Ubicar, atender o reencontrar al animal</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      También usamos los datos para enviarte notificaciones en la app y por correo, moderar
+      contenido y generar estadísticas que no identifican a nadie.
+    </p>
+  </section>
+
+  <section id="autorizacion">
+    <h2>3. Autorización</h2>
+    <p>
+      Para crear una cuenta debes marcar la casilla de autorización del registro. Guardamos la fecha
+      y hora en que la diste. Puedes revocarla en cualquier momento; si lo haces, tu cuenta se
+      desactiva.
+    </p>
+    <ul>
+      <li>No pedimos datos sensibles (salud, origen, religión, opinión política).</li>
+      <li>Pedimos fotos del animal, no de personas. Una foto donde se reconozca a alguien puede ocultarse.</li>
+      <li>La plataforma es para mayores de 18 años, o menores con autorización de su representante legal.</li>
+    </ul>
+  </section>
+
+  <section id="acceso">
+    <h2>4. Quién ve qué</h2>
+    <ul>
+      <li>El feed público muestra fotos, tipo de caso, barrio y municipio, nunca tu teléfono ni la dirección exacta.</li>
+      <li>La fundación con custodia y la veterinaria responsable ven los datos de contacto del reportante.</li>
+      <li>La bitácora médica completa solo la ve la veterinaria que la abrió; los demás ven un resumen.</li>
+      <li>El administrador ve los documentos de las entidades para validarlas y modera ocultando, sin borrar.</li>
+    </ul>
+  </section>
+
+  <section id="encargados">
+    <h2>5. Proveedores y transferencia internacional</h2>
+    <p>
+      Microsoft Azure (backend), Railway (base de datos), Vercel (sitio web), Cloudinary (fotos y
+      documentos) y el servicio de correo procesan datos por cuenta nuestra. Algunos tienen
+      servidores fuera de Colombia; al aceptar esta política autorizas esa transmisión. Ningún
+      proveedor puede usar tus datos para fines propios.
+    </p>
+  </section>
+
+  <section id="derechos">
+    <h2>6. Tus derechos</h2>
+    <ul>
+      <li>Conocer, actualizar y rectificar tus datos.</li>
+      <li>Pedir prueba de la autorización que diste.</li>
+      <li>Saber cómo se han usado tus datos.</li>
+      <li>Revocar la autorización y pedir que se borren, si no hay un deber legal de conservarlos.</li>
+      <li>Presentar quejas ante la Superintendencia de Industria y Comercio, después de agotar el trámite con nosotros.</li>
+      <li>Acceder gratis a tus datos.</li>
+    </ul>
+    <p>Tus datos de perfil los puedes cambiar tú mismo en <strong>Mi cuenta</strong>.</p>
+  </section>
+
+  <section id="procedimiento">
+    <h2>7. Consultas y reclamos</h2>
+    <p>
+      Escribe a <a [href]="'mailto:' + correoContacto">{{ correoContacto }}</a> desde el correo de
+      tu cuenta, con tu nombre, lo que pides y, si es un reclamo, los hechos y soportes.
+    </p>
+    <div class="policy-table">
+      <table>
+        <thead>
+          <tr><th>Tipo</th><th>Plazo de respuesta</th><th>Prórroga</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Consulta</td><td>10 días hábiles</td><td>5 días hábiles más, avisando el motivo</td></tr>
+          <tr><td>Reclamo</td><td>15 días hábiles</td><td>8 días hábiles más, avisando el motivo</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Si al reclamo le falta información, te pedimos completarla en 5 días hábiles.</p>
+  </section>
+
+  <section id="conservacion">
+    <h2>8. Seguridad y conservación</h2>
+    <ul>
+      <li>Las contraseñas se guardan cifradas y la sesión usa tokens con vencimiento.</li>
+      <li>Toda la comunicación va por HTTPS y cada rol accede solo a lo que necesita.</li>
+      <li>Un caso resuelto se archiva a los 7 días y queda en solo lectura para conservar su historial.</li>
+      <li>Si pides borrar tu cuenta, eliminamos tus datos de contacto; los casos quedan sin tu nombre.</li>
+    </ul>
+  </section>
+
+  <section id="vigencia">
+    <h2>9. Vigencia y cambios</h2>
+    <p>
+      Esta política rige desde el {{ vigenteDesde }} y mientras la plataforma esté en
+      funcionamiento. Si cambia algo importante, te avisaremos en la plataforma y por correo antes
+      de aplicarlo.
+    </p>
+  </section>
+
+  <footer class="policy-foot">
+    <a routerLink="/terminos" class="policy-link">Ver los Términos y Condiciones</a>
+    <button type="button" class="policy-btn" (click)="volver()">Entendido</button>
+  </footer>
+</article>

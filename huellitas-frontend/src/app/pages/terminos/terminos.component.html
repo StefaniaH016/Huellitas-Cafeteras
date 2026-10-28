@@ -1,0 +1,198 @@
+<article class="policy">
+  <header class="policy-head">
+    <button type="button" class="policy-back" (click)="volver()">← Volver</button>
+    <p class="policy-kicker">Huellitas Cafeteras</p>
+    <h1>Términos y Condiciones de Uso</h1>
+    <p class="policy-meta">Versión {{ version }} · Vigente desde el {{ vigenteDesde }}</p>
+    <p class="policy-lead">
+      Huellitas Cafeteras conecta a ciudadanos, fundaciones y veterinarias para rescatar animales en
+      riesgo. Al crear una cuenta aceptas estas reglas y la
+      <a routerLink="/politica-datos">Política de Tratamiento de Datos Personales</a>.
+    </p>
+  </header>
+
+  <nav class="policy-toc" aria-label="Contenido de los términos">
+    <ol>
+      @for (s of secciones; track s.id) {
+        <li><a [href]="'#' + s.id" (click)="irA(s.id, $event)">{{ s.titulo }}</a></li>
+      }
+    </ol>
+  </nav>
+
+  <section id="objeto">
+    <h2>1. Objeto, aceptación y quién puede usar la plataforma</h2>
+    <p>
+      Huellitas Cafeteras es una plataforma web gratuita para reportar animales en riesgo en el Eje
+      Cafetero y coordinar su rescate entre ciudadanos, fundaciones y veterinarias.
+    </p>
+    <ul>
+      <li>La plataforma es un medio de contacto y seguimiento. No es una fundación, un albergue ni una clínica veterinaria.</li>
+      <li>Pueden usarla personas mayores de 18 años, o menores con autorización de su representante legal.</li>
+      <li>Huellitas Cafeteras es un proyecto académico de Software III de la Universidad del Quindío, con domicilio en Armenia, Quindío.</li>
+      <li>Quien no esté de acuerdo con estos términos no debe crear una cuenta.</li>
+    </ul>
+    <p>
+      El servicio está pensado para animales domésticos de la Tierra: perros, gatos y otros.
+      Huellitas Cafeteras no se hace responsable de reportes, custodias ni bitácoras médicas de
+      criaturas de origen extraterrestre, y si una nave aterriza en un cafetal de Calarcá para
+      recoger a uno de sus tripulantes, el caso se cerrará como REENCUENTRO.
+    </p>
+  </section>
+
+  <section id="cuentas">
+    <h2>2. Cuentas, roles y validación de entidades</h2>
+    <p>Cada cuenta tiene un solo rol, que define lo que el usuario puede hacer.</p>
+    <div class="policy-table">
+      <table>
+        <thead>
+          <tr><th>Rol</th><th>Qué puede hacer</th><th>Activación</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Ciudadano / Voluntario</td><td>Reportar casos, aportar comentarios y avistamientos, confirmar reencuentros</td><td>Inmediata</td></tr>
+          <tr><td>Fundación / Refugio</td><td>Asumir y liberar custodias, cerrar casos que tiene en custodia</td><td>Después de la validación del administrador</td></tr>
+          <tr><td>Veterinaria</td><td>Abrir, diligenciar y firmar bitácoras médicas, emitir altas</td><td>Después de la validación del administrador</td></tr>
+          <tr><td>Administrador</td><td>Validar entidades, moderar contenido, archivar casos</td><td>Asignado por el equipo</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul>
+      <li>El usuario responde por la veracidad de los datos de su cuenta y por guardar su contraseña.</li>
+      <li>Una fundación o veterinaria debe adjuntar un documento soporte real. Si el administrador lo rechaza, la entidad puede corregirlo y volver a enviarlo.</li>
+      <li>La cuenta es personal: no se presta ni se vende.</li>
+      <li>Si crees que alguien entró a tu cuenta, avisa de inmediato a <a [href]="'mailto:' + correoContacto">{{ correoContacto }}</a>.</li>
+    </ul>
+  </section>
+
+  <section id="reglas">
+    <h2>3. Reglas de uso y contenido prohibido</h2>
+    <p>El usuario se compromete a usar la plataforma solo para ayudar a animales en riesgo. Está prohibido:</p>
+    <ol>
+      <li>Publicar reportes falsos, duplicados a propósito o de animales que no estén en riesgo.</li>
+      <li>Vender, comprar o rifar animales. Ningún caso de la plataforma tiene costo para quien recibe al animal.</li>
+      <li>Publicar datos personales de otras personas, como su teléfono, dirección o placa, en comentarios o fotos.</li>
+      <li>Subir fotos de maltrato explícito sin necesidad, contenido sexual, ofensivo o que incite a la violencia.</li>
+      <li>Usar la plataforma para publicidad, cadenas o spam.</li>
+      <li>Hacerse pasar por otra persona, fundación o veterinaria.</li>
+      <li>Intentar entrar a cuentas ajenas, saltarse los permisos por rol o atacar el servicio.</li>
+      <li>Registrar como "animal vulnerable" a un familiar, pareja o compañero de grupo, aunque lleve tres días sin dormir por la entrega final de Software III.</li>
+    </ol>
+    <p>
+      Las fotos deben ser propias o tomadas por el usuario. Al subirlas, el usuario autoriza que se
+      muestren en la plataforma mientras el caso exista.
+    </p>
+  </section>
+
+  <section id="casos">
+    <h2>4. Casos, custodia, atención veterinaria y cierre</h2>
+    <p>
+      Un caso pasa por cuatro estados: Registrado, En atención, Resuelto y Archivado. La única
+      excepción es un animal extraviado que se reencuentra con su familia, que pasa directo de
+      Registrado a Resuelto.
+    </p>
+    <ul>
+      <li><strong>Reporte:</strong> quien reporta debe dar una ubicación de referencia real y al menos una foto. Puede actualizar el caso con novedades.</li>
+      <li><strong>Custodia:</strong> solo una fundación validada, con cupo y que acepte custodias puede asumirla. Si la fundación ya no puede, la libera con un motivo y el caso vuelve a estar disponible.</li>
+      <li><strong>Atención veterinaria:</strong> la veterinaria que abre la bitácora queda como responsable de la atención y firma cada registro. Cada veterinaria responde por su propio ejercicio profesional, según la Ley 576 de 2000.</li>
+      <li><strong>Cierre:</strong> el caso lo cierra quien tiene la custodia, la veterinaria al dar el alta o el reportante en un reencuentro. El resultado puede ser reencuentro, entregado a cuidador, recuperado o fallecido.</li>
+      <li><strong>Archivo:</strong> un caso resuelto se archiva a los 7 días y queda en solo lectura. Un caso con 30 días sin actividad genera un recordatorio al reportante, y con 45 días pasa a revisión del administrador.</li>
+    </ul>
+    <p>
+      Los plazos se cuentan en días calendario. Huellitas Cafeteras tampoco puede garantizar que un
+      gato rescatado muestre gratitud después del alta; la indiferencia felina no se considera un
+      incumplimiento de estos términos.
+    </p>
+  </section>
+
+  <section id="responsabilidad">
+    <h2>5. Límites de responsabilidad</h2>
+    <p>
+      Huellitas Cafeteras pone en contacto a las personas y registra el seguimiento de cada caso,
+      pero no participa directamente en los rescates. Por eso no se hace responsable de:
+    </p>
+    <ol>
+      <li><strong>La veracidad de los reportes.</strong> La plataforma no verifica cada caso en el lugar; cada usuario responde por lo que publica.</li>
+      <li><strong>El resultado de un rescate, una custodia o un reencuentro.</strong> Ni de que el animal sea encontrado.</li>
+      <li><strong>La atención veterinaria.</strong> Cada veterinaria es independiente y responde por sus diagnósticos, tratamientos y cobros.</li>
+      <li><strong>Lo que acuerden los usuarios por fuera de la plataforma.</strong> Encuentros, traslados, pagos o donaciones.</li>
+      <li><strong>Los datos que un usuario publique por su cuenta.</strong> Por ejemplo, su teléfono en un comentario. El administrador puede ocultarlos.</li>
+      <li><strong>Daños causados por el animal durante un rescate.</strong> Mordidas, arañazos o huidas. Quien rescata debe tomar precauciones.</li>
+      <li><strong>Los animales abducidos.</strong> El catálogo de ubicaciones solo llega hasta barrio, municipio y departamento, así que la plataforma no puede rastrear casos fuera de la órbita terrestre.</li>
+      <li><strong>Caídas del servicio o fallos de los proveedores externos</strong>, según la sección 6.</li>
+    </ol>
+    <p class="policy-alert">
+      <strong>La plataforma no reemplaza a las autoridades.</strong> Ante maltrato animal, un animal
+      herido en la vía o cualquier emergencia, llama al 123 o a la Policía Ambiental. También puedes
+      denunciar maltrato según la Ley 1774 de 2016.
+    </p>
+    <p>
+      Estos límites no aplican a las obligaciones que la ley le impone a Huellitas Cafeteras, como
+      proteger los datos personales que guarda y usarlos solo para lo autorizado.
+    </p>
+  </section>
+
+  <section id="disponibilidad">
+    <h2>6. Disponibilidad del servicio y propiedad intelectual</h2>
+    <p>
+      La plataforma busca estar disponible al menos el 95 % del tiempo, pero no puede garantizar un
+      servicio sin interrupciones. Depende de proveedores externos: Microsoft Azure, Railway,
+      Vercel, Cloudinary y el servicio de correo.
+    </p>
+    <ul>
+      <li>Puede haber pausas por mantenimiento, actualizaciones o fallas de esos proveedores. Cuando sean planeadas, se avisará en la plataforma.</li>
+      <li>Huellitas Cafeteras no responde por interrupciones causadas por fuerza mayor: cortes de energía, fallas de internet, desastres naturales, o que el servidor entre en su era de autocuidado y decida no contestarle a nadie por un rato.</li>
+      <li>Si se pierde una notificación por correo, la información sigue disponible en la sección Notificaciones de la app.</li>
+    </ul>
+    <p>
+      <strong>Propiedad intelectual.</strong> El nombre Huellitas Cafeteras, el logo, el diseño de
+      las pantallas y el código pertenecen a sus autores, el equipo del proyecto. Las fotos y textos
+      que publica cada usuario siguen siendo suyos; el usuario solo autoriza que se muestren en la
+      plataforma mientras el caso exista.
+    </p>
+  </section>
+
+  <section id="moderacion">
+    <h2>7. Moderación, suspensión y cancelación</h2>
+    <p>
+      El administrador puede ocultar un caso o un aporte que incumpla estos términos. Ocultar no es
+      borrar: el contenido sale del feed, queda el motivo y se conserva el historial.
+    </p>
+    <div class="policy-table">
+      <table>
+        <thead>
+          <tr><th>Falta</th><th>Qué pasa</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Contenido inapropiado o datos de terceros</td><td>Se oculta el contenido y se notifica al autor con el motivo</td></tr>
+          <tr><td>Caso duplicado</td><td>Se marca como duplicado del caso original y se oculta</td></tr>
+          <tr><td>Reportes falsos repetidos o suplantación</td><td>Se desactiva la cuenta</td></tr>
+          <tr><td>Venta de animales</td><td>Se oculta el caso y se desactiva la cuenta</td></tr>
+          <tr><td>Ataques al servicio</td><td>Se desactiva la cuenta y se informa a las autoridades si corresponde</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul>
+      <li>Puedes pedir que se revise una decisión de moderación escribiendo a <a [href]="'mailto:' + correoContacto">{{ correoContacto }}</a>.</li>
+      <li>Puedes cancelar tu cuenta cuando quieras. Tus datos se tratan como dice la <a routerLink="/politica-datos">Política de Tratamiento de Datos Personales</a>: se borran tus datos de contacto y tus casos quedan sin tu nombre.</li>
+    </ul>
+  </section>
+
+  <section id="cambios">
+    <h2>8. Cambios, ley aplicable y contacto</h2>
+    <p>
+      Estos términos rigen desde el {{ vigenteDesde }}. Si cambian, se avisará en la plataforma y
+      por correo antes de aplicarlos; seguir usando la plataforma después del aviso significa
+      aceptar la nueva versión.
+    </p>
+    <ul>
+      <li><strong>Ley aplicable:</strong> las leyes de la República de Colombia, incluidas la Ley 1581 de 2012 (datos personales), la Ley 1774 de 2016 (protección animal) y la Ley 576 de 2000 (ejercicio veterinario).</li>
+      <li><strong>Conflictos:</strong> se buscará primero un arreglo directo por correo. Si no se logra, se acude a las autoridades competentes de Armenia, Quindío.</li>
+      <li><strong>Contacto: </strong><a [href]="'mailto:' + correoContacto">{{ correoContacto }}</a>.</li>
+    </ul>
+    <p>Si una parte de estos términos resulta inválida, el resto sigue vigente.</p>
+  </section>
+
+  <footer class="policy-foot">
+    <a routerLink="/politica-datos" class="policy-link">Ver la Política de Tratamiento de Datos</a>
+    <button type="button" class="policy-btn" (click)="volver()">Entendido</button>
+  </footer>
+</article>

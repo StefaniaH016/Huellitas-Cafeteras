@@ -401,6 +401,31 @@ header.site {
   margin: 0.6rem 0 1.4rem;
 }
 
+.privacy-notice {
+  margin: 1rem 0 0.4rem;
+  padding: 0.75rem 0.9rem;
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+.privacy-notice p {
+  margin: 0;
+}
+
+.privacy-notice .privacy-title {
+  margin-bottom: 0.25rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.privacy-notice a {
+  color: var(--pine-700);
+}
+
 .step-actions {
   display: flex;
   justify-content: space-between;

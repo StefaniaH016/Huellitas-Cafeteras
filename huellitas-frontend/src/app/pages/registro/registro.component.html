@@ -328,18 +328,30 @@
           </div>
         }
 
+        <div class="privacy-notice" role="note" aria-labelledby="aviso-titulo">
+          <p class="privacy-title" id="aviso-titulo">Aviso de privacidad</p>
+          <p>
+            Huellitas Cafeteras usará tus datos para crear tu cuenta, contactarte por los casos en
+            los que participes y enviarte alertas de tu zona. No los vendemos ni los usamos para
+            publicidad. Puedes conocerlos, corregirlos, borrarlos o revocar esta autorización
+            escribiendo a <a href="mailto:soporte@huellitascafeteras.co">soporte@huellitascafeteras.co</a>.
+          </p>
+        </div>
+
         <label class="checkline signup-lead">
-          <input type="checkbox" formControlName="aceptaDatos" />
-          Acepto la
-          <a
-            href="https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=49981"
-            target="_blank"
-            rel="noopener"
-            >política de tratamiento de datos personales (Ley 1581 de 2012)</a
-          >
+          <input type="checkbox" formControlName="aceptaDatos" aria-describedby="aviso-titulo" />
+          <span>
+            He leído y acepto los
+            <a routerLink="/terminos" target="_blank" rel="noopener">Términos y Condiciones</a>
+            y la
+            <a routerLink="/politica-datos" target="_blank" rel="noopener"
+              >Política de Tratamiento de Datos Personales</a
+            >
+            de Huellitas Cafeteras (Ley 1581 de 2012).
+          </span>
         </label>
         @if (step2Form.get('aceptaDatos')?.invalid && step2Form.get('aceptaDatos')?.touched) {
-          <span class="field-error" role="alert">Debes aceptar el tratamiento de datos.</span>
+          <span class="field-error" role="alert">Debes aceptar los términos y la política de datos.</span>
         }
 
         <div class="step-actions">
