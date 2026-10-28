@@ -7,7 +7,7 @@
     "build": "ng build --configuration production",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
-    "test:coverage": "ng test --no-watch --coverage",
+    "test:coverage": "ng test --no-watch --configuration=coverage",
     "lint": "ng lint",
     "lint:fix": "ng lint --fix",
     "lint:report": "ng lint --format json > eslint-report.json || true",

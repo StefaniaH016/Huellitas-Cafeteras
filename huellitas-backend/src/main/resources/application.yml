@@ -46,6 +46,12 @@ spring:
       allow-credentials: true
       max-age: 3600
 
+  # ── Multipart / Carga de Imágenes ─────────────────────────────
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 8MB
+
 # ── Servidor ───────────────────────────────────────────────────
 server:
   port: 8080

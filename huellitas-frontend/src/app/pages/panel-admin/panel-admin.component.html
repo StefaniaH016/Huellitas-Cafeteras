@@ -1,89 +1,60 @@
 <main>
   <section class="dash-hello">
     <div>
-      <h1>Hola, administrador</h1>
-      <p class="dash-summary">
-        Hay cuentas esperando validación y contenidos denunciados. Mantén la plataforma verificada y
-        segura.
-      </p>
-    </div>
-    <div class="dash-ctas">
-      <button class="btn btn-primary" (click)="setAdminTab('validar'); scrollToPanel()">
-        Validar cuentas
-      </button>
-      <button class="btn btn-secondary" (click)="setAdminTab('moderacion'); scrollToPanel()">
-        Moderar contenido
-      </button>
+      <h1>Panel de administración</h1>
+      <p class="dash-summary">Revisa y valida las cuentas institucionales pendientes.</p>
     </div>
   </section>
 
-  <section class="dash-figures" aria-label="Resumen de la plataforma">
-    <a href="#" class="figure">
-      <span class="figure-num">{{ adminStats().cuentasPorValidar }}</span>
-      <span class="figure-label">Cuentas por validar</span>
-    </a>
-    <a href="#" class="figure is-urgent">
-      <span class="figure-num">{{ adminStats().contenidosDenunciados }}</span>
-      <span class="figure-label">Contenidos denunciados</span>
-    </a>
-    <a href="#" class="figure">
-      <span class="figure-num">{{ adminStats().casosActivos }}</span>
-      <span class="figure-label">Casos activos</span>
-    </a>
-  </section>
+  @if (mensaje()) {
+    <p class="feedback-success" role="status">{{ mensaje() }}</p>
+  }
+  @if (errorMensaje()) {
+    <div class="feedback-error" role="alert">
+      <span>{{ errorMensaje() }}</span>
+      <button class="btn btn-secondary btn-sm" type="button" (click)="cargarDatos()">
+        Reintentar
+      </button>
+    </div>
+  }
 
-  <div class="dash-grid" id="mi-panel">
-    @if (adminActiveTab() === 'validar') {
-      <section class="panel">
-        <div class="panel-head">
-          <h3>Cuentas por validar</h3>
-          <a class="panel-link" href="#">Ver todas</a>
+  <section class="panel" aria-labelledby="cuentas-validar">
+    <div class="panel-head">
+      <h2 id="cuentas-validar">Cuentas por validar</h2>
+      <span class="panel-count">{{ adminValidaciones().length }}</span>
+    </div>
+    @if (cargando()) {
+      <p class="panel-message" role="status">Cargando solicitudes...</p>
+    } @else if (adminValidaciones().length === 0) {
+      <p class="panel-message">No hay cuentas por validar.</p>
+    } @else {
+      @for (cuenta of adminValidaciones(); track cuenta.usuarioId) {
+        <div class="list-row">
+          <div class="list-thumb" aria-hidden="true">🏠</div>
+          <div class="list-info">
+            <p class="list-title">{{ cuenta.nombreEntidad }}</p>
+            <p class="list-meta">{{ cuenta.rolSolicitado }} · Estado: {{ cuenta.estado }}</p>
+          </div>
+          <div class="list-actions">
+            <button
+              class="btn btn-primary btn-sm"
+              type="button"
+              [disabled]="accionEnCurso() !== null || cargando()"
+              (click)="resolverVerificacion(cuenta.usuarioId, 'APROBAR')"
+            >
+              Aprobar
+            </button>
+            <button
+              class="btn btn-secondary btn-sm"
+              type="button"
+              [disabled]="accionEnCurso() !== null || cargando()"
+              (click)="resolverVerificacion(cuenta.usuarioId, 'RECHAZAR')"
+            >
+              Rechazar
+            </button>
+          </div>
         </div>
-        @if (adminValidaciones().length === 0) {
-          <p style="padding: 1rem; color: var(--ink-soft)">No hay cuentas por validar.</p>
-        } @else {
-          @for (cuenta of adminValidaciones(); track cuenta.id) {
-            <div class="list-row">
-              <div class="list-thumb">🏠</div>
-              <div class="list-info">
-                <p class="list-title">{{ cuenta.nombre }}</p>
-                <p class="list-meta">
-                  Documento soporte adjunto · {{ cuenta.municipio }} · {{ cuenta.tipo }}
-                </p>
-              </div>
-              <div class="list-actions">
-                <button class="btn btn-secondary btn-sm">Revisar</button>
-              </div>
-            </div>
-          }
-        }
-      </section>
-    } @else if (adminActiveTab() === 'moderacion') {
-      <section class="panel">
-        <div class="panel-head">
-          <h3>Contenido denunciado</h3>
-          <a class="panel-link" href="#">Ver todo</a>
-        </div>
-        @if (adminModeraccion().length === 0) {
-          <p style="padding: 1rem; color: var(--ink-soft)">No hay contenidos por moderar.</p>
-        } @else {
-          @for (contenido of adminModeraccion(); track contenido.id) {
-            <div class="list-row">
-              <div class="list-thumb">⚑</div>
-              <div class="list-info">
-                <p class="list-title">
-                  Caso #{{ contenido.casoId }} · denunciado por
-                  {{ contenido.denunciadosPor }} usuarios
-                </p>
-                <p class="list-meta">Motivo: {{ contenido.motivo }}</p>
-              </div>
-              <div class="list-actions">
-                <button class="btn btn-secondary btn-sm">Revisar</button>
-              </div>
-            </div>
-          }
-        }
-      </section>
+      }
     }
-  </div>
+  </section>
 </main>

@@ -47,7 +47,7 @@ services:
       dockerfile: Dockerfile
     container_name: huellitas-web
     ports:
-      - '80:80'
+      - '8081:80'
     depends_on:
       - backend
     networks:

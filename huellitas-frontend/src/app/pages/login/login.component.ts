@@ -14,13 +14,13 @@ export class LoginComponent {
   private authService = inject(AuthService);
   private router = inject(Router);
 
-  loginForm = this.fb.group({
+  loginForm = this.fb.nonNullable.group({
     email: ['', [Validators.required, Validators.email]],
     password: ['', Validators.required],
     mantenerSesion: [false],
   });
 
-  recoveryForm = this.fb.group({
+  recoveryForm = this.fb.nonNullable.group({
     recoveryEmail: ['', [Validators.required, Validators.email]],
   });
 
@@ -35,8 +35,8 @@ export class LoginComponent {
     }
     this.isLoading.set(true);
     this.showError.set(false);
-    const { email, password } = this.loginForm.value;
-    this.authService.login(email!, password!).subscribe({
+    const { email, password } = this.loginForm.getRawValue();
+    this.authService.login(email, password).subscribe({
       next: () => {
         this.isLoading.set(false);
         this.authService.navigateAfterLogin();

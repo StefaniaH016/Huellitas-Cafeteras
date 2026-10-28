@@ -1,0 +1,22 @@
+<div class="doodles" aria-hidden="true">
+  <span>🐾</span>
+  <span>💜</span>
+  <span>🐾</span>
+  <span>🐾</span>
+  <span>💗</span>
+  <span>🐾</span>
+  <span>🐾</span>
+  <span>💜</span>
+  <span>🐾</span>
+  <span>🐾</span>
+</div>
+
+<header class="site" [class.with-actions]="hasActions" [class.login-header]="!hasActions">
+  <div class="brand">
+    <div class="brand-mark">
+      <img src="huellitas-cafeteras-icono.png" alt="" />
+    </div>
+    <span class="brand-name"><span>Huellitas</span><span>Cafeteras</span></span>
+  </div>
+  <ng-content />
+</header>

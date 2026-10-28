@@ -1,46 +1,25 @@
-import { Component, signal, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { CasoService } from '../../core/services/caso.service';
-import { AuthService } from '../../core/services/auth.service';
-
-interface Caso {
-  id: number;
-  titulo?: string;
-  descripcion: string;
-  urgencia: string;
-  municipio: string;
-  barrio: string;
-  foto?: string;
-  reportadoHace?: string;
-  estado?: string;
-  nombre?: string;
-  tipo?: string;
-  solicitadoPor?: string;
-  casoId?: number;
-  proximoControl?: string;
-  denunciadosPor?: number;
-  motivo?: string;
-}
+import {
+  DecisionVerificacion,
+  VerificacionPendiente,
+  VerificacionService,
+} from '../../core/services/verificacion.service';
 
 @Component({
   selector: 'app-panel-admin',
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule],
   templateUrl: './panel-admin.component.html',
   styleUrl: './panel-admin.component.css',
 })
 export class PanelAdminComponent implements OnInit {
-  private casoService = inject(CasoService);
-  authService = inject(AuthService);
+  private verificacionService = inject(VerificacionService);
 
-  // Stats
-  adminStats = signal({ cuentasPorValidar: 0, contenidosDenunciados: 0, casosActivos: 0 });
-  adminValidaciones = signal<Caso[]>([]);
-  adminModeraccion = signal<Caso[]>([]);
-  adminActiveTab = signal('validar');
-
+  adminValidaciones = signal<VerificacionPendiente[]>([]);
   cargando = signal(false);
   errorMensaje = signal('');
+  mensaje = signal('');
+  accionEnCurso = signal<number | null>(null);
 
   ngOnInit(): void {
     this.cargarDatos();
@@ -49,22 +28,38 @@ export class PanelAdminComponent implements OnInit {
   cargarDatos(): void {
     this.cargando.set(true);
     this.errorMensaje.set('');
-    // TODO: Load data from backend (phase 2)
-    // For now, show empty state
-    this.adminStats.set({ cuentasPorValidar: 0, contenidosDenunciados: 0, casosActivos: 0 });
-    this.adminValidaciones.set([]);
-    this.adminModeraccion.set([]);
-    this.cargando.set(false);
+    this.verificacionService.getPendientes().subscribe({
+      next: (verificaciones) => {
+        this.adminValidaciones.set(verificaciones);
+        this.cargando.set(false);
+      },
+      error: (error: unknown) => {
+        console.error('Error al cargar las cuentas por validar:', error);
+        this.errorMensaje.set('No fue posible cargar las cuentas. Intenta nuevamente.');
+        this.cargando.set(false);
+      },
+    });
   }
 
-  setAdminTab(tab: string): void {
-    this.adminActiveTab.set(tab);
-  }
-
-  scrollToPanel(): void {
-    const element = document.getElementById('mi-panel');
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
-    }
+  resolverVerificacion(usuarioId: number, decision: DecisionVerificacion): void {
+    this.accionEnCurso.set(usuarioId);
+    this.errorMensaje.set('');
+    this.mensaje.set('');
+    this.verificacionService.resolverVerificacion(usuarioId, { decision }).subscribe({
+      next: () => {
+        this.accionEnCurso.set(null);
+        this.mensaje.set(
+          decision === 'APROBAR'
+            ? 'La cuenta fue aprobada correctamente.'
+            : 'La cuenta fue rechazada correctamente.',
+        );
+        this.cargarDatos();
+      },
+      error: (error: unknown) => {
+        console.error('Error al resolver la verificación:', error);
+        this.accionEnCurso.set(null);
+        this.errorMensaje.set('No fue posible resolver la verificación. Intenta nuevamente.');
+      },
+    });
   }
 }

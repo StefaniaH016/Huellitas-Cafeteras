@@ -278,7 +278,7 @@ export class CasoDetalleComponent implements OnInit {
   }
 
   goBack(): void {
-    this.router.navigate(['/casos']);
+    void this.router.navigate(['/casos']);
   }
 
   selectTab(tab: 'informacion' | 'seguimiento' | 'bitacora'): void {

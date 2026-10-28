@@ -72,167 +72,7 @@
         }
       </section>
     </div>
-    <div class="zone-block">
-      <form class="search-bar" (ngSubmit)="onSearch()">
-        <div class="field">
-          <label for="dep">Departamento</label>
-          <select
-            id="dep"
-            [(ngModel)]="filtros.departamentoId"
-            name="departamentoId"
-            (change)="onDepartamentoChange()"
-          >
-            <option value="">Seleccionar departamento</option>
-            @for (dep of departamentos(); track dep.id) {
-              <option [value]="dep.id">{{ dep.nombre }}</option>
-            }
-          </select>
-        </div>
-        <div class="field">
-          <label for="mun">Municipio</label>
-          <select
-            id="mun"
-            [(ngModel)]="filtros.municipioId"
-            name="municipioId"
-            (change)="onMunicipioChange()"
-          >
-            <option value="">Todos los municipios</option>
-            @for (mun of municipios(); track mun.id) {
-              <option [value]="mun.id">{{ mun.nombre }}</option>
-            }
-          </select>
-        </div>
-        <div class="field">
-          <label for="barrio">Barrio</label>
-          <select id="barrio" [(ngModel)]="filtros.barrioId" name="barrioId">
-            <option value="">Todos los barrios</option>
-            @for (barrio of barrios(); track barrio.id) {
-              <option [value]="barrio.id">{{ barrio.nombre }}</option>
-            }
-          </select>
-        </div>
-        <div class="field">
-          <label for="urg">Urgencia</label>
-          <select id="urg" [(ngModel)]="filtros.urgencia" name="urgencia">
-            <option value="">Todas</option>
-            <option value="CRITICA">Emergencia</option>
-            <option value="ALTA">Alta</option>
-            <option value="MEDIA">Media</option>
-          </select>
-        </div>
-        <div class="field">
-          <label for="animal">Tipo de animal</label>
-          <select id="animal" [(ngModel)]="filtros.tipoAnimal" name="tipoAnimal">
-            <option value="">Todos</option>
-            <option value="PERRO">Perro</option>
-            <option value="GATO">Gato</option>
-            <option value="OTRO">Otro</option>
-          </select>
-        </div>
-        <button class="btn btn-primary self-end" type="submit">Buscar</button>
-      </form>
-
-      <section class="block">
-        <div class="block-head">
-          <h2>Casos urgentes cerca de ti</h2>
-          <a routerLink="/casos">Ver todos</a>
-        </div>
-        <div class="case-grid">
-          @if (cargando()) {
-            <p style="text-align: center; color: var(--ink-soft); grid-column: 1/-1">
-              Cargando casos...
-            </p>
-          }
-          @if (errorMensaje()) {
-            <p style="text-align: center; color: var(--coral-600); grid-column: 1/-1">
-              {{ errorMensaje() }}
-            </p>
-          }
-          @for (caso of casos(); track caso.id) {
-            <article
-              class="case-card"
-              [routerLink]="['/caso-detalle', caso.id]"
-              style="cursor: pointer"
-            >
-              <div class="case-photo">
-                @if (caso.foto) {
-                  <img [src]="caso.foto" [alt]="caso.titulo" (error)="caso.foto = ''" />
-                } @else {
-                  <span style="color: var(--ink-soft)">Foto del animal</span>
-                }
-              </div>
-              <div class="case-body">
-                <div
-                  style="
-                    display: flex;
-                    gap: 0.4rem;
-                    align-items: center;
-                    margin-bottom: 0.4rem;
-                    flex-wrap: wrap;
-                  "
-                >
-                  <span class="badge" [ngClass]="getBadgeClass(caso.urgencia)">
-                    <span class="badge-dot"></span>
-                    {{ getBadgeLabel(caso.urgencia) }}
-                  </span>
-                  @if (caso.tipoCaso && getTipoLabel(caso.tipoCaso)) {
-                    <span
-                      class="badge"
-                      style="
-                        background: var(--lav-100, #f0ebfd);
-                        color: var(--lav-700, #5c35b8);
-                        font-size: 0.75rem;
-                        padding: 0.2rem 0.5rem;
-                        border-radius: 99px;
-                      "
-                    >
-                      {{ getTipoLabel(caso.tipoCaso) }}
-                    </span>
-                  }
-                  @if (caso.estado) {
-                    <span
-                      class="badge"
-                      style="
-                        background: var(--pine-100, #e6f6f0);
-                        color: var(--pine-700, #147253);
-                        font-size: 0.75rem;
-                        padding: 0.2rem 0.5rem;
-                        border-radius: 99px;
-                      "
-                    >
-                      {{ getEstadoLabel(caso.estado) }}
-                    </span>
-                  }
-                </div>
-                <p class="case-title">{{ caso.titulo || caso.descripcion }}</p>
-                <p class="case-meta">{{ caso.municipio }} · {{ caso.barrio }}</p>
-              </div>
-            </article>
-          } @empty {
-            <p style="text-align: center; color: var(--ink-soft); grid-column: 1/-1">
-              No hay casos disponibles.
-            </p>
-          }
-        </div>
-      </section>
-    </div>
-
-    <div class="trust-strip">
-      <div class="trust-item">
-        <div class="trust-num">—</div>
-        <div class="trust-label">Casos registrados este mes</div>
-      </div>
-      <div class="trust-item">
-        <div class="trust-num">—</div>
-        <div class="trust-label">Casos resueltos</div>
-      </div>
-      <div class="trust-item">
-        <div class="trust-num">—</div>
-        <div class="trust-label">Fundaciones y veterinarias verificadas</div>
-      </div>
-    </div>
   }
-
   <!-- FUNDACION -->
   @if (isFundacion()) {
     <div class="dash">
@@ -338,6 +178,54 @@
         </section>
       </div>
     </div>
+  }
+
+  <!-- VETERINARIA -->
+  @if (isVeterinaria()) {
+    <div class="dash">
+      <section class="dash-hello">
+        <div>
+          <h1>Hola, {{ authService.getNombre() }}</h1>
+          <p class="dash-summary">
+            Revisa las solicitudes de atención y gestiona tus pacientes activos.
+          </p>
+        </div>
+        <div class="dash-ctas">
+          <a class="btn btn-primary" routerLink="/veterinaria">Ir a mi panel</a>
+          <button class="btn btn-secondary" routerLink="/casos">Ver casos activos</button>
+        </div>
+      </section>
+      <section class="dash-figures" aria-label="Resumen de tu consulta">
+        <a class="figure is-urgent" routerLink="/veterinaria"
+          ><span class="figure-num">0</span
+          ><span class="figure-label">Solicitud por responder</span></a
+        >
+        <a class="figure" routerLink="/veterinaria"
+          ><span class="figure-num">0</span><span class="figure-label">Pacientes activos</span></a
+        >
+        <a class="figure" routerLink="/veterinaria"
+          ><span class="figure-num">0</span><span class="figure-label">Control programado</span></a
+        >
+      </section>
+      <div class="dash-grid">
+        <section class="panel">
+          <div class="panel-head">
+            <h3>Solicitudes de atención</h3>
+            <a class="panel-link" routerLink="/veterinaria">Ver mi panel</a>
+          </div>
+          <p class="list-empty">No hay solicitudes de atención pendientes.</p>
+        </section>
+        <section class="panel">
+          <div class="panel-head">
+            <h3>Pacientes activos</h3>
+            <a class="panel-link" routerLink="/veterinaria">Ver mi panel</a>
+          </div>
+          <p class="list-empty">No hay pacientes activos actualmente.</p>
+        </section>
+      </div>
+    </div>
+  }
+  @if (isCiudadano() || isFundacion() || isVeterinaria()) {
     <div class="zone-block">
       <form class="search-bar" (ngSubmit)="onSearch()">
         <div class="field">
@@ -484,193 +372,20 @@
     </div>
   }
 
-  <!-- VETERINARIA -->
-  @if (isVeterinaria()) {
-    <div class="dash">
-      <section class="dash-hello">
-        <div>
-          <h1>Hola, {{ authService.getNombre() }}</h1>
-          <p class="dash-summary">
-            Revisa las solicitudes de atención y gestiona tus pacientes activos.
-          </p>
-        </div>
-        <div class="dash-ctas">
-          <a class="btn btn-primary" routerLink="/veterinaria">Ir a mi panel</a>
-          <button class="btn btn-secondary" routerLink="/casos">Ver casos activos</button>
-        </div>
-      </section>
-      <section class="dash-figures" aria-label="Resumen de tu consulta">
-        <a class="figure is-urgent" routerLink="/veterinaria"
-          ><span class="figure-num">0</span
-          ><span class="figure-label">Solicitud por responder</span></a
-        >
-        <a class="figure" routerLink="/veterinaria"
-          ><span class="figure-num">0</span><span class="figure-label">Pacientes activos</span></a
-        >
-        <a class="figure" routerLink="/veterinaria"
-          ><span class="figure-num">0</span><span class="figure-label">Control programado</span></a
-        >
-      </section>
-      <div class="dash-grid">
-        <section class="panel">
-          <div class="panel-head">
-            <h3>Solicitudes de atención</h3>
-            <a class="panel-link" routerLink="/veterinaria">Ver mi panel</a>
-          </div>
-          <p class="list-empty">No hay solicitudes de atención pendientes.</p>
-        </section>
-        <section class="panel">
-          <div class="panel-head">
-            <h3>Pacientes activos</h3>
-            <a class="panel-link" routerLink="/veterinaria">Ver mi panel</a>
-          </div>
-          <p class="list-empty">No hay pacientes activos actualmente.</p>
-        </section>
+  @if (isCiudadano()) {
+    <div class="trust-strip">
+      <div class="trust-item">
+        <div class="trust-num">—</div>
+        <div class="trust-label">Casos registrados este mes</div>
       </div>
-    </div>
-    <div class="zone-block">
-      <form class="search-bar" (ngSubmit)="onSearch()">
-        <div class="field">
-          <label for="dep">Departamento</label>
-          <select
-            id="dep"
-            [(ngModel)]="filtros.departamentoId"
-            name="departamentoId"
-            (change)="onDepartamentoChange()"
-          >
-            <option value="">Seleccionar departamento</option>
-            @for (dep of departamentos(); track dep.id) {
-              <option [value]="dep.id">{{ dep.nombre }}</option>
-            }
-          </select>
-        </div>
-        <div class="field">
-          <label for="mun">Municipio</label>
-          <select
-            id="mun"
-            [(ngModel)]="filtros.municipioId"
-            name="municipioId"
-            (change)="onMunicipioChange()"
-          >
-            <option value="">Todos los municipios</option>
-            @for (mun of municipios(); track mun.id) {
-              <option [value]="mun.id">{{ mun.nombre }}</option>
-            }
-          </select>
-        </div>
-        <div class="field">
-          <label for="barrio">Barrio</label>
-          <select id="barrio" [(ngModel)]="filtros.barrioId" name="barrioId">
-            <option value="">Todos los barrios</option>
-            @for (barrio of barrios(); track barrio.id) {
-              <option [value]="barrio.id">{{ barrio.nombre }}</option>
-            }
-          </select>
-        </div>
-        <div class="field">
-          <label for="urg">Urgencia</label>
-          <select id="urg" [(ngModel)]="filtros.urgencia" name="urgencia">
-            <option value="">Todas</option>
-            <option value="CRITICA">Emergencia</option>
-            <option value="ALTA">Alta</option>
-            <option value="MEDIA">Media</option>
-          </select>
-        </div>
-        <div class="field">
-          <label for="animal">Tipo de animal</label>
-          <select id="animal" [(ngModel)]="filtros.tipoAnimal" name="tipoAnimal">
-            <option value="">Todos</option>
-            <option value="PERRO">Perro</option>
-            <option value="GATO">Gato</option>
-            <option value="OTRO">Otro</option>
-          </select>
-        </div>
-        <button class="btn btn-primary self-end" type="submit">Buscar</button>
-      </form>
-
-      <section class="block">
-        <div class="block-head">
-          <h2>Casos urgentes cerca de ti</h2>
-          <a routerLink="/casos">Ver todos</a>
-        </div>
-        <div class="case-grid">
-          @if (cargando()) {
-            <p style="text-align: center; color: var(--ink-soft); grid-column: 1/-1">
-              Cargando casos...
-            </p>
-          }
-          @if (errorMensaje()) {
-            <p style="text-align: center; color: var(--coral-600); grid-column: 1/-1">
-              {{ errorMensaje() }}
-            </p>
-          }
-          @for (caso of casos(); track caso.id) {
-            <article
-              class="case-card"
-              [routerLink]="['/caso-detalle', caso.id]"
-              style="cursor: pointer"
-            >
-              <div class="case-photo">
-                @if (caso.foto) {
-                  <img [src]="caso.foto" [alt]="caso.titulo" (error)="caso.foto = ''" />
-                } @else {
-                  <span style="color: var(--ink-soft)">Foto del animal</span>
-                }
-              </div>
-              <div class="case-body">
-                <div
-                  style="
-                    display: flex;
-                    gap: 0.4rem;
-                    align-items: center;
-                    margin-bottom: 0.4rem;
-                    flex-wrap: wrap;
-                  "
-                >
-                  <span class="badge" [ngClass]="getBadgeClass(caso.urgencia)">
-                    <span class="badge-dot"></span>
-                    {{ getBadgeLabel(caso.urgencia) }}
-                  </span>
-                  @if (caso.tipoCaso && getTipoLabel(caso.tipoCaso)) {
-                    <span
-                      class="badge"
-                      style="
-                        background: var(--lav-100, #f0ebfd);
-                        color: var(--lav-700, #5c35b8);
-                        font-size: 0.75rem;
-                        padding: 0.2rem 0.5rem;
-                        border-radius: 99px;
-                      "
-                    >
-                      {{ getTipoLabel(caso.tipoCaso) }}
-                    </span>
-                  }
-                  @if (caso.estado) {
-                    <span
-                      class="badge"
-                      style="
-                        background: var(--pine-100, #e6f6f0);
-                        color: var(--pine-700, #147253);
-                        font-size: 0.75rem;
-                        padding: 0.2rem 0.5rem;
-                        border-radius: 99px;
-                      "
-                    >
-                      {{ getEstadoLabel(caso.estado) }}
-                    </span>
-                  }
-                </div>
-                <p class="case-title">{{ caso.titulo || caso.descripcion }}</p>
-                <p class="case-meta">{{ caso.municipio }} · {{ caso.barrio }}</p>
-              </div>
-            </article>
-          } @empty {
-            <p style="text-align: center; color: var(--ink-soft); grid-column: 1/-1">
-              No hay casos disponibles.
-            </p>
-          }
-        </div>
-      </section>
+      <div class="trust-item">
+        <div class="trust-num">—</div>
+        <div class="trust-label">Casos resueltos</div>
+      </div>
+      <div class="trust-item">
+        <div class="trust-num">—</div>
+        <div class="trust-label">Fundaciones y veterinarias verificadas</div>
+      </div>
     </div>
   }
 

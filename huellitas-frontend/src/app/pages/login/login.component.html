@@ -1,37 +1,25 @@
-<div class="doodles" aria-hidden="true">
-  <span>🐾</span>
-  <span>💜</span>
-  <span>🐾</span>
-  <span>🐾</span>
-  <span>💗</span>
-  <span>🐾</span>
-  <span>🐾</span>
-  <span>💜</span>
-  <span>🐾</span>
-  <span>🐾</span>
-</div>
-
-<header class="site">
-  <div class="brand">
-    <div class="brand-mark">
-      <svg width="19" height="19" viewBox="0 0 24 24" fill="#F5F2FE">
-        <ellipse cx="12" cy="15.5" rx="5.4" ry="4.6" />
-        <ellipse cx="5.6" cy="9.2" rx="2.1" ry="2.6" />
-        <ellipse cx="10.2" cy="5.6" rx="2.1" ry="2.7" />
-        <ellipse cx="14.8" cy="5.6" rx="2.1" ry="2.7" />
-        <ellipse cx="18.4" cy="9.2" rx="2.1" ry="2.6" />
-      </svg>
-    </div>
-    <span class="brand-name">Huellitas Cafeteras</span>
-  </div>
-</header>
-
 <div class="auth-wrap">
+  <aside class="login-intro" aria-label="Huellitas Cafeteras">
+    <div class="login-brand">
+      <div class="brand-mark" aria-hidden="true">
+        <img src="huellitas-cafeteras-icono.png" alt="" />
+      </div>
+      <span class="brand-name"><span>Huellitas</span><span>Cafeteras</span></span>
+    </div>
+    <div class="login-intro-copy">
+      <h1>Cuando un animal necesita ayuda, cada minuto cuenta.</h1>
+      <p>
+        Reporta y da seguimiento a animales heridos, abandonados o extraviados en el Eje Cafetero,
+        conectado directamente con fundaciones y veterinarias de tu zona.
+      </p>
+    </div>
+    <span class="intro-paw" aria-hidden="true">🐾</span>
+  </aside>
+
   @if (!showRecovery()) {
     <div class="auth-card login-panel">
       <div class="auth-accent"></div>
       <h2>Ingresar</h2>
-      <p class="sub">Entra para reportar, seguir tus casos o atender solicitudes.</p>
 
       <div class="error-banner" [class.show]="showError()" role="alert">
         Correo o contraseña incorrectos. Si tu cuenta es institucional, puede estar pendiente de

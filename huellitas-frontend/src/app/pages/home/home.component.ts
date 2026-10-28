@@ -5,6 +5,12 @@ import { RouterLink } from '@angular/router';
 import { CasoService } from '../../core/services/caso.service';
 import { AuthService } from '../../core/services/auth.service';
 import { UbicacionService } from '../../core/services/ubicacion.service';
+import {
+  fallbackCaseString,
+  getUrgencyBadgeClass,
+  getUrgencyBadgeLabel,
+  normalizeCasoDisplay,
+} from '../../core/utils/caso-display.utils';
 import { normalizeRole } from '../../core/utils/role.utils';
 
 interface Ubicacion {
@@ -232,43 +238,18 @@ export class HomeComponent implements OnInit {
     return p;
   }
 
-  private fallbackStr(val?: string, defaultVal = ''): string {
-    if (val) {
-      return val;
-    }
-    return defaultVal;
-  }
-
   private extractHomeFoto(c: RawHomeCaso): string {
-    if (c.fotoPrincipal) {
-      return c.fotoPrincipal;
-    }
-    if (c.foto) {
-      return c.foto;
-    }
-    if (c.fotografias && c.fotografias.length > 0) {
-      return c.fotografias[0]?.url || '';
-    }
-    return '';
+    return fallbackCaseString(c.fotoPrincipal, fallbackCaseString(c.foto, c.fotografias?.[0]?.url));
   }
 
   private mapRawHomeCaso(c: RawHomeCaso): Caso {
-    const urg = c.urgencia ? c.urgencia.toUpperCase() : 'MEDIA';
-    const tip = this.fallbackStr(c.tipoCaso, this.fallbackStr(c.tipo));
-    const est = this.fallbackStr(c.estado, 'REGISTRADO').toUpperCase();
-    const titulo = this.fallbackStr(c.titulo, this.fallbackStr(c.descripcion));
-
+    const display = normalizeCasoDisplay(c);
     return {
+      ...display,
       id: c.id,
-      titulo,
-      descripcion: this.fallbackStr(c.descripcion),
-      urgencia: urg,
-      tipoCaso: tip.toUpperCase(),
-      estado: est,
-      municipio: this.fallbackStr(c.municipio),
-      barrio: this.fallbackStr(c.barrio),
+      tipoCaso: fallbackCaseString(c.tipoCaso, fallbackCaseString(c.tipo)).toUpperCase(),
       foto: this.extractHomeFoto(c),
-      fundacion: this.fallbackStr(c.fundacion, this.fallbackStr(c.fundacionCustodio)),
+      fundacion: fallbackCaseString(c.fundacion, fallbackCaseString(c.fundacionCustodio)),
     };
   }
 
@@ -308,33 +289,11 @@ export class HomeComponent implements OnInit {
   }
 
   getBadgeClass(urgencia: string): string {
-    switch (urgencia?.toUpperCase()) {
-      case 'CRITICA':
-        return 'badge-emergencia';
-      case 'ALTA':
-        return 'badge-alta';
-      case 'MEDIA':
-        return 'badge-atencion';
-      case 'BAJA':
-        return 'badge-media';
-      default:
-        return 'badge-atencion';
-    }
+    return getUrgencyBadgeClass(urgencia);
   }
 
   getBadgeLabel(urgencia: string): string {
-    switch (urgencia?.toUpperCase()) {
-      case 'CRITICA':
-        return 'Emergencia';
-      case 'ALTA':
-        return 'Alta';
-      case 'MEDIA':
-        return 'Media';
-      case 'BAJA':
-        return 'Baja';
-      default:
-        return urgencia || 'Media';
-    }
+    return getUrgencyBadgeLabel(urgencia);
   }
 
   getEstadoLabel(estado?: string): string {

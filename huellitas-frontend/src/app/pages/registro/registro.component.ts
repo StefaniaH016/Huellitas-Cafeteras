@@ -9,6 +9,7 @@ import {
 import { Router, RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
+import { AuthBrandHeaderComponent } from '../../shared/components/auth-brand-header/auth-brand-header.component';
 
 type TipoCuenta = 'CIUDADANO_VOLUNTARIO' | 'FUNDACION_REFUGIO' | 'VETERINARIA' | null;
 
@@ -53,7 +54,7 @@ function confirmPasswordValidator(control: AbstractControl): ValidationErrors | 
 
 @Component({
   selector: 'app-registro',
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, AuthBrandHeaderComponent],
   templateUrl: './registro.component.html',
   styleUrl: './registro.component.css',
 })
@@ -162,7 +163,7 @@ export class RegistroComponent {
       .subscribe({
         next: () => {
           this.isLoading.set(false);
-          this.router.navigate(['/login']);
+          void this.router.navigate(['/login']);
         },
         error: (err) => {
           this.isLoading.set(false);
