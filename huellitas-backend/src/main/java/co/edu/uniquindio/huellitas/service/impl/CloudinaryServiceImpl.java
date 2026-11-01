@@ -7,6 +7,7 @@ import co.edu.uniquindio.huellitas.dto.imagen.ImagenResponseDTO;
 import co.edu.uniquindio.huellitas.entity.Caso;
 import co.edu.uniquindio.huellitas.entity.Foto;
 import co.edu.uniquindio.huellitas.exception.ResourceNotFoundException;
+import co.edu.uniquindio.huellitas.exception.CloudinaryIntegrationException;
 import co.edu.uniquindio.huellitas.repository.CasoRepository;
 import co.edu.uniquindio.huellitas.repository.FotoRepository;
 import co.edu.uniquindio.huellitas.service.CloudinaryService;
@@ -87,7 +88,7 @@ public class CloudinaryServiceImpl implements CloudinaryService {
                 publicId = (String) uploadResult.get("public_id");
             } catch (IOException | RuntimeException e) {
                 log.error("Fallo al subir imagen a Cloudinary: {}", e.getMessage());
-                throw new IllegalStateException("No fue posible procesar y optimizar la imagen con Cloudinary", e);
+                throw new CloudinaryIntegrationException("No fue posible procesar y optimizar la imagen con Cloudinary", e);
             }
         }
 
@@ -126,11 +127,11 @@ public class CloudinaryServiceImpl implements CloudinaryService {
                 Map<?, ?> result = cloudinary.uploader().destroy(publicId, ObjectUtils.emptyMap());
                 Object status = result.get("result");
                 if (!"ok".equals(status) && !"not found".equals(status)) {
-                    throw new IllegalStateException("Cloudinary no confirmó la eliminación de la foto.");
+                    throw new CloudinaryIntegrationException("Cloudinary no confirmó la eliminación de la foto.");
                 }
             } catch (Exception e) {
                 log.error("Fallo al eliminar la imagen de Cloudinary con publicId: {}", publicId, e);
-                throw new IllegalStateException("No fue posible eliminar todas las fotos del caso.", e);
+                throw new CloudinaryIntegrationException("No fue posible eliminar todas las fotos del caso.", e);
             }
         }
     }

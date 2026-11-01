@@ -7,6 +7,7 @@ import co.edu.uniquindio.huellitas.entity.Caso;
 import co.edu.uniquindio.huellitas.entity.Foto;
 import co.edu.uniquindio.huellitas.entity.enums.EstadoCaso;
 import co.edu.uniquindio.huellitas.exception.ResourceNotFoundException;
+import co.edu.uniquindio.huellitas.exception.CloudinaryIntegrationException;
 import co.edu.uniquindio.huellitas.repository.CasoRepository;
 import co.edu.uniquindio.huellitas.repository.FotoRepository;
 import co.edu.uniquindio.huellitas.service.impl.CloudinaryServiceImpl;
@@ -272,7 +273,7 @@ class CloudinaryServiceTest {
         when(cloudinary.uploader()).thenReturn(uploader);
         when(uploader.upload(any(byte[].class), anyMap())).thenThrow(new IOException("Error de conexión"));
 
-        IllegalStateException ex = assertThrows(IllegalStateException.class, () -> {
+        CloudinaryIntegrationException ex = assertThrows(CloudinaryIntegrationException.class, () -> {
             cloudinaryService.subirImagen(archivoMock, null);
         });
 
