@@ -8,19 +8,18 @@ import co.edu.uniquindio.huellitas.entity.Seguimiento;
 import co.edu.uniquindio.huellitas.entity.Usuario;
 import co.edu.uniquindio.huellitas.entity.enums.TipoAporte;
 import co.edu.uniquindio.huellitas.exception.ResourceNotFoundException;
+import co.edu.uniquindio.huellitas.mapper.AporteMapper;
 import co.edu.uniquindio.huellitas.repository.CasoRepository;
 import co.edu.uniquindio.huellitas.repository.FotoRepository;
 import co.edu.uniquindio.huellitas.repository.SeguimientoRepository;
 import co.edu.uniquindio.huellitas.repository.UsuarioRepository;
 import co.edu.uniquindio.huellitas.service.AporteService;
-import co.edu.uniquindio.huellitas.util.FechaUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 @Service
@@ -32,6 +31,7 @@ public class AporteServiceImpl implements AporteService {
     private final UsuarioRepository usuarioRepository;
     private final SeguimientoRepository seguimientoRepository;
     private final FotoRepository fotoRepository;
+    private final AporteMapper aporteMapper;
 
     @Override
     @Transactional(readOnly = true)
@@ -41,15 +41,9 @@ public class AporteServiceImpl implements AporteService {
         }
 
         List<Seguimiento> seguimientos = seguimientoRepository.findByCasoIdAndVisibleTrueOrderByFechaAsc(casoId);
-        return seguimientos.stream().map(s -> new AporteResponseDTO(
-                s.getId(),
-                casoId,
-                s.getAutor() != null ? s.getAutor().getId() : null,
-                s.getComentario(),
-                null,
-                Collections.emptyList(),
-                FechaUtils.formatear(s.getFecha())
-        )).toList();
+        return seguimientos.stream()
+                .map(s -> aporteMapper.toResponseDTO(s, casoId))
+                .toList();
     }
 
     @Override
@@ -93,14 +87,6 @@ public class AporteServiceImpl implements AporteService {
         caso.setFechaUltimaActividad(Instant.now());
         casoRepository.save(caso);
 
-        return new AporteResponseDTO(
-                guardado.getId(),
-                caso.getId(),
-                autor.getId(),
-                guardado.getComentario(),
-                dto.ubicacionTexto(),
-                fotosGuardadas,
-                FechaUtils.formatear(guardado.getFecha())
-        );
+        return aporteMapper.toResponseDTO(guardado, caso.getId(), autor.getId(), dto.ubicacionTexto(), fotosGuardadas);
     }
 }

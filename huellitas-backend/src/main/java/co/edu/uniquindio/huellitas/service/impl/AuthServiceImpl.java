@@ -10,6 +10,7 @@ import co.edu.uniquindio.huellitas.entity.Usuario;
 import co.edu.uniquindio.huellitas.entity.enums.Rol;
 import co.edu.uniquindio.huellitas.exception.ConflictException;
 import co.edu.uniquindio.huellitas.exception.ResourceNotFoundException;
+import co.edu.uniquindio.huellitas.mapper.UsuarioMapper;
 import co.edu.uniquindio.huellitas.repository.BarrioRepository;
 import co.edu.uniquindio.huellitas.repository.UsuarioRepository;
 import co.edu.uniquindio.huellitas.security.JwtUtils;
@@ -36,6 +37,7 @@ public class AuthServiceImpl implements AuthService {
     private final AuthenticationManager authenticationManager;
     private final JwtUtils jwtUtils;
     private final UserDetailsService userDetailsService;
+    private final UsuarioMapper usuarioMapper;
 
     @Override
     public RegistroResponseDTO registro(RegistroUsuarioDTO dto) {
@@ -67,13 +69,7 @@ public class AuthServiceImpl implements AuthService {
 
         Usuario guardado = usuarioRepository.save(usuario);
 
-        return new RegistroResponseDTO(
-                guardado.getId(),
-                guardado.getNombre(),
-                guardado.getCorreo(),
-                guardado.getRol(),
-                guardado.isVerificado()
-        );
+        return usuarioMapper.toRegistroResponseDTO(guardado);
     }
 
     @Override
@@ -91,13 +87,7 @@ public class AuthServiceImpl implements AuthService {
         UserDetails userDetails = userDetailsService.loadUserByUsername(correo);
         String token = jwtUtils.generateToken(userDetails, usuario.getNombre());
 
-        UsuarioDTO usuarioDTO = new UsuarioDTO(
-                usuario.getId(),
-                usuario.getNombre(),
-                usuario.getCorreo(),
-                usuario.getRol(),
-                usuario.isVerificado()
-        );
+        UsuarioDTO usuarioDTO = usuarioMapper.toUsuarioDTO(usuario);
 
         return AuthResponseDTO.bearer(token, usuarioDTO);
     }
@@ -108,12 +98,6 @@ public class AuthServiceImpl implements AuthService {
         Usuario usuario = usuarioRepository.findByCorreo(correo.trim().toLowerCase())
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con correo: " + correo));
 
-        return new UsuarioDTO(
-                usuario.getId(),
-                usuario.getNombre(),
-                usuario.getCorreo(),
-                usuario.getRol(),
-                usuario.isVerificado()
-        );
+        return usuarioMapper.toUsuarioDTO(usuario);
     }
 }

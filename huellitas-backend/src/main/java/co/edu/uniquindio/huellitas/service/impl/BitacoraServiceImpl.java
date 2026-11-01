@@ -4,6 +4,7 @@ import co.edu.uniquindio.huellitas.dto.bitacora.*;
 import co.edu.uniquindio.huellitas.entity.*;
 import co.edu.uniquindio.huellitas.exception.ConflictException;
 import co.edu.uniquindio.huellitas.exception.ResourceNotFoundException;
+import co.edu.uniquindio.huellitas.mapper.BitacoraMapper;
 import co.edu.uniquindio.huellitas.repository.*;
 import co.edu.uniquindio.huellitas.service.BitacoraService;
 import co.edu.uniquindio.huellitas.util.FechaUtils;
@@ -19,9 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.awt.Color;
 import java.io.ByteArrayOutputStream;
 import java.time.Instant;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -33,6 +32,7 @@ public class BitacoraServiceImpl implements BitacoraService {
     private final RegistroMedicoRepository registroMedicoRepository;
     private final CasoRepository casoRepository;
     private final UsuarioRepository usuarioRepository;
+    private final BitacoraMapper bitacoraMapper;
 
     @Override
     public BitacoraResponseDTO abrirBitacora(Long casoId, AbrirBitacoraDTO dto, String correoVeterinaria) {
@@ -64,13 +64,7 @@ public class BitacoraServiceImpl implements BitacoraService {
             registroMedicoRepository.save(registroInicial);
         }
 
-        return new BitacoraResponseDTO(
-                guardada.getId(),
-                caso.getId(),
-                veterinaria.getId(),
-                FechaUtils.formatear(guardada.getFechaApertura()),
-                "ABIERTA"
-        );
+        return bitacoraMapper.toResponseDTO(guardada, caso.getId(), veterinaria.getId(), "ABIERTA");
     }
 
     @Override
@@ -80,23 +74,9 @@ public class BitacoraServiceImpl implements BitacoraService {
                 .orElseThrow(() -> new ResourceNotFoundException("Bitácora médica no encontrada para el caso con id: " + casoId));
 
         List<RegistroMedico> registros = registroMedicoRepository.findByBitacoraMedicaIdOrderByFechaAsc(bitacora.getId());
-        List<EvolucionDetalleDTO> evoluciones = registros.stream().map(r -> new EvolucionDetalleDTO(
-                r.getId(),
-                FechaUtils.formatear(r.getFecha()),
-                r.getDiagnostico(),
-                r.getTratamiento(),
-                r.getEvolucion()
-        )).toList();
+        List<EvolucionDetalleDTO> evoluciones = bitacoraMapper.toEvolucionDetalleDTOList(registros);
 
-        Map<String, Object> altaInfo = null;
-        if (bitacora.isAltaMedica()) {
-            altaInfo = new LinkedHashMap<>();
-            altaInfo.put("fechaAlta", FechaUtils.formatear(bitacora.getFechaAlta()));
-            altaInfo.put("estado", "ALTA_REGISTRADA");
-        }
-
-        String estado = bitacora.isAltaMedica() ? "ALTA_REGISTRADA" : "ABIERTA";
-        return new BitacoraDetalleDTO(bitacora.getId(), casoId, estado, evoluciones, altaInfo);
+        return bitacoraMapper.toDetalleDTO(bitacora, casoId, evoluciones);
     }
 
     @Override
@@ -129,11 +109,7 @@ public class BitacoraServiceImpl implements BitacoraService {
 
         RegistroMedico guardado = registroMedicoRepository.save(registro);
 
-        return new RegistroMedicoResponseDTO(
-                guardado.getId(),
-                bitacora.getId(),
-                FechaUtils.formatear(guardado.getFecha())
-        );
+        return bitacoraMapper.toRegistroMedicoResponseDTO(guardado, bitacora.getId());
     }
 
     @Override
@@ -162,11 +138,7 @@ public class BitacoraServiceImpl implements BitacoraService {
                 .build();
         registroMedicoRepository.save(registroAlta);
 
-        return new AltaMedicaResponseDTO(
-                casoId,
-                FechaUtils.formatear(bitacora.getFechaAlta()),
-                "ALTA_REGISTRADA"
-        );
+        return bitacoraMapper.toAltaMedicaResponseDTO(bitacora, casoId);
     }
 
     @Override

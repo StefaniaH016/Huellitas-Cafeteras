@@ -8,10 +8,12 @@ import co.edu.uniquindio.huellitas.entity.enums.Rol;
 import co.edu.uniquindio.huellitas.repository.UsuarioRepository;
 import co.edu.uniquindio.huellitas.service.impl.VerificacionServiceImpl;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
+
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import co.edu.uniquindio.huellitas.mapper.VerificacionMapper;
 
 import java.util.List;
 
@@ -25,8 +27,14 @@ class VerificacionServiceImplTest {
     @Mock
     private UsuarioRepository usuarioRepository;
 
-    @InjectMocks
+    private VerificacionMapper verificacionMapper = new VerificacionMapper();
+
     private VerificacionServiceImpl verificacionService;
+
+    @BeforeEach
+    void setUp() {
+        verificacionService = new VerificacionServiceImpl(usuarioRepository, verificacionMapper);
+    }
 
     @Test
     void listsOnlyPendingInstitutionalUsers() {

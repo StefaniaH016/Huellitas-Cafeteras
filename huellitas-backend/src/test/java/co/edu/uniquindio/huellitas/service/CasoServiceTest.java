@@ -61,9 +61,14 @@ class CasoServiceTest {
     private NotificacionRepository notificacionRepository;
 
     @Mock
+    private CierreCasoRepository cierreCasoRepository;
+
+    @Mock
     private CloudinaryService cloudinaryService;
 
-    @InjectMocks
+    private co.edu.uniquindio.huellitas.mapper.CasoMapper casoMapper = new co.edu.uniquindio.huellitas.mapper.CasoMapper();
+    private co.edu.uniquindio.huellitas.mapper.AporteMapper aporteMapper = new co.edu.uniquindio.huellitas.mapper.AporteMapper();
+
     private CasoServiceImpl casoService;
 
     private Usuario usuarioMock;
@@ -74,6 +79,19 @@ class CasoServiceTest {
 
     @BeforeEach
     void setUp() {
+        casoService = new CasoServiceImpl(
+                casoRepository,
+                usuarioRepository,
+                barrioRepository,
+                animalRepository,
+                historialEstadoRepository,
+                seguimientoRepository,
+                cierreCasoRepository,
+                notificacionRepository,
+                cloudinaryService,
+                casoMapper,
+                aporteMapper
+        );
         // Usuario mock
         usuarioMock = Usuario.builder()
                 .id(1L)

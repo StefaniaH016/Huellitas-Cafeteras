@@ -3,9 +3,9 @@ package co.edu.uniquindio.huellitas.service.impl;
 import co.edu.uniquindio.huellitas.dto.notificacion.NotificacionDTO;
 import co.edu.uniquindio.huellitas.entity.Notificacion;
 import co.edu.uniquindio.huellitas.exception.ResourceNotFoundException;
+import co.edu.uniquindio.huellitas.mapper.NotificacionMapper;
 import co.edu.uniquindio.huellitas.repository.NotificacionRepository;
 import co.edu.uniquindio.huellitas.service.NotificacionService;
-import co.edu.uniquindio.huellitas.util.FechaUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class NotificacionServiceImpl implements NotificacionService {
 
     private final NotificacionRepository notificacionRepository;
+    private final NotificacionMapper notificacionMapper;
 
     @Override
     @Transactional(readOnly = true)
@@ -31,14 +32,7 @@ public class NotificacionServiceImpl implements NotificacionService {
             page = notificacionRepository.findByUsuarioCorreoOrderByFechaDesc(correoLimpio, pageable);
         }
 
-        return page.map(n -> new NotificacionDTO(
-                n.getId(),
-                n.getTipo() != null ? n.getTipo().name() : "GENERAL",
-                n.getMensaje(),
-                n.isLeida(),
-                FechaUtils.formatear(n.getFecha()),
-                n.getCaso() != null ? n.getCaso().getId() : null
-        ));
+        return page.map(notificacionMapper::toDTO);
     }
 
     @Override
@@ -53,13 +47,6 @@ public class NotificacionServiceImpl implements NotificacionService {
         notificacion.setLeida(true);
         Notificacion guardada = notificacionRepository.save(notificacion);
 
-        return new NotificacionDTO(
-                guardada.getId(),
-                guardada.getTipo() != null ? guardada.getTipo().name() : "GENERAL",
-                guardada.getMensaje(),
-                guardada.isLeida(),
-                FechaUtils.formatear(guardada.getFecha()),
-                guardada.getCaso() != null ? guardada.getCaso().getId() : null
-        );
+        return notificacionMapper.toDTO(guardada);
     }
 }
