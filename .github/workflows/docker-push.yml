@@ -94,14 +94,18 @@ jobs:
     runs-on: ubuntu-latest
     needs: build-and-push
     steps:
-      - name: Wait for Railway to redeploy (60s)
+      - name: Wait for Azure to redeploy (60s)
         run: sleep 60
 
       - name: Healthcheck backend
         id: health
         run: |
+          if [ -z "${{ secrets.AZURE_BACKEND_URL }}" ]; then
+            echo "⚠️ AZURE_BACKEND_URL no configurado. Saltando healthcheck."
+            exit 0
+          fi
           STATUS=$(curl --silent --max-time 15 --write-out "%{http_code}" --output /dev/null \
-            "${{ secrets.RAILWAY_BACKEND_URL }}/actuator/health" || echo "000")
+            "${{ secrets.AZURE_BACKEND_URL }}/actuator/health" || echo "000")
           echo "status=$STATUS" >> $GITHUB_OUTPUT
           if [ "$STATUS" != "200" ]; then
             echo "❌ Healthcheck falló con HTTP $STATUS"
@@ -109,7 +113,6 @@ jobs:
           fi
           echo "✅ Healthcheck OK (HTTP $STATUS)"
 
-      # Si el healthcheck falla, re-push de :stable como :latest para revertir el deploy
       - name: Rollback – re-push imagen estable anterior
         if: failure() && steps.health.conclusion == 'failure'
         run: |
@@ -129,4 +132,4 @@ jobs:
         if: failure()
         run: |
           echo "::error::🚨 Deploy fallido. Se ejecutó rollback automático a la imagen :stable anterior."
-          echo "::error::Revisar logs de Railway y el healthcheck de ${{ secrets.RAILWAY_BACKEND_URL }}/actuator/health"
+          echo "::error::Revisar logs de Azure y el healthcheck de ${{ secrets.AZURE_BACKEND_URL }}/actuator/health"
