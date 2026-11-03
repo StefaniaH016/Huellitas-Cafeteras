@@ -346,6 +346,34 @@ export class CasoDetalleComponent implements OnInit {
     } as CasoDetalle;
   });
 
+  esFundacion = computed(() => this.authService.tieneRol('FUNDACION_REFUGIO'));
+
+  casoDet = computed(() => {
+    const c = this.caso();
+    if (!c) {
+      return null;
+    }
+    return {
+      id: Number(c.id),
+      titulo: c.titulo,
+      descripcion: c.descripcion,
+      urgencia: c.urgencia,
+      estado: c.estado || '',
+      tipo: c.tipo,
+      tipoCaso: c.tipo,
+      municipio: c.municipio,
+      barrio: c.barrio,
+      aportes: [],
+      historial: [],
+      fotografias: c.fotos,
+      foto: c.foto,
+      resumenMedico: undefined,
+      fundacionCustodioNombre: c.fundacion,
+      veterinariaNombreResponsable: c.veterinaria,
+      reportanteNombre: c.reportante,
+    } as CasoDetalle;
+  });
+
   ngOnInit(): void {
     this.activatedRoute.queryParamMap.subscribe((params) => {
       if (params.get('tab') === 'bitacora') {

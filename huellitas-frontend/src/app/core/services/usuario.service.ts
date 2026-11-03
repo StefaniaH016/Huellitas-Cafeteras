@@ -28,6 +28,18 @@ export interface ActualizarPerfilRequest {
   disponibleRescate: boolean;
 }
 
+export interface UsuarioPerfil {
+  id: number;
+  nombre: string;
+  correo: string;
+  telefono?: string;
+  rol: string;
+  verificado: boolean;
+  departamentoId?: number;
+  municipioId?: number;
+  barrioId?: number;
+}
+
 @Injectable({
   providedIn: 'root',
 })
