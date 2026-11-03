@@ -1,6 +1,7 @@
 package co.edu.uniquindio.huellitas.worker;
 
 import co.edu.uniquindio.huellitas.entity.Caso;
+import co.edu.uniquindio.huellitas.entity.Fundacion;
 import co.edu.uniquindio.huellitas.entity.Notificacion;
 import co.edu.uniquindio.huellitas.entity.Usuario;
 import co.edu.uniquindio.huellitas.entity.enums.EstadoCaso;
@@ -102,6 +103,22 @@ public class NotificacionWorker {
                 caso.getId()
         );
         guardar(caso.getReportante(), caso, TipoNotificacion.RECORDATORIO, mensaje);
+    }
+
+    /**
+     * Notifica al reportante cuando una fundación asume la custodia de su caso.
+     * Subtarea 13.3.
+     */
+    @Async
+    public void notificarAsuncionCustodia(Caso caso, Fundacion fundacion) {
+        if (caso.getReportante() == null) return;
+
+        String mensaje = String.format(
+                "🏠 La fundación '%s' ha asumido la custodia de tu caso #%d. ¡Gracias por dar visibilidad a este animal!",
+                fundacion.getNombre(),
+                caso.getId()
+        );
+        guardar(caso.getReportante(), caso, TipoNotificacion.CUSTODIA, mensaje);
     }
 
     // ── helper interno ────────────────────────────────────────────

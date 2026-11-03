@@ -2,6 +2,8 @@ package co.edu.uniquindio.huellitas.controller;
 
 import co.edu.uniquindio.huellitas.dto.reporte.*;
 import co.edu.uniquindio.huellitas.service.CasoService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -148,5 +150,42 @@ public class ReporteController {
         }
         CasoResponseDTO response = casoService.archivarCaso(id, dto, userDetails.getUsername());
         return ResponseEntity.ok(response);
+    }
+
+    // 13.3: Gestionar custodia (asumir o liberar)
+    @PatchMapping("/{id}/custodia")
+    @PreAuthorize("hasAnyRole('FUNDACION_REFUGIO', 'ADMINISTRADOR')")
+    public ResponseEntity<CasoResponseDTO> gestionarCustodia(
+            @PathVariable Long id,
+            @Valid @RequestBody CustodiaDTO dto,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        if (userDetails == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        CasoResponseDTO response = casoService.gestionarCustodia(id, dto, userDetails.getUsername());
+        return ResponseEntity.ok(response);
+    }
+
+    // 13.4: Casos en custodia de la fundación autenticada
+    @GetMapping("/en-custodia")
+    @PreAuthorize("hasAnyRole('FUNDACION_REFUGIO', 'ADMINISTRADOR')")
+    public ResponseEntity<Page<CasoListItemDTO>> listarCasosEnCustodia(
+            @AuthenticationPrincipal UserDetails userDetails,
+            Pageable pageable) {
+        if (userDetails == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        Page<CasoListItemDTO> list = casoService.listarCasosEnCustodia(userDetails.getUsername(), pageable);
+        return ResponseEntity.ok(list);
+    }
+
+    // 13.4: Casos sin custodia en un municipio
+    @GetMapping("/sin-custodia")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Page<CasoListItemDTO>> listarCasosSinCustodia(
+            @RequestParam Long municipioId,
+            Pageable pageable) {
+        Page<CasoListItemDTO> list = casoService.listarCasosSinCustodia(municipioId, pageable);
+        return ResponseEntity.ok(list);
     }
 }
