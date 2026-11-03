@@ -8,7 +8,7 @@ import {
 } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
-import { environment } from '../../../environments/environment';
+import { AuthService } from '../../core/services/auth.service';
 import { AuthBrandHeaderComponent } from '../../shared/components/auth-brand-header/auth-brand-header.component';
 
 type TipoCuenta = 'CIUDADANO_VOLUNTARIO' | 'FUNDACION_REFUGIO' | 'VETERINARIA' | null;
@@ -62,6 +62,7 @@ export class RegistroComponent {
   private fb = inject(FormBuilder);
   private router = inject(Router);
   private httpClient = inject(HttpClient);
+  private authService = inject(AuthService);
 
   step = signal(1);
   tipoCuenta = signal<TipoCuenta>(null);
@@ -133,8 +134,8 @@ export class RegistroComponent {
   private buildRegistroPayload(): RegistroRequest {
     const formValue = this.step2Form.value as unknown as FormValue;
     const payload: RegistroRequest = {
-      nombre: formValue.nombre || '',
-      correo: formValue.email || '',
+      nombre: (formValue.nombre || '').trim(),
+      correo: (formValue.email || '').trim(),
       telefono: formValue.telefono || '',
       contrasena: formValue.password || '',
       rol: this.tipoCuenta() || 'CIUDADANO_VOLUNTARIO',
@@ -158,18 +159,18 @@ export class RegistroComponent {
 
     const payload = this.buildRegistroPayload();
 
-    this.httpClient
-      .post<{ message: string }>(`${environment.apiUrl}/auth/registro`, payload)
-      .subscribe({
-        next: () => {
-          this.isLoading.set(false);
-          void this.router.navigate(['/login']);
-        },
-        error: (err) => {
-          this.isLoading.set(false);
-          const errMsg = err.error?.message || 'Error al registrarse. Intenta de nuevo.';
-          this.errorMessage.set(errMsg);
-        },
-      });
+    this.authService.registro(payload).subscribe({
+      next: () => {
+        this.isLoading.set(false);
+        void this.router.navigate(['/login']);
+      },
+      error: (err: unknown) => {
+        this.isLoading.set(false);
+        const errorMsg =
+          (err as Record<string, Record<string, string> | undefined>)?.['error']?.['message'] ||
+          'Error al registrarse. Intenta de nuevo.';
+        this.errorMessage.set(errorMsg);
+      },
+    });
   }
 }

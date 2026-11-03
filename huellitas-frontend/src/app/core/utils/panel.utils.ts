@@ -40,3 +40,13 @@ export function getPanelBadgeLabel(urgencia: string): string {
 export function scrollToDashboardPanel(): void {
   document.getElementById('mi-panel')?.scrollIntoView({ behavior: 'smooth' });
 }
+
+/**
+ * Default filter for the feed/panel list of cases
+ */
+export const FEED_PANEL = {
+  page: 0,
+  size: 10,
+  state: 'OPEN',
+};
+

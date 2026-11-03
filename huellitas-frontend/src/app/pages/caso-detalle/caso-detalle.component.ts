@@ -1,7 +1,10 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { CasoService } from '../../core/services/caso.service';
+import { CasoService, CasoDetalle } from '../../core/services/caso.service';
+import { AuthService } from '../../core/services/auth.service';
+import { CasoSeguimientoComponent } from './caso-seguimiento/caso-seguimiento.component';
+import { CasoBitacoraComponent } from './caso-bitacora/caso-bitacora.component';
 
 interface Caso {
   id: string | number;
@@ -21,6 +24,7 @@ interface Caso {
   fotos: string[];
   fundacion?: string;
   veterinaria?: string;
+  reportante?: string;
 }
 
 interface AnimalResponse {
@@ -70,23 +74,28 @@ interface CasoResponse {
   fechaReporte?: string;
   fundacion?: string;
   veterinaria?: string;
+  reportanteNombre?: string;
+  fundacionCustodioNombre?: string;
+  veterinariaNombreResponsable?: string;
 }
 
 @Component({
   selector: 'app-caso-detalle',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, CasoSeguimientoComponent, CasoBitacoraComponent],
   templateUrl: './caso-detalle.component.html',
   styleUrls: ['./caso-detalle.component.css'],
 })
 export class CasoDetalleComponent implements OnInit {
   private activatedRoute = inject(ActivatedRoute);
   private casoService = inject(CasoService);
+  private authService = inject(AuthService);
   private router = inject(Router);
 
   caso = signal<Caso | null>(null);
   cargando = signal(true);
   activeTab = signal<'informacion' | 'seguimiento' | 'bitacora'>('informacion');
+  asumiendo = signal(false);
 
   fotos = signal<string[]>([]);
   selectedFotoIndex = signal<number>(0);
@@ -97,6 +106,34 @@ export class CasoDetalleComponent implements OnInit {
       return list[idx];
     }
     return this.caso()?.foto || '';
+  });
+
+  esFundacion = computed(() => this.authService.tieneRol('FUNDACION_REFUGIO'));
+
+  casoDet = computed(() => {
+    const c = this.caso();
+    if (!c) {
+      return null;
+    }
+    return {
+      id: Number(c.id),
+      titulo: c.titulo,
+      descripcion: c.descripcion,
+      urgencia: c.urgencia,
+      estado: c.estado || '',
+      tipo: c.tipo,
+      tipoCaso: c.tipo,
+      municipio: c.municipio,
+      barrio: c.barrio,
+      aportes: [],
+      historial: [],
+      fotografias: c.fotos,
+      foto: c.foto,
+      resumenMedico: undefined,
+      fundacionCustodioNombre: c.fundacion,
+      veterinariaNombreResponsable: c.veterinaria,
+      reportanteNombre: c.reportante,
+    } as CasoDetalle;
   });
 
   ngOnInit(): void {
@@ -192,34 +229,79 @@ export class CasoDetalleComponent implements OnInit {
     };
   }
 
-  private mapResponseToCaso(response: CasoResponse, fallbackId: string | number): Caso {
-    const ai = this.extractAnimalInfo(response.animal);
-    const u = this.formatUbicacion(response.ubicacion);
+  private buildCasoFromResponse(
+    response: CasoResponse,
+    fallbackId: string | number,
+    animalInfo: { especie: string; tamanio: string; edad: string; color: string },
+    ubicacion: { mun: string; bar: string },
+    fotos: string[],
+  ): Caso {
     const desc = response.descripcion ? response.descripcion : '';
     const titulo = desc ? desc : response.titulo ? response.titulo : '';
     const idVal = response.id !== undefined && response.id !== null ? response.id : fallbackId;
-    const fotos = this.extractFotos(response);
     const fotoPrincipal = fotos.length > 0 ? fotos[0] : '';
 
-    return {
-      id: idVal,
+    return this.createCasoObject(
+      idVal,
       titulo,
-      descripcion: desc,
-      urgencia: response.urgencia ? response.urgencia : 'MEDIA',
-      tipo: response.tipoCaso,
-      estado: response.estado,
-      fechaReporte: this.formatFecha(response.fechaCreacion),
-      especie: ai.especie,
-      tamanio: ai.tamanio,
-      edad: ai.edad,
-      color: ai.color,
-      municipio: u.mun,
-      barrio: u.bar,
+      desc,
+      response.urgencia,
+      response.tipoCaso,
+      response.estado,
+      response.fechaCreacion,
+      animalInfo,
+      ubicacion,
+      fotoPrincipal,
+      fotos,
+      response.fundacionCustodioNombre,
+      response.veterinariaNombreResponsable,
+      response.reportanteNombre,
+    );
+  }
+
+  private createCasoObject(
+    id: string | number,
+    titulo: string,
+    descripcion: string,
+    urgencia: string | undefined,
+    tipoCaso: string | undefined,
+    estado: string | undefined,
+    fechaCreacion: string | undefined,
+    animalInfo: { especie: string; tamanio: string; edad: string; color: string },
+    ubicacion: { mun: string; bar: string },
+    fotoPrincipal: string,
+    fotos: string[],
+    fundacion: string | undefined,
+    veterinaria: string | undefined,
+    reportante: string | undefined,
+  ): Caso {
+    return {
+      id,
+      titulo,
+      descripcion,
+      urgencia: urgencia ? urgencia : 'MEDIA',
+      tipo: tipoCaso,
+      estado,
+      fechaReporte: this.formatFecha(fechaCreacion),
+      especie: animalInfo.especie,
+      tamanio: animalInfo.tamanio,
+      edad: animalInfo.edad,
+      color: animalInfo.color,
+      municipio: ubicacion.mun,
+      barrio: ubicacion.bar,
       foto: fotoPrincipal,
       fotos,
-      fundacion: response.fundacion ? response.fundacion : '',
-      veterinaria: response.veterinaria ? response.veterinaria : '',
+      fundacion: fundacion ? fundacion : '',
+      veterinaria: veterinaria ? veterinaria : '',
+      reportante: reportante ? reportante : '',
     };
+  }
+
+  private mapResponseToCaso(response: CasoResponse, fallbackId: string | number): Caso {
+    const ai = this.extractAnimalInfo(response.animal);
+    const u = this.formatUbicacion(response.ubicacion);
+    const fotos = this.extractFotos(response);
+    return this.buildCasoFromResponse(response, fallbackId, ai, u, fotos);
   }
 
   selectFoto(index: number): void {
@@ -283,6 +365,29 @@ export class CasoDetalleComponent implements OnInit {
 
   selectTab(tab: 'informacion' | 'seguimiento' | 'bitacora'): void {
     this.activeTab.set(tab);
+  }
+
+  asumirCustodia(): void {
+    if (!this.caso()?.id) {
+      console.error('No case ID available');
+      return;
+    }
+
+    this.asumiendo.set(true);
+    this.casoService.asumirCustodia(Number(this.caso()?.id)).subscribe({
+      next: () => {
+        this.asumiendo.set(false);
+        console.warn('Custodia asumida exitosamente');
+        // Reload case details
+        if (this.caso()?.id) {
+          this.loadDetalle(this.caso()!.id);
+        }
+      },
+      error: (err: unknown) => {
+        this.asumiendo.set(false);
+        console.error('Error al asumir custodia:', err);
+      },
+    });
   }
 
   getBadgeClass(urgencia?: string): string {

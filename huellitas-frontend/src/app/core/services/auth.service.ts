@@ -56,8 +56,34 @@ export class AuthService {
     void this.router.navigate(['/login']);
   }
 
-  registro(correo: string, contrasena: string, nombre: string): Observable<RegistroResponse> {
-    const body = { correo, contrasena, nombre };
+  registro(request: {
+    nombre: string;
+    correo: string;
+    contrasena: string;
+    telefono: string;
+    barrioId?: number;
+    rol: string;
+    nombreEntidad?: string;
+    nit?: string;
+    documentoLegal?: string;
+    municipioOperacion?: string;
+    documentoSoporte?: string;
+    aceptoTratamientoDatos: boolean;
+  }): Observable<RegistroResponse> {
+    const body = {
+      correo: request.correo,
+      contrasena: request.contrasena,
+      nombre: request.nombre,
+      rol: request.rol,
+      aceptoTratamientoDatos: request.aceptoTratamientoDatos,
+      ...(request.telefono && { telefono: request.telefono }),
+      ...(request.barrioId && { barrioId: request.barrioId }),
+      ...(request.nombreEntidad && { nombreEntidad: request.nombreEntidad }),
+      ...(request.nit && { nit: request.nit }),
+      ...(request.documentoLegal && { documentoLegal: request.documentoLegal }),
+      ...(request.municipioOperacion && { municipioOperacion: request.municipioOperacion }),
+      ...(request.documentoSoporte && { documentoSoporte: request.documentoSoporte }),
+    };
     return this.httpClient.post<RegistroResponse>(`${environment.apiUrl}/auth/registro`, body);
   }
 
@@ -98,5 +124,10 @@ export class AuthService {
   getNombre(): string | null {
     const payload = this.tokenService.decodePayload();
     return (payload?.['nombre'] ?? null) as string | null;
+  }
+
+  tieneRol(rol: string): boolean {
+    const rolActual = this.getRol();
+    return rolActual === rol || rolActual === normalizeRole(rol);
   }
 }

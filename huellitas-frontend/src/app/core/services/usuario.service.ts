@@ -6,6 +6,18 @@ import { environment } from '../../../environments/environment';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ApiResponse = any;
 
+export interface UsuarioPerfil {
+  id: number;
+  nombre: string;
+  correo: string;
+  telefono?: string;
+  rol: string;
+  verificado: boolean;
+  departamentoId?: number;
+  municipioId?: number;
+  barrioId?: number;
+}
+
 @Injectable({
   providedIn: 'root',
 })

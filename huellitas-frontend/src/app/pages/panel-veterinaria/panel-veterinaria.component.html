@@ -13,64 +13,35 @@
   </section>
 
   <section class="dash-figures" aria-label="Resumen de tu consulta">
-    <a href="#" class="figure is-urgent">
-      <span class="figure-num">{{ veterinariaStats().solicitudes }}</span>
-      <span class="figure-label">Solicitud por responder</span>
-    </a>
     <a href="#" class="figure">
       <span class="figure-num">{{ veterinariaStats().pacientesActivos }}</span>
       <span class="figure-label">Pacientes activos</span>
-    </a>
-    <a href="#" class="figure">
-      <span class="figure-num">1</span>
-      <span class="figure-label">Control programado</span>
     </a>
   </section>
 
   <div class="dash-grid" id="mi-panel">
     <section class="panel">
       <div class="panel-head">
-        <h3>Solicitudes de atención</h3>
-        <a class="panel-link" href="#">Ver mi panel</a>
-      </div>
-      @if (veterinariaSolicitudes().length === 0) {
-        <p style="padding: 1rem; color: var(--ink-soft)">No hay solicitudes pendientes.</p>
-      } @else {
-        @for (solicitud of veterinariaSolicitudes(); track solicitud.id) {
-          <div class="list-row">
-            <div class="list-thumb">🐾</div>
-            <div class="list-info">
-              <p class="list-title">Caso #{{ solicitud.id }} · {{ solicitud.tipo }}</p>
-              <p class="list-meta">
-                Solicitado por {{ solicitud.solicitadoPor }} · {{ solicitud.municipio }}
-              </p>
-            </div>
-            <span class="badge badge-alta"><span class="badge-dot"></span>Alta</span>
-            <div class="list-actions">
-              <button class="btn btn-secondary btn-sm">Ver solicitud</button>
-            </div>
-          </div>
-        }
-      }
-    </section>
-
-    <section class="panel">
-      <div class="panel-head">
         <h3>Pacientes activos</h3>
-        <a class="panel-link" href="#">Ver mi panel</a>
+        <a class="panel-link" href="#">Ver todos</a>
       </div>
       @if (veterinariaPacientes().length === 0) {
-        <p style="padding: 1rem; color: var(--ink-soft)">No hay pacientes activos.</p>
+        <p style="padding: 1rem; color: var(--ink-soft)">No hay pacientes activos en atención.</p>
       } @else {
         @for (paciente of veterinariaPacientes(); track paciente.id) {
           <div class="list-row">
             <div class="list-thumb">🐾</div>
             <div class="list-info">
-              <p class="list-title">{{ paciente.nombre }} · Caso #{{ paciente.casoId }}</p>
-              <p class="list-meta">Próximo control el {{ paciente.proximoControl }}</p>
+              <p class="list-title">{{ paciente.titulo || paciente.descripcion }}</p>
+              <p class="list-meta">Caso #{{ paciente.id }} · {{ paciente.municipio }}</p>
             </div>
             <div class="list-actions">
-              <button class="btn btn-secondary btn-sm">Abrir bitácora</button>
+              <button class="btn btn-secondary btn-sm" (click)="abrirBitacora(paciente.id)">
+                Nueva entrada
+              </button>
+              <button class="btn btn-secondary btn-sm" (click)="irAlCaso(paciente.id)">
+                Ver caso
+              </button>
             </div>
           </div>
         }

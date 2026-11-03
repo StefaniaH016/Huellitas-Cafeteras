@@ -1,4 +1,12 @@
+<app-panel-trabajo [config]="panelConfig()" />
+
 <main>
+  @if (errorMensaje() !== '') {
+    <div class="error-banner" role="alert">
+      <p>{{ errorMensaje() }}</p>
+    </div>
+  }
+
   <section class="dash-hello">
     <div>
       <h1>Hola, Fundación {{ authService.getNombre() }}</h1>
@@ -54,7 +62,12 @@
               {{ getBadgeLabel(alerta.urgencia) }}
             </span>
             <div class="list-actions">
-              <button class="btn btn-secondary btn-sm">Ver caso</button>
+              <button class="btn btn-secondary btn-sm" (click)="asumirCustodia(alerta.id)">
+                Asumir custodia
+              </button>
+              <button class="btn btn-secondary btn-sm" (click)="irAlCaso(alerta.id)">
+                Ver caso
+              </button>
             </div>
           </div>
         }
@@ -77,7 +90,12 @@
               <p class="list-meta">{{ animal.estado || animal.descripcion }}</p>
             </div>
             <div class="list-actions">
-              <button class="btn btn-secondary btn-sm">Ver caso</button>
+              <button class="btn btn-secondary btn-sm" (click)="liberarCustodia(animal.id)">
+                Liberar custodia
+              </button>
+              <button class="btn btn-secondary btn-sm" (click)="irAlCaso(animal.id)">
+                Ver caso
+              </button>
             </div>
           </div>
         }

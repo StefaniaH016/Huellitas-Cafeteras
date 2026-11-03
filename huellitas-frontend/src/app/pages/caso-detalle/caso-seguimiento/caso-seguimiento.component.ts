@@ -1,6 +1,5 @@
 import { Component, computed, inject, input, output, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { switchMap } from 'rxjs';
 import { AporteService } from '../../../core/services/aporte.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { CasoDetalle, CasoService } from '../../../core/services/caso.service';
@@ -41,7 +40,7 @@ export class CasoSeguimientoComponent {
   readonly caso = input.required<CasoDetalle>();
   readonly actualizado = output<void>();
 
-  private readonly picker = viewChild(FotoPickerComponent);
+  private readonly picker = viewChild.required(FotoPickerComponent);
 
   readonly maxAporte = MAX_APORTE;
   readonly envio = new EstadoCarga();
@@ -60,19 +59,19 @@ export class CasoSeguimientoComponent {
 
   readonly actividad = computed<ItemActividad[]>(() => {
     const caso = this.caso();
-    const aportes = (caso.aportes ?? []).map((a) => ({
-      clave: `a${a.id}`,
-      icono: a.tipo === 'AVISTAMIENTO' ? '👀' : '💬',
-      titulo: `${a.autorNombre ?? 'Alguien'} · ${labelOf(APORTE_LABELS, a.tipo)}`,
-      texto: a.comentario,
-      fecha: a.fecha,
+    const aportes = (caso.aportes ?? []).map((a: Record<string, unknown>) => ({
+      clave: `a${a['id']}`,
+      icono: a['tipo'] === 'AVISTAMIENTO' ? '👀' : '💬',
+      titulo: `${a['autorNombre'] ?? 'Alguien'} · ${labelOf(APORTE_LABELS, a['tipo'] as string)}`,
+      texto: a['comentario'] as string | undefined,
+      fecha: a['fecha'] as string,
     }));
-    const cambios = (caso.historial ?? []).map((h) => ({
-      clave: `h${h.id}`,
+    const cambios = (caso.historial ?? []).map((h: Record<string, unknown>) => ({
+      clave: `h${h['id']}`,
       icono: '🔄',
-      titulo: h.observacion || 'Cambio de estado',
-      cambio: `${labelOf(ESTADO_LABELS, h.estadoAnterior)} → ${labelOf(ESTADO_LABELS, h.estadoNuevo)}`,
-      fecha: h.fecha,
+      titulo: (h['observacion'] as string) || 'Cambio de estado',
+      cambio: `${labelOf(ESTADO_LABELS, h['estadoAnterior'] as string)} → ${labelOf(ESTADO_LABELS, h['estadoNuevo'] as string)}`,
+      fecha: h['fecha'] as string,
     }));
     return [...aportes, ...cambios].sort((x, y) => y.fecha.localeCompare(x.fecha));
   });
@@ -97,31 +96,88 @@ export class CasoSeguimientoComponent {
     }
     const casoId = this.caso().id;
     this.publicado.set(false);
-    const envio$ = this.casoService.subirImagenes(this.fotos(), casoId).pipe(
-      switchMap((imagenes) =>
-        this.aporteService.crear(casoId, {
-          descripcion: this.descripcion.trim(),
-          deptoId: this.tipo() === 'AVISTAMIENTO' ? this.deptoId() ?? undefined : undefined,
-          munId: this.tipo() === 'AVISTAMIENTO' ? this.munId() ?? undefined : undefined,
-          barrioId: this.tipo() === 'AVISTAMIENTO' ? this.barrioId() ?? undefined : undefined,
-          ubicacionTexto: this.tipo() === 'AVISTAMIENTO' ? this.ubicacionTexto.trim() : undefined,
-          fotografias: imagenes.map((imagen) => imagen.url),
-        }),
-      ),
-    );
-    this.envio.ejecutar(
-      envio$,
-      () => {
-        this.descripcion = '';
-        this.ubicacionTexto = '';
-        this.deptoId.set(null);
-        this.munId.set(null);
-        this.barrioId.set(null);
-        this.picker()?.limpiar();
-        this.publicado.set(true);
-        this.actualizado.emit();
-      },
-      'No fue posible publicar el aporte. Intenta de nuevo.',
-    );
+
+    if (this.fotos().length === 0) {
+      this.publicarSinFotos(casoId);
+    } else {
+      this.publicarConFotos(casoId);
+    }
+  }
+
+  private publicarSinFotos(casoId: number | string): void {
+    const numCasoId = typeof casoId === 'string' ? parseInt(casoId, 10) : casoId;
+    this.aporteService
+      .crear(numCasoId, {
+        descripcion: this.descripcion.trim(),
+        deptoId: this.tipo() === 'AVISTAMIENTO' ? (this.deptoId() ?? undefined) : undefined,
+        munId: this.tipo() === 'AVISTAMIENTO' ? (this.munId() ?? undefined) : undefined,
+        barrioId: this.tipo() === 'AVISTAMIENTO' ? (this.barrioId() ?? undefined) : undefined,
+        ubicacionTexto: this.tipo() === 'AVISTAMIENTO' ? this.ubicacionTexto.trim() : undefined,
+        fotografias: [],
+      })
+      .subscribe({
+        next: () => this.finalizarPublicacion(),
+        error: () => {
+          this.envio.error.set('No fue posible publicar el aporte. Intenta de nuevo.');
+        },
+      });
+  }
+
+  private publicarConFotos(casoId: number | string): void {
+    const fotografias: string[] = [];
+    let fotosSubidas = 0;
+
+    const subirSiguiente = (): void => {
+      if (fotosSubidas >= this.fotos().length) {
+        this.crearAporteConFotos(casoId, fotografias);
+        return;
+      }
+
+      this.casoService.subirImagen(this.fotos()[fotosSubidas], casoId).subscribe({
+        next: (response: unknown) => {
+          const url = (response as Record<string, unknown>)?.['url'] as string | undefined;
+          if (url) {
+            fotografias.push(url);
+          }
+          fotosSubidas++;
+          subirSiguiente();
+        },
+        error: () => {
+          this.envio.error.set('No fue posible subir las fotos. Intenta de nuevo.');
+        },
+      });
+    };
+
+    subirSiguiente();
+  }
+
+  private crearAporteConFotos(casoId: number | string, fotografias: string[]): void {
+    const numCasoId = typeof casoId === 'string' ? parseInt(casoId, 10) : casoId;
+    this.aporteService
+      .crear(numCasoId, {
+        descripcion: this.descripcion.trim(),
+        deptoId: this.tipo() === 'AVISTAMIENTO' ? (this.deptoId() ?? undefined) : undefined,
+        munId: this.tipo() === 'AVISTAMIENTO' ? (this.munId() ?? undefined) : undefined,
+        barrioId: this.tipo() === 'AVISTAMIENTO' ? (this.barrioId() ?? undefined) : undefined,
+        ubicacionTexto: this.tipo() === 'AVISTAMIENTO' ? this.ubicacionTexto.trim() : undefined,
+        fotografias,
+      })
+      .subscribe({
+        next: () => this.finalizarPublicacion(),
+        error: () => {
+          this.envio.error.set('No fue posible publicar el aporte. Intenta de nuevo.');
+        },
+      });
+  }
+
+  private finalizarPublicacion(): void {
+    this.descripcion = '';
+    this.ubicacionTexto = '';
+    this.deptoId.set(null);
+    this.munId.set(null);
+    this.barrioId.set(null);
+    this.picker().limpiar();
+    this.publicado.set(true);
+    this.actualizado.emit();
   }
 }

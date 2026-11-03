@@ -129,11 +129,11 @@
         }
 
         @if (activeTab() === 'seguimiento') {
-          <p class="text-soft-md" style="padding: 1rem">Seguimiento próximamente disponible.</p>
+          <app-caso-seguimiento [caso]="casoDet()!" (actualizado)="loadDetalle(caso()!.id)" />
         }
 
         @if (activeTab() === 'bitacora') {
-          <p class="text-soft-md" style="padding: 1rem">Bitácora médica próximamente disponible.</p>
+          <app-caso-bitacora [caso]="casoDet()!" (actualizado)="loadDetalle(caso()!.id)" />
         }
       </div>
 
@@ -142,20 +142,51 @@
           <div class="panel-head">
             <h3>Acciones</h3>
           </div>
-          <button class="btn btn-primary btn-block mb-sm">Asumir custodia</button>
-          <button class="btn btn-secondary btn-block mb-sm">Solicitar atención médica</button>
-          <button class="btn btn-secondary btn-block">Contactar al reportante</button>
+          @if (esFundacion() && !caso()?.fundacion) {
+            <button
+              class="btn btn-primary btn-block mb-sm"
+              (click)="asumirCustodia()"
+              [disabled]="asumiendo()"
+            >
+              {{ asumiendo() ? 'Asumiendo...' : 'Asumir custodia' }}
+            </button>
+          }
         </div>
 
         <div class="panel">
           <div class="panel-head">
             <h3>Responsables</h3>
           </div>
+          @if (caso()?.reportante) {
+            <div class="list-row">
+              <div class="avatar-dot">👤</div>
+              <div class="list-info">
+                <p class="list-title">{{ caso()?.reportante }}</p>
+                <p class="list-meta">Reportante</p>
+              </div>
+            </div>
+          } @else {
+            <div class="list-row">
+              <div class="avatar-dot">👤</div>
+              <div class="list-info">
+                <p class="list-title">Sin asignar</p>
+                <p class="list-meta">Reportante</p>
+              </div>
+            </div>
+          }
           @if (caso()?.fundacion) {
             <div class="list-row">
               <div class="avatar-dot">🏠</div>
               <div class="list-info">
                 <p class="list-title">{{ caso()?.fundacion }}</p>
+                <p class="list-meta">A cargo</p>
+              </div>
+            </div>
+          } @else {
+            <div class="list-row">
+              <div class="avatar-dot">🏠</div>
+              <div class="list-info">
+                <p class="list-title">Sin asignar</p>
                 <p class="list-meta">A cargo</p>
               </div>
             </div>
@@ -168,11 +199,14 @@
                 <p class="list-meta">Atención médica</p>
               </div>
             </div>
-          }
-          @if (!caso()?.fundacion && !caso()?.veterinaria) {
-            <p style="padding: 1rem; color: var(--ink-soft); font-size: 0.85rem">
-              Sin responsables asignados aún.
-            </p>
+          } @else {
+            <div class="list-row">
+              <div class="avatar-dot">🩺</div>
+              <div class="list-info">
+                <p class="list-title">Sin asignar</p>
+                <p class="list-meta">Atención médica</p>
+              </div>
+            </div>
           }
         </div>
       </aside>

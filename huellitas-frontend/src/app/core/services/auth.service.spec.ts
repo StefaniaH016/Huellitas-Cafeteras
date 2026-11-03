@@ -74,7 +74,14 @@ it('uses the role alias and falls back to the token claim', () => {
 it('registers a user with the expected request body', () => {
   const expected = { id: '1', correo: 'user@example.test', nombre: 'Luna' };
   let result: unknown;
-  service.registro('user@example.test', 'secret', 'Luna').subscribe((response) => {
+  service.registro({
+    nombre: 'Luna',
+    correo: 'user@example.test',
+    contrasena: 'secret',
+    telefono: '1234567890',
+    rol: 'CIUDADANO_VOLUNTARIO',
+    aceptoTratamientoDatos: true,
+  }).subscribe((response) => {
     result = response;
   });
 
@@ -83,6 +90,9 @@ it('registers a user with the expected request body', () => {
     correo: 'user@example.test',
     contrasena: 'secret',
     nombre: 'Luna',
+    rol: 'CIUDADANO_VOLUNTARIO',
+    telefono: '1234567890',
+    aceptoTratamientoDatos: true,
   });
   request.flush(expected);
   expect(result).toEqual(expected);
