@@ -45,7 +45,7 @@ services:
     pull_policy: always
     container_name: huellitas-web
     ports:
-      - '80:80'
+      - '4200:80'
     depends_on:
       - backend
     networks:
