@@ -18,7 +18,9 @@ import co.edu.uniquindio.huellitas.repository.FotoRepository;
 import co.edu.uniquindio.huellitas.repository.SeguimientoRepository;
 import co.edu.uniquindio.huellitas.repository.UsuarioRepository;
 import co.edu.uniquindio.huellitas.service.AporteService;
+import co.edu.uniquindio.huellitas.worker.NotificacionWorker;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +31,7 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 @Transactional
+@Slf4j
 public class AporteServiceImpl implements AporteService {
 
     private static final int MIN_DESCRIPCION_LENGTH = 10;
@@ -40,6 +43,7 @@ public class AporteServiceImpl implements AporteService {
     private final FotoRepository fotoRepository;
     private final BarrioRepository barrioRepository;
     private final AporteMapper aporteMapper;
+    private final NotificacionWorker notificacionWorker;
 
     @Override
     @Transactional(readOnly = true)
@@ -119,6 +123,13 @@ public class AporteServiceImpl implements AporteService {
 
         caso.setFechaUltimaActividad(Instant.now());
         casoRepository.save(caso);
+
+        // 13.5: Notificar a los involucrados (excepto el autor)
+        try {
+            notificacionWorker.notificarAporte(guardado);
+        } catch (Exception e) {
+            log.warn("Error al procesar notificaciones del aporte: {}", e.getMessage());
+        }
 
         return aporteMapper.toResponseDTO(guardado, caso.getId(), autor.getId(), dto.ubicacionTexto(), fotosGuardadas);
     }

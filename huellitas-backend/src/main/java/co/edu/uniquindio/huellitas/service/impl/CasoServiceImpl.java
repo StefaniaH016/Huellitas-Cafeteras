@@ -13,10 +13,12 @@ import co.edu.uniquindio.huellitas.mapper.CasoMapper;
 import co.edu.uniquindio.huellitas.repository.*;
 import co.edu.uniquindio.huellitas.service.CasoService;
 import co.edu.uniquindio.huellitas.service.CloudinaryService;
+import co.edu.uniquindio.huellitas.service.EmailService;
 import co.edu.uniquindio.huellitas.specification.CasoSpecification;
 import co.edu.uniquindio.huellitas.worker.FiltroWorker;
 import co.edu.uniquindio.huellitas.worker.NotificacionWorker;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
@@ -29,6 +31,7 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 @Transactional
+@Slf4j
 public class CasoServiceImpl implements CasoService {
 
     private final CasoRepository casoRepository;
@@ -44,6 +47,7 @@ public class CasoServiceImpl implements CasoService {
     private final AporteMapper aporteMapper;
     private final NotificacionWorker notificacionWorker;
     private final FiltroWorker filtroWorker;
+    private final EmailService emailService;
 
     @Override
     public CasoResponseDTO crearCaso(CrearReporteDTO dto, String correoUsuario) {
@@ -84,6 +88,13 @@ public class CasoServiceImpl implements CasoService {
 
         // W-01: notificar al reportante si el caso es urgente
         notificacionWorker.notificarCasoUrgente(caso);
+
+        // 13.6: Notificar emergencia a rescuistas del municipio
+        try {
+            notificacionWorker.notificarEmergenciaARescuatistas(caso);
+        } catch (Exception e) {
+            log.warn("Error al notificar emergencias a rescuistas: {}", e.getMessage());
+        }
 
         return casoMapper.toResponseDTO(caso);
     }
@@ -317,6 +328,15 @@ public class CasoServiceImpl implements CasoService {
 
         // W-01: notificar cierre de caso
         notificacionWorker.notificarCierreCaso(caso, dto.motivoCierre().name());
+
+        // 13.7: Enviar correo de cierre al reportante
+        try {
+            if (caso.getReportante() != null) {
+                emailService.enviarCorreoCierre(caso, caso.getReportante().getCorreo(), dto.motivoCierre().name());
+            }
+        } catch (Exception e) {
+            log.warn("Error al enviar correo de cierre: {}", e.getMessage());
+        }
 
         return casoMapper.toResponseDTO(caso);
     }
