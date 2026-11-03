@@ -17,4 +17,7 @@ public interface NotificacionRepository extends JpaRepository<Notificacion, Long
     @Modifying
     @Query("update Notificacion n set n.caso = null where n.caso.id = :casoId")
     void desvincularCaso(@Param("casoId") Long casoId);
+
+    // 13.8: Contar notificaciones no leídas
+    long countByUsuarioCorreoAndLeida(String correo, boolean leida);
 }

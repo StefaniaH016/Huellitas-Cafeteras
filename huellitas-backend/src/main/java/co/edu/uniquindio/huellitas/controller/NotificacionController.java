@@ -2,6 +2,9 @@ package co.edu.uniquindio.huellitas.controller;
 
 import co.edu.uniquindio.huellitas.dto.notificacion.NotificacionDTO;
 import co.edu.uniquindio.huellitas.service.NotificacionService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -14,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/v1/notificaciones")
 @RequiredArgsConstructor
+@Tag(name = "Notificaciones", description = "API para gestión de notificaciones del usuario")
 public class NotificacionController {
 
     private final NotificacionService notificacionService;
@@ -35,5 +39,17 @@ public class NotificacionController {
             @PathVariable Long id,
             @AuthenticationPrincipal UserDetails userDetails) {
         return ResponseEntity.ok(notificacionService.marcarLeida(id, userDetails.getUsername()));
+    }
+
+    /**
+     * 13.8: Contador de notificaciones no leídas del usuario autenticado.
+     */
+    @GetMapping("/no-leidas/count")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Contar notificaciones no leídas", description = "Retorna la cantidad de notificaciones no leídas del usuario autenticado")
+    public ResponseEntity<Long> contarNoLeidas(
+            @Parameter(hidden = true) @AuthenticationPrincipal UserDetails userDetails) {
+        long count = notificacionService.contarNoLeidas(userDetails.getUsername());
+        return ResponseEntity.ok(count);
     }
 }

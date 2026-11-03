@@ -2,12 +2,13 @@ package co.edu.uniquindio.huellitas.controller;
 
 import co.edu.uniquindio.huellitas.dto.reporte.*;
 import co.edu.uniquindio.huellitas.service.CasoService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -20,6 +21,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/v1/casos")
 @RequiredArgsConstructor
+@Tag(name = "Casos", description = "API para gestión de casos de animales")
 public class ReporteController {
 
     private final CasoService casoService;
@@ -155,8 +157,9 @@ public class ReporteController {
     // 13.3: Gestionar custodia (asumir o liberar)
     @PatchMapping("/{id}/custodia")
     @PreAuthorize("hasAnyRole('FUNDACION_REFUGIO', 'ADMINISTRADOR')")
+    @Operation(summary = "Gestionar custodia de un caso", description = "Asume o libera la custodia de un caso. Solo fundaciones verificadas con aceptaCustodia=true pueden asumir custodia.")
     public ResponseEntity<CasoResponseDTO> gestionarCustodia(
-            @PathVariable Long id,
+            @Parameter(description = "ID del caso") @PathVariable Long id,
             @Valid @RequestBody CustodiaDTO dto,
             @AuthenticationPrincipal UserDetails userDetails) {
         if (userDetails == null) {
@@ -169,6 +172,7 @@ public class ReporteController {
     // 13.4: Casos en custodia de la fundación autenticada
     @GetMapping("/en-custodia")
     @PreAuthorize("hasAnyRole('FUNDACION_REFUGIO', 'ADMINISTRADOR')")
+    @Operation(summary = "Casos en custodia", description = "Lista los casos bajo custodia de la fundación autenticada")
     public ResponseEntity<Page<CasoListItemDTO>> listarCasosEnCustodia(
             @AuthenticationPrincipal UserDetails userDetails,
             Pageable pageable) {
@@ -182,8 +186,9 @@ public class ReporteController {
     // 13.4: Casos sin custodia en un municipio
     @GetMapping("/sin-custodia")
     @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Casos sin custodia", description = "Lista los casos sin custodia en un municipio específico")
     public ResponseEntity<Page<CasoListItemDTO>> listarCasosSinCustodia(
-            @RequestParam Long municipioId,
+            @Parameter(description = "ID del municipio") @RequestParam Long municipioId,
             Pageable pageable) {
         Page<CasoListItemDTO> list = casoService.listarCasosSinCustodia(municipioId, pageable);
         return ResponseEntity.ok(list);
