@@ -9,4 +9,10 @@ import java.util.List;
 public interface ModeracionService {
     List<CasoModeracionDTO> listarCasosReportados();
     ModeracionResponseDTO moderarCaso(Long casoId, DecisionModeracionDTO dto, String correoAdmin);
+
+    /**
+     * 13.2: Oculta un aporte (Seguimiento) registrando el motivo.
+     * Solo administrators pueden ocultar aportes.
+     */
+    ModeracionResponseDTO ocultarAporte(Long aporteId, String motivo, String correoAdmin);
 }
