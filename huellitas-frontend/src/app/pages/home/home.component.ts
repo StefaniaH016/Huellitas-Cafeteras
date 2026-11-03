@@ -6,9 +6,12 @@ import { CasoService } from '../../core/services/caso.service';
 import { AuthService } from '../../core/services/auth.service';
 import { UbicacionService } from '../../core/services/ubicacion.service';
 import {
+  ESTADO_LABELS,
+  TIPO_LABELS,
   fallbackCaseString,
   getUrgencyBadgeClass,
   getUrgencyBadgeLabel,
+  labelOf,
   normalizeCasoDisplay,
 } from '../../core/utils/caso-display.utils';
 import { normalizeRole } from '../../core/utils/role.utils';
@@ -297,33 +300,11 @@ export class HomeComponent implements OnInit {
   }
 
   getEstadoLabel(estado?: string): string {
-    switch (estado?.toUpperCase()) {
-      case 'REGISTRADO':
-        return 'Registrado';
-      case 'EN_ATENCION':
-        return 'En atención';
-      case 'RESUELTO':
-        return 'Resuelto';
-      case 'ARCHIVADO':
-        return 'Archivado';
-      default:
-        return estado || 'Registrado';
-    }
+    return labelOf(ESTADO_LABELS, estado || 'REGISTRADO');
   }
 
   getTipoLabel(tipo?: string): string {
-    switch (tipo?.toUpperCase()) {
-      case 'EXTRAVIADO':
-        return 'Extraviado';
-      case 'VULNERABLE':
-        return 'Vulnerable';
-      case 'HERIDO':
-        return 'Herido';
-      case 'EN_ADOPCION':
-        return 'En adopción';
-      default:
-        return tipo || '';
-    }
+    return labelOf(TIPO_LABELS, tipo || '');
   }
 
   getPanelLink(): string {
