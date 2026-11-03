@@ -1,0 +1,112 @@
+@if (puedeAportar()) {
+  <form class="panel panel-flat" (ngSubmit)="publicar()" novalidate>
+    <div class="panel-head">
+      <h2>
+        {{
+          caso().tipoCaso === 'EXTRAVIADO'
+            ? '¿Lo viste? Agrega un aporte'
+            : 'Agregar aporte al caso'
+        }}
+      </h2>
+    </div>
+    <fieldset class="choice-row">
+      <legend>Tipo de aporte</legend>
+      <label class="choice">
+        <input
+          type="radio"
+          name="tipo"
+          [checked]="tipo() === 'COMENTARIO'"
+          (change)="tipo.set('COMENTARIO')"
+        />
+        <span>Comentario<small>Lo que observaste o hiciste</small></span>
+      </label>
+      <label class="choice">
+        <input
+          type="radio"
+          name="tipo"
+          [checked]="tipo() === 'AVISTAMIENTO'"
+          (change)="tipo.set('AVISTAMIENTO')"
+        />
+        <span>Avistamiento<small>Dónde lo viste</small></span>
+      </label>
+    </fieldset>
+    <div class="form-field">
+      <label for="aporte-texto">Descripción</label>
+      <textarea
+        id="aporte-texto"
+        name="descripcion"
+        [maxlength]="maxAporte"
+        [(ngModel)]="descripcion"
+        placeholder="Escribe lo que observaste o qué acción realizaste"
+      ></textarea>
+      <p class="field-hint">
+        <span>Entre 10 y {{ maxAporte }} caracteres</span
+        ><span>{{ descripcion.length }} / {{ maxAporte }}</span>
+      </p>
+    </div>
+    @if (tipo() === 'AVISTAMIENTO') {
+      <app-ubicacion-selector
+        [deptoId]="deptoId()"
+        [munId]="munId()"
+        [barrioId]="barrioId()"
+        (deptoChange)="deptoId.set($event)"
+        (munChange)="munId.set($event)"
+        (barrioChange)="barrioId.set($event)"
+        idPrefix="aporte"
+        leyenda="Zona"
+      ></app-ubicacion-selector>
+      <div class="form-field">
+        <label for="aporte-lugar">Referencia (opcional)</label>
+        <input
+          id="aporte-lugar"
+          name="ubicacionTexto"
+          type="text"
+          maxlength="300"
+          [(ngModel)]="ubicacionTexto"
+          placeholder="Ej: Parque Sucre, frente a la tienda de la esquina"
+        />
+      </div>
+    }
+    <p class="group-label">Fotos <span class="optional">(opcional)</span></p>
+    <app-foto-picker campoId="aporte-fotos" (archivosChange)="fotos.set($event)" />
+    @if (descripcion && errorFormulario()) {
+      <p class="field-error">{{ errorFormulario() }}</p>
+    }
+    @if (envio.error()) {
+      <p class="feedback-error" role="alert">{{ envio.error() }}</p>
+    }
+    @if (publicado()) {
+      <p class="feedback-success" role="status">Tu aporte quedó publicado. Gracias por ayudar.</p>
+    }
+    <button
+      class="btn btn-primary btn-sm"
+      type="submit"
+      [disabled]="envio.cargando() || !!errorFormulario()"
+    >
+      {{ envio.cargando() ? 'Publicando...' : 'Publicar aporte' }}
+    </button>
+  </form>
+} @else if (caso().estado === 'RESUELTO' || caso().estado === 'ARCHIVADO') {
+  <p class="note">El caso está cerrado: ya no recibe aportes.</p>
+}
+
+<div class="panel-head mt-sm"><h2>Actividad del caso</h2></div>
+@for (item of actividad(); track item.clave) {
+  <div class="timeline-item">
+    <div class="avatar-dot" aria-hidden="true">{{ item.icono }}</div>
+    <div class="timeline-body">
+      <p>
+        <strong>{{ item.titulo }}</strong>
+      </p>
+      @if (item.texto) {
+        <p class="quote">{{ item.texto }}</p>
+      }
+      <p class="list-meta">{{ formatFechaHora(item.fecha) }}</p>
+      @if (item.cambio) {
+        <p class="tl-change">{{ item.cambio }}</p>
+      }
+    </div>
+  </div>
+} @empty {
+  <p class="list-empty">Todavía no hay actividad en este caso.</p>
+}
