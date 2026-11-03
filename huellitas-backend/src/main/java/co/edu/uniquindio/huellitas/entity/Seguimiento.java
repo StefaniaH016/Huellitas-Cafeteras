@@ -4,6 +4,7 @@ import co.edu.uniquindio.huellitas.entity.enums.TipoAporte;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.*;
+import co.edu.uniquindio.huellitas.entity.Barrio;
 
 import java.time.Instant;
 
@@ -31,6 +32,15 @@ public class Seguimiento {
 
     @Builder.Default
     private boolean visible = true;
+
+    // Optional barrio asociado al aporte (sub‑tarea 13.1)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "barrio_id")
+    private Barrio barrio;
+
+    // Motivo de ocultación para moderación (sub‑tarea 13.2)
+    @Column(length = 255)
+    private String motivoOcultacion;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "caso_id", nullable = false)

@@ -4,9 +4,11 @@ import co.edu.uniquindio.huellitas.dto.moderacion.CasoModeracionDTO;
 import co.edu.uniquindio.huellitas.dto.moderacion.DecisionModeracionDTO;
 import co.edu.uniquindio.huellitas.dto.moderacion.ModeracionResponseDTO;
 import co.edu.uniquindio.huellitas.entity.Caso;
+import co.edu.uniquindio.huellitas.entity.Seguimiento;
 import co.edu.uniquindio.huellitas.exception.ResourceNotFoundException;
 import co.edu.uniquindio.huellitas.mapper.ModeracionMapper;
 import co.edu.uniquindio.huellitas.repository.CasoRepository;
+import co.edu.uniquindio.huellitas.repository.SeguimientoRepository;
 import co.edu.uniquindio.huellitas.service.ModeracionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -21,6 +23,7 @@ import java.util.List;
 public class ModeracionServiceImpl implements ModeracionService {
 
     private final CasoRepository casoRepository;
+    private final SeguimientoRepository seguimientoRepository;
     private final ModeracionMapper moderacionMapper;
 
     @Override
@@ -45,5 +48,21 @@ public class ModeracionServiceImpl implements ModeracionService {
         casoRepository.save(caso);
 
         return moderacionMapper.toModeracionResponseDTO(caso.getId(), mantener);
+    }
+
+    @Override
+    public ModeracionResponseDTO ocultarAporte(Long aporteId, String motivo, String correoAdmin) {
+        Seguimiento aporte = seguimientoRepository.findById(aporteId)
+                .orElseThrow(() -> new ResourceNotFoundException("Aporte", aporteId));
+
+        if (!aporte.isVisible()) {
+            return moderacionMapper.toModeracionResponseDTO(aporteId, false);
+        }
+
+        aporte.setVisible(false);
+        aporte.setMotivoOcultacion(motivo);
+        seguimientoRepository.save(aporte);
+
+        return moderacionMapper.toModeracionResponseDTO(aporteId, false);
     }
 }

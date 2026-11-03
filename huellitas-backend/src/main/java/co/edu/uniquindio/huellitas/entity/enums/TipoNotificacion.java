@@ -4,5 +4,6 @@ public enum TipoNotificacion {
     EMERGENCIA,
     CAMBIO_ESTADO,
     CIERRE,
-    RECORDATORIO
+    RECORDATORIO,
+    CUSTODIA
 }

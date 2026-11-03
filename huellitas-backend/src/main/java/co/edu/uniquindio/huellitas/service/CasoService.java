@@ -31,4 +31,13 @@ public interface CasoService {
     CasoResponseDTO archivarCaso(Long id, ArchivarCasoDTO dto, String correoUsuario);
 
     Page<CasoListItemDTO> getFeed(Pageable pageable);
+
+    // 13.3: Gestión de custodia
+    CasoResponseDTO gestionarCustodia(Long casoId, CustodiaDTO dto, String correoUsuario);
+
+    // 13.4: Casos en custodia de la fundación autenticada
+    Page<CasoListItemDTO> listarCasosEnCustodia(String correoFundacion, Pageable pageable);
+
+    // 13.4: Casos sin custodia en un municipio
+    Page<CasoListItemDTO> listarCasosSinCustodia(Long municipioId, Pageable pageable);
 }

@@ -9,6 +9,7 @@ import co.edu.uniquindio.huellitas.exception.ConflictException;
 import co.edu.uniquindio.huellitas.exception.ResourceNotFoundException;
 import co.edu.uniquindio.huellitas.repository.*;
 import co.edu.uniquindio.huellitas.service.CloudinaryService;
+import co.edu.uniquindio.huellitas.service.EmailService;
 import co.edu.uniquindio.huellitas.service.impl.CasoServiceImpl;
 import co.edu.uniquindio.huellitas.worker.FiltroWorker;
 import co.edu.uniquindio.huellitas.worker.NotificacionWorker;
@@ -74,6 +75,9 @@ class CasoServiceTest {
     @Mock
     private FiltroWorker filtroWorker;
 
+    @Mock
+    private EmailService emailService;
+
     private co.edu.uniquindio.huellitas.mapper.CasoMapper casoMapper = new co.edu.uniquindio.huellitas.mapper.CasoMapper();
     private co.edu.uniquindio.huellitas.mapper.AporteMapper aporteMapper = new co.edu.uniquindio.huellitas.mapper.AporteMapper();
 
@@ -100,7 +104,8 @@ class CasoServiceTest {
                 casoMapper,
                 aporteMapper,
                 notificacionWorker,
-                filtroWorker
+                filtroWorker,
+                emailService
         );
         // Usuario mock
         usuarioMock = Usuario.builder()

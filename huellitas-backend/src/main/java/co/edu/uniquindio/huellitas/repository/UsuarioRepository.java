@@ -16,4 +16,10 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
 
     @Query("SELECT u FROM Usuario u WHERE u.verificado = false AND u.rol IN (:roles)")
     List<Usuario> findByVerificadoFalseAndRolIn(List<Rol> roles);
+
+    // 13.6: Buscar usuarios disponibles para rescate en un municipio
+    List<Usuario> findByMunicipioInteresIdAndDisponibleRescateTrue(Long municipioId);
+
+    // Buscar usuario por ID de organización
+    Optional<Usuario> findByOrganizacionId(Long organizacionId);
 }

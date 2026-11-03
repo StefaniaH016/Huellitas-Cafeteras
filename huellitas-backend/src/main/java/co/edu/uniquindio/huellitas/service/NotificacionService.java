@@ -7,4 +7,9 @@ import org.springframework.data.domain.Pageable;
 public interface NotificacionService {
     Page<NotificacionDTO> listarMisNotificaciones(String correo, Boolean soloNoLeidas, Pageable pageable);
     NotificacionDTO marcarLeida(Long notificacionId, String correo);
+
+    /**
+     * 13.8: Cuenta las notificaciones no leídas del usuario.
+     */
+    long contarNoLeidas(String correo);
 }
