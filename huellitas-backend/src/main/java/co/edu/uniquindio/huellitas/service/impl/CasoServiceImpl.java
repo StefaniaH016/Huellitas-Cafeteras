@@ -13,6 +13,8 @@ import co.edu.uniquindio.huellitas.repository.*;
 import co.edu.uniquindio.huellitas.service.CasoService;
 import co.edu.uniquindio.huellitas.service.CloudinaryService;
 import co.edu.uniquindio.huellitas.specification.CasoSpecification;
+import co.edu.uniquindio.huellitas.worker.FiltroWorker;
+import co.edu.uniquindio.huellitas.worker.NotificacionWorker;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -39,6 +41,8 @@ public class CasoServiceImpl implements CasoService {
     private final CloudinaryService cloudinaryService;
     private final CasoMapper casoMapper;
     private final AporteMapper aporteMapper;
+    private final NotificacionWorker notificacionWorker;
+    private final FiltroWorker filtroWorker;
 
     @Override
     public CasoResponseDTO crearCaso(CrearReporteDTO dto, String correoUsuario) {
@@ -76,6 +80,9 @@ public class CasoServiceImpl implements CasoService {
                 .usuario(reportante)
                 .build();
         historialEstadoRepository.save(historial);
+
+        // W-01: notificar al reportante si el caso es urgente
+        notificacionWorker.notificarCasoUrgente(caso);
 
         return casoMapper.toResponseDTO(caso);
     }
@@ -167,8 +174,8 @@ public class CasoServiceImpl implements CasoService {
     @Override
     @Transactional(readOnly = true)
     public Page<CasoListItemDTO> listarCasos(FiltrosCasoDTO filtros, Pageable pageable) {
-        return casoRepository.findAll(CasoSpecification.conFiltros(filtros), pageable)
-                .map(casoMapper::toListItemDTO);
+        // W-02: delegar filtrado al FiltroWorker
+        return filtroWorker.filtrar(filtros, pageable);
     }
 
     @Override
@@ -238,6 +245,9 @@ public class CasoServiceImpl implements CasoService {
                 .build();
         seguimientoRepository.save(seguimiento);
 
+        // W-01: notificar cambio de estado
+        notificacionWorker.notificarCambioEstado(caso, anterior, nuevo, usuario);
+
         return casoMapper.toResponseDTO(caso);
     }
 
@@ -303,6 +313,9 @@ public class CasoServiceImpl implements CasoService {
                 .visible(true)
                 .build();
         seguimientoRepository.save(seguimiento);
+
+        // W-01: notificar cierre de caso
+        notificacionWorker.notificarCierreCaso(caso, dto.motivoCierre().name());
 
         return casoMapper.toResponseDTO(caso);
     }

@@ -10,6 +10,8 @@ import co.edu.uniquindio.huellitas.exception.ResourceNotFoundException;
 import co.edu.uniquindio.huellitas.repository.*;
 import co.edu.uniquindio.huellitas.service.CloudinaryService;
 import co.edu.uniquindio.huellitas.service.impl.CasoServiceImpl;
+import co.edu.uniquindio.huellitas.worker.FiltroWorker;
+import co.edu.uniquindio.huellitas.worker.NotificacionWorker;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -66,6 +68,12 @@ class CasoServiceTest {
     @Mock
     private CloudinaryService cloudinaryService;
 
+    @Mock
+    private NotificacionWorker notificacionWorker;
+
+    @Mock
+    private FiltroWorker filtroWorker;
+
     private co.edu.uniquindio.huellitas.mapper.CasoMapper casoMapper = new co.edu.uniquindio.huellitas.mapper.CasoMapper();
     private co.edu.uniquindio.huellitas.mapper.AporteMapper aporteMapper = new co.edu.uniquindio.huellitas.mapper.AporteMapper();
 
@@ -90,7 +98,9 @@ class CasoServiceTest {
                 notificacionRepository,
                 cloudinaryService,
                 casoMapper,
-                aporteMapper
+                aporteMapper,
+                notificacionWorker,
+                filtroWorker
         );
         // Usuario mock
         usuarioMock = Usuario.builder()
