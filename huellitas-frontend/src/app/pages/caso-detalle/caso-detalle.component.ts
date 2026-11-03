@@ -3,6 +3,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { CasoService, CasoDetalle } from '../../core/services/caso.service';
 import { AuthService } from '../../core/services/auth.service';
+import { getUrgencyBadgeLabel } from '../../core/utils/caso-display.utils';
 import { CasoSeguimientoComponent } from './caso-seguimiento/caso-seguimiento.component';
 import { CasoBitacoraComponent } from './caso-bitacora/caso-bitacora.component';
 
@@ -406,17 +407,6 @@ export class CasoDetalleComponent implements OnInit {
   }
 
   getBadgeLabel(urgencia?: string): string {
-    switch (urgencia?.toUpperCase()) {
-      case 'CRITICA':
-        return 'Emergencia';
-      case 'ALTA':
-        return 'Alta';
-      case 'MEDIA':
-        return 'Media';
-      case 'BAJA':
-        return 'Baja';
-      default:
-        return urgencia || 'Media';
-    }
+    return getUrgencyBadgeLabel(urgencia || 'MEDIA');
   }
 }
