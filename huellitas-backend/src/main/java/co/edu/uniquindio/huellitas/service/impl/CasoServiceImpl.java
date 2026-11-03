@@ -5,19 +5,24 @@ import co.edu.uniquindio.huellitas.entity.*;
 import co.edu.uniquindio.huellitas.entity.enums.EstadoCaso;
 import co.edu.uniquindio.huellitas.entity.enums.TipoAporte;
 import co.edu.uniquindio.huellitas.entity.enums.Urgencia;
+import co.edu.uniquindio.huellitas.exception.ConflictException;
 import co.edu.uniquindio.huellitas.exception.ResourceNotFoundException;
+import co.edu.uniquindio.huellitas.mapper.AporteMapper;
+import co.edu.uniquindio.huellitas.mapper.CasoMapper;
 import co.edu.uniquindio.huellitas.repository.*;
 import co.edu.uniquindio.huellitas.service.CasoService;
+import co.edu.uniquindio.huellitas.service.CloudinaryService;
 import co.edu.uniquindio.huellitas.specification.CasoSpecification;
-import co.edu.uniquindio.huellitas.util.FechaUtils;
+import co.edu.uniquindio.huellitas.worker.FiltroWorker;
+import co.edu.uniquindio.huellitas.worker.NotificacionWorker;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.util.Collections;
 import java.util.List;
 
 @Service
@@ -32,6 +37,12 @@ public class CasoServiceImpl implements CasoService {
     private final HistorialEstadoRepository historialEstadoRepository;
     private final SeguimientoRepository seguimientoRepository;
     private final CierreCasoRepository cierreCasoRepository;
+    private final NotificacionRepository notificacionRepository;
+    private final CloudinaryService cloudinaryService;
+    private final CasoMapper casoMapper;
+    private final AporteMapper aporteMapper;
+    private final NotificacionWorker notificacionWorker;
+    private final FiltroWorker filtroWorker;
 
     @Override
     public CasoResponseDTO crearCaso(CrearReporteDTO dto, String correoUsuario) {
@@ -41,17 +52,7 @@ public class CasoServiceImpl implements CasoService {
         Barrio barrio = barrioRepository.findById(dto.barrioId())
                 .orElseThrow(() -> new ResourceNotFoundException("Barrio", dto.barrioId()));
 
-        AnimalReporteDTO animalDto = dto.animal();
-        Animal animal = Animal.builder()
-                .nombre(animalDto.nombre())
-                .especie(animalDto.especie())
-                .raza(animalDto.raza())
-                .color(animalDto.color())
-                .sexo(animalDto.sexo())
-                .edadAproximada(animalDto.edadAproximada())
-                .senasParticulares(animalDto.senasParticulares())
-                .propietario(reportante)
-                .build();
+        Animal animal = casoMapper.toAnimalEntity(dto.animal(), reportante);
         animal = animalRepository.save(animal);
 
         Instant now = Instant.now();
@@ -80,14 +81,101 @@ public class CasoServiceImpl implements CasoService {
                 .build();
         historialEstadoRepository.save(historial);
 
-        return mapearACasoResponseDTO(caso);
+        // W-01: notificar al reportante si el caso es urgente
+        notificacionWorker.notificarCasoUrgente(caso);
+
+        return casoMapper.toResponseDTO(caso);
+    }
+
+    @Override
+    public CasoResponseDTO actualizarReporte(Long id, CrearReporteDTO dto, String correoUsuario) {
+        Caso caso = obtenerCasoEditable(id, correoUsuario);
+        Barrio barrio = barrioRepository.findById(dto.barrioId())
+                .orElseThrow(() -> new ResourceNotFoundException("Barrio", dto.barrioId()));
+
+        AnimalReporteDTO animalDto = dto.animal();
+        Animal animal = caso.getAnimal();
+        animal.setNombre(animalDto.nombre());
+        animal.setEspecie(animalDto.especie());
+        animal.setRaza(animalDto.raza());
+        animal.setColor(animalDto.color());
+        animal.setSexo(animalDto.sexo());
+        animal.setEdadAproximada(animalDto.edadAproximada());
+        animal.setSenasParticulares(animalDto.senasParticulares());
+        animalRepository.save(animal);
+
+        caso.setTipoCaso(dto.tipoCaso());
+        caso.setDescripcion(dto.descripcion());
+        caso.setUrgencia(dto.urgencia());
+        caso.setDireccionReferencia(dto.direccionReferencia());
+        caso.setBarrio(barrio);
+        caso.setFechaUltimaActividad(Instant.now());
+        caso = casoRepository.save(caso);
+
+        return casoMapper.toResponseDTO(caso);
+    }
+
+    @Override
+    public void eliminarFoto(Long casoId, Long fotoId, String correoUsuario) {
+        Caso caso = obtenerCasoEditable(casoId, correoUsuario);
+        Foto foto = caso.getFotos().stream()
+                .filter(item -> item.getId().equals(fotoId))
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("Foto", fotoId));
+
+        if (caso.getFotos().size() <= 1) {
+            throw new ConflictException("El caso debe conservar al menos una foto.");
+        }
+
+        cloudinaryService.eliminarFotos(List.of(foto));
+        if (foto.isPrincipal()) {
+            caso.getFotos().stream()
+                    .filter(item -> !item.getId().equals(fotoId))
+                    .findFirst()
+                    .ifPresent(item -> item.setPrincipal(true));
+        }
+        caso.getFotos().remove(foto);
+    }
+
+    @Override
+    public void eliminarCaso(Long id, String correoUsuario) {
+        Caso caso = obtenerCasoEditable(id, correoUsuario);
+        if (casoRepository.existsByCasoOriginalId(id)) {
+            throw new ConflictException("No se puede eliminar el caso porque tiene casos relacionados.");
+        }
+
+        Animal animal = caso.getAnimal();
+        boolean animalCompartido = casoRepository.existsByAnimalIdAndIdNot(animal.getId(), id);
+        cloudinaryService.eliminarFotos(caso.getFotos());
+        notificacionRepository.desvincularCaso(id);
+        historialEstadoRepository.deleteByCasoId(id);
+        casoRepository.delete(caso);
+        casoRepository.flush();
+        if (!animalCompartido) {
+            animalRepository.delete(animal);
+        }
+    }
+
+    private Caso obtenerCasoEditable(Long id, String correoUsuario) {
+        Caso caso = casoRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Caso", id));
+
+        String correoNormalizado = correoUsuario.trim().toLowerCase();
+        if (caso.getReportante() == null
+                || !correoNormalizado.equals(caso.getReportante().getCorreo().trim().toLowerCase())) {
+            throw new AccessDeniedException("Solo el reportante puede modificar o eliminar este caso.");
+        }
+        if (caso.getEstado() != EstadoCaso.REGISTRADO) {
+            throw new ConflictException("Solo se pueden modificar o eliminar casos en estado REGISTRADO.");
+        }
+        return caso;
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<CasoListItemDTO> listarCasos(FiltrosCasoDTO filtros, Pageable pageable) {
-        return casoRepository.findAll(CasoSpecification.conFiltros(filtros), pageable)
-                .map(this::mapearACasoListItemDTO);
+        // W-02: delegar filtrado al FiltroWorker
+        return filtroWorker.filtrar(filtros, pageable);
     }
 
     @Override
@@ -96,98 +184,21 @@ public class CasoServiceImpl implements CasoService {
         Caso caso = casoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Caso", id));
 
-        AnimalDetalleDTO animalDTO = null;
-        if (caso.getAnimal() != null) {
-            Animal a = caso.getAnimal();
-            animalDTO = AnimalDetalleDTO.builder()
-                    .id(a.getId())
-                    .nombre(a.getNombre())
-                    .especie(a.getEspecie())
-                    .raza(a.getRaza())
-                    .color(a.getColor())
-                    .sexo(a.getSexo())
-                    .edadAproximada(a.getEdadAproximada())
-                    .senasParticulares(a.getSenasParticulares())
-                    .build();
-        }
+        AnimalDetalleDTO animalDTO = casoMapper.toAnimalDetalleDTO(caso.getAnimal());
+        UbicacionDetalleDTO ubicacionDTO = casoMapper.toUbicacionDetalleDTO(caso);
+        List<FotoDetalleDTO> fotosDTO = casoMapper.toFotoDetalleDTOList(caso.getFotos());
 
-        UbicacionDetalleDTO ubicacionDTO = null;
-        if (caso.getBarrio() != null) {
-            Barrio b = caso.getBarrio();
-            Municipio m = b.getMunicipio();
-            Departamento d = m != null ? m.getDepartamento() : null;
+        List<HistorialEstadoDTO> historialDTO = casoMapper.toHistorialEstadoDTOList(
+                historialEstadoRepository.findByCasoIdOrderByFechaAsc(id)
+        );
 
-            ubicacionDTO = UbicacionDetalleDTO.builder()
-                    .barrioId(b.getId())
-                    .barrio(b.getNombre())
-                    .municipioId(m != null ? m.getId() : null)
-                    .municipio(m != null ? m.getNombre() : null)
-                    .departamentoId(d != null ? d.getId() : null)
-                    .departamento(d != null ? d.getNombre() : null)
-                    .direccionReferencia(caso.getDireccionReferencia())
-                    .build();
-        }
+        List<AporteDetalleDTO> aportesDTO = aporteMapper.toDetalleDTOList(
+                seguimientoRepository.findByCasoIdAndVisibleTrueOrderByFechaAsc(id)
+        );
 
-        List<FotoDetalleDTO> fotosDTO = (caso.getFotos() != null)
-                ? caso.getFotos().stream()
-                .map(f -> FotoDetalleDTO.builder()
-                        .id(f.getId())
-                        .url(f.getUrl())
-                        .principal(f.isPrincipal())
-                        .build())
-                .toList()
-                : Collections.emptyList();
+        ResumenMedicoDTO resumenMedicoDTO = casoMapper.toResumenMedicoDTO(caso.getBitacoraMedica());
 
-        List<HistorialEstadoDTO> historialDTO = historialEstadoRepository.findByCasoIdOrderByFechaAsc(id)
-                .stream()
-                .map(h -> HistorialEstadoDTO.builder()
-                        .id(h.getId())
-                        .estadoAnterior(h.getEstadoAnterior())
-                        .estadoNuevo(h.getEstadoNuevo())
-                        .observacion(h.getObservacion())
-                        .fecha(FechaUtils.formatear(h.getFecha()))
-                        .build())
-                .toList();
-
-        List<AporteDetalleDTO> aportesDTO = seguimientoRepository.findByCasoIdAndVisibleTrueOrderByFechaAsc(id)
-                .stream()
-                .map(s -> AporteDetalleDTO.builder()
-                        .id(s.getId())
-                        .tipo(s.getTipo())
-                        .comentario(s.getComentario())
-                        .fecha(FechaUtils.formatear(s.getFecha()))
-                        .autorNombre(s.getAutor() != null ? s.getAutor().getNombre() : null)
-                        .build())
-                .toList();
-
-        ResumenMedicoDTO resumenMedicoDTO = null;
-        if (caso.getBitacoraMedica() != null) {
-            BitacoraMedica bm = caso.getBitacoraMedica();
-            resumenMedicoDTO = ResumenMedicoDTO.builder()
-                    .id(bm.getId())
-                    .fechaApertura(FechaUtils.formatear(bm.getFechaApertura()))
-                    .altaMedica(bm.isAltaMedica())
-                    .fechaAlta(FechaUtils.formatear(bm.getFechaAlta()))
-                    .veterinariaNombre(bm.getVeterinaria() != null ? bm.getVeterinaria().getNombre() : null)
-                    .build();
-        }
-
-        return CasoDetalleDTO.builder()
-                .id(caso.getId())
-                .tipoCaso(caso.getTipoCaso())
-                .estado(caso.getEstado())
-                .urgencia(caso.getUrgencia())
-                .descripcion(caso.getDescripcion())
-                .animal(animalDTO)
-                .ubicacion(ubicacionDTO)
-                .fotografias(fotosDTO)
-                .historial(historialDTO)
-                .aportes(aportesDTO)
-                .resumenMedico(resumenMedicoDTO)
-                .fechaCreacion(FechaUtils.formatear(caso.getFechaRegistro()))
-                .autorId(caso.getReportante() != null ? caso.getReportante().getId() : null)
-                .autorNombre(caso.getReportante() != null ? caso.getReportante().getNombre() : null)
-                .build();
+        return casoMapper.toCasoDetalleDTO(caso, animalDTO, ubicacionDTO, fotosDTO, historialDTO, aportesDTO, resumenMedicoDTO);
     }
 
     @Override
@@ -234,7 +245,10 @@ public class CasoServiceImpl implements CasoService {
                 .build();
         seguimientoRepository.save(seguimiento);
 
-        return mapearACasoResponseDTO(caso);
+        // W-01: notificar cambio de estado
+        notificacionWorker.notificarCambioEstado(caso, anterior, nuevo, usuario);
+
+        return casoMapper.toResponseDTO(caso);
     }
 
     @Override
@@ -244,23 +258,14 @@ public class CasoServiceImpl implements CasoService {
             throw new ResourceNotFoundException("Caso", id);
         }
 
-        return historialEstadoRepository.findByCasoIdOrderByFechaAsc(id)
-                .stream()
-                .map(h -> HistorialEstadoDTO.builder()
-                        .id(h.getId())
-                        .estadoAnterior(h.getEstadoAnterior())
-                        .estadoNuevo(h.getEstadoNuevo())
-                        .observacion(h.getObservacion())
-                        .fecha(FechaUtils.formatear(h.getFecha()))
-                        .build())
-                .toList();
+        return casoMapper.toHistorialEstadoDTOList(historialEstadoRepository.findByCasoIdOrderByFechaAsc(id));
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<CasoListItemDTO> misReportes(String correoUsuario, Pageable pageable) {
         return casoRepository.findByReportanteCorreoOrderByFechaRegistroDesc(correoUsuario.trim().toLowerCase(), pageable)
-                .map(this::mapearACasoListItemDTO);
+                .map(casoMapper::toListItemDTO);
     }
 
     @Override
@@ -309,7 +314,10 @@ public class CasoServiceImpl implements CasoService {
                 .build();
         seguimientoRepository.save(seguimiento);
 
-        return mapearACasoResponseDTO(caso);
+        // W-01: notificar cierre de caso
+        notificacionWorker.notificarCierreCaso(caso, dto.motivoCierre().name());
+
+        return casoMapper.toResponseDTO(caso);
     }
 
     @Override
@@ -349,62 +357,7 @@ public class CasoServiceImpl implements CasoService {
                 .build();
         seguimientoRepository.save(seguimiento);
 
-        return mapearACasoResponseDTO(caso);
-    }
-
-    private CasoResponseDTO mapearACasoResponseDTO(Caso caso) {
-        return CasoResponseDTO.builder()
-                .id(caso.getId())
-                .tipoCaso(caso.getTipoCaso())
-                .urgencia(caso.getUrgencia())
-                .estado(caso.getEstado())
-                .descripcion(caso.getDescripcion())
-                .direccionReferencia(caso.getDireccionReferencia())
-                .autorId(caso.getReportante() != null ? caso.getReportante().getId() : null)
-                .barrioId(caso.getBarrio() != null ? caso.getBarrio().getId() : null)
-                .fechaCreacion(FechaUtils.formatear(caso.getFechaRegistro()))
-                .build();
-    }
-
-    private CasoListItemDTO mapearACasoListItemDTO(Caso caso) {
-        String departamento = null;
-        String municipio = null;
-        String barrio = null;
-
-        if (caso.getBarrio() != null) {
-            barrio = caso.getBarrio().getNombre();
-            if (caso.getBarrio().getMunicipio() != null) {
-                municipio = caso.getBarrio().getMunicipio().getNombre();
-                if (caso.getBarrio().getMunicipio().getDepartamento() != null) {
-                    departamento = caso.getBarrio().getMunicipio().getDepartamento().getNombre();
-                }
-            }
-        }
-
-        return CasoListItemDTO.builder()
-                .id(caso.getId())
-                .tipoCaso(caso.getTipoCaso())
-                .estado(caso.getEstado())
-                .urgencia(caso.getUrgencia())
-                .descripcion(caso.getDescripcion())
-                .especie(caso.getAnimal() != null ? caso.getAnimal().getEspecie() : null)
-                .fotoPrincipal(extraerFotoPrincipal(caso))
-                .departamento(departamento)
-                .municipio(municipio)
-                .barrio(barrio)
-                .fechaCreacion(FechaUtils.formatear(caso.getFechaRegistro()))
-                .build();
-    }
-
-    private String extraerFotoPrincipal(Caso caso) {
-        if (caso.getFotos() == null || caso.getFotos().isEmpty()) {
-            return null;
-        }
-        return caso.getFotos().stream()
-                .filter(Foto::isPrincipal)
-                .map(Foto::getUrl)
-                .findFirst()
-                .orElseGet(() -> caso.getFotos().get(0).getUrl());
+        return casoMapper.toResponseDTO(caso);
     }
 
     @Override
@@ -412,6 +365,6 @@ public class CasoServiceImpl implements CasoService {
     public Page<CasoListItemDTO> getFeed(Pageable pageable) {
         List<Urgencia> urgentes = List.of(Urgencia.ALTA, Urgencia.CRITICA);
         return casoRepository.findByUrgenciaInAndVisibleTrueOrderByFechaRegistroDesc(urgentes, pageable)
-                .map(this::mapearACasoListItemDTO);
+                .map(casoMapper::toListItemDTO);
     }
 }

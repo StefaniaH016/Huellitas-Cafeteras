@@ -5,9 +5,9 @@ import co.edu.uniquindio.huellitas.dto.moderacion.DecisionModeracionDTO;
 import co.edu.uniquindio.huellitas.dto.moderacion.ModeracionResponseDTO;
 import co.edu.uniquindio.huellitas.entity.Caso;
 import co.edu.uniquindio.huellitas.exception.ResourceNotFoundException;
+import co.edu.uniquindio.huellitas.mapper.ModeracionMapper;
 import co.edu.uniquindio.huellitas.repository.CasoRepository;
 import co.edu.uniquindio.huellitas.service.ModeracionService;
-import co.edu.uniquindio.huellitas.util.FechaUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,17 +21,15 @@ import java.util.List;
 public class ModeracionServiceImpl implements ModeracionService {
 
     private final CasoRepository casoRepository;
+    private final ModeracionMapper moderacionMapper;
 
     @Override
     @Transactional(readOnly = true)
     public List<CasoModeracionDTO> listarCasosReportados() {
         List<Caso> casos = casoRepository.findByMotivoModeracionNotNullOrVisibleFalse();
-        return casos.stream().map(c -> new CasoModeracionDTO(
-                c.getId(),
-                c.getMotivoModeracion() != null ? c.getMotivoModeracion() : "Reportado para revisión",
-                c.isVisible() ? "PENDIENTE" : "OCULTADO",
-                FechaUtils.formatear(c.getFechaRegistro())
-        )).toList();
+        return casos.stream()
+                .map(moderacionMapper::toCasoModeracionDTO)
+                .toList();
     }
 
     @Override
@@ -46,10 +44,6 @@ public class ModeracionServiceImpl implements ModeracionService {
 
         casoRepository.save(caso);
 
-        return new ModeracionResponseDTO(
-                caso.getId(),
-                mantener ? "MANTENIDO" : "OCULTADO",
-                FechaUtils.formatear(Instant.now())
-        );
+        return moderacionMapper.toModeracionResponseDTO(caso.getId(), mantener);
     }
 }

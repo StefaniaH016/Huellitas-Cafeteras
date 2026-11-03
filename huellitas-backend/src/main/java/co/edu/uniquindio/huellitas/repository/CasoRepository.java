@@ -16,6 +16,8 @@ public interface CasoRepository extends JpaRepository<Caso, Long>, JpaSpecificat
     Page<Caso> findByVisibleTrueAndEstado(EstadoCaso estado, Pageable pageable);
     Page<Caso> findByReportanteId(Long reportanteId, Pageable pageable);
     Page<Caso> findByReportanteCorreoOrderByFechaRegistroDesc(String correo, Pageable pageable);
+    boolean existsByCasoOriginalId(Long casoOriginalId);
+    boolean existsByAnimalIdAndIdNot(Long animalId, Long casoId);
     List<Caso> findByMotivoModeracionNotNullOrVisibleFalse();
     Page<Caso> findByUrgenciaInAndVisibleTrueOrderByFechaRegistroDesc(List<Urgencia> urgencias, Pageable pageable);
 }

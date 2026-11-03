@@ -8,6 +8,7 @@ import co.edu.uniquindio.huellitas.entity.Usuario;
 import co.edu.uniquindio.huellitas.entity.enums.EstadoVerificacion;
 import co.edu.uniquindio.huellitas.entity.enums.Rol;
 import co.edu.uniquindio.huellitas.exception.ResourceNotFoundException;
+import co.edu.uniquindio.huellitas.mapper.VerificacionMapper;
 import co.edu.uniquindio.huellitas.repository.UsuarioRepository;
 import co.edu.uniquindio.huellitas.service.VerificacionService;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +24,7 @@ import java.util.List;
 public class VerificacionServiceImpl implements VerificacionService {
 
     private final UsuarioRepository usuarioRepository;
+    private final VerificacionMapper verificacionMapper;
 
     @Override
     @Transactional(readOnly = true)
@@ -33,16 +35,8 @@ public class VerificacionServiceImpl implements VerificacionService {
         return pendientes.stream()
                 .filter(u -> u.getOrganizacion() == null
                         || u.getOrganizacion().getEstadoVerificacion() == EstadoVerificacion.PENDIENTE)
-                .map(u -> {
-                    String nombreEntidad = (u.getOrganizacion() != null
-                            && u.getOrganizacion().getNombre() != null)
-                            ? u.getOrganizacion().getNombre()
-                            : u.getNombre();
-                    String estado = (u.getOrganizacion() != null)
-                            ? u.getOrganizacion().getEstadoVerificacion().name()
-                            : "PENDIENTE";
-                    return new VerificacionPendienteDTO(u.getId(), nombreEntidad, u.getRol().name(), estado);
-                }).toList();
+                .map(verificacionMapper::toPendienteDTO)
+                .toList();
     }
 
     @Override
@@ -65,7 +59,6 @@ public class VerificacionServiceImpl implements VerificacionService {
 
         usuarioRepository.save(usuario);
 
-        String estadoRespuesta = aprobada ? "APROBADA" : "RECHAZADA";
-        return new VerificacionResponseDTO(usuario.getId(), estadoRespuesta, usuario.isVerificado());
+        return verificacionMapper.toResponseDTO(usuario, aprobada);
     }
 }

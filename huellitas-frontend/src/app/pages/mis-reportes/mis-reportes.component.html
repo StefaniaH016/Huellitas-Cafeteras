@@ -1,0 +1,62 @@
+<main class="my-reports">
+  <header class="page-header">
+    <div>
+      <h1>Mis reportes</h1>
+      <p>Consulta y administra los casos que has reportado.</p>
+    </div>
+    <a class="btn btn-primary" routerLink="/reportar">Reportar un caso</a>
+  </header>
+
+  @if (error()) {
+    <p class="message error" role="alert">{{ error() }}</p>
+  }
+
+  @if (cargando()) {
+    <p class="message">Cargando tus reportes...</p>
+  } @else if (reportes().length === 0) {
+    <section class="empty-state">
+      <h2>Aún no tienes reportes</h2>
+      <p>Cuando reportes un caso, podrás consultarlo y administrarlo desde aquí.</p>
+    </section>
+  } @else {
+    <section class="report-list" aria-label="Lista de mis reportes">
+      @for (caso of reportes(); track caso.id) {
+        <article class="report-card">
+          @if (caso.fotoPrincipal) {
+            <img class="report-photo" [src]="caso.fotoPrincipal" alt="Foto del caso" />
+          } @else {
+            <div class="report-photo placeholder" aria-hidden="true">🐾</div>
+          }
+          <div class="report-content">
+            <p class="report-status">Estado: {{ caso.estado }}</p>
+            <h2>{{ caso.descripcion }}</h2>
+            <p class="report-location">
+              {{ caso.municipio }}
+              @if (caso.barrio) {
+                · {{ caso.barrio }}
+              }
+            </p>
+            <div class="report-actions">
+              <a class="btn btn-secondary btn-sm" [routerLink]="['/caso-detalle', caso.id]">
+                Ver caso
+              </a>
+              @if (caso.estado === 'REGISTRADO') {
+                <a class="btn btn-secondary btn-sm" [routerLink]="['/casos', caso.id, 'editar']">
+                  Editar
+                </a>
+                <button
+                  class="btn btn-danger btn-sm"
+                  type="button"
+                  [disabled]="eliminandoId() === caso.id"
+                  (click)="eliminar(caso)"
+                >
+                  {{ eliminandoId() === caso.id ? 'Eliminando...' : 'Eliminar' }}
+                </button>
+              }
+            </div>
+          </div>
+        </article>
+      }
+    </section>
+  }
+</main>

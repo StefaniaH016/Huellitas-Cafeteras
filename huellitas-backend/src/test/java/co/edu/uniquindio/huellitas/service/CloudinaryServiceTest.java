@@ -7,6 +7,7 @@ import co.edu.uniquindio.huellitas.entity.Caso;
 import co.edu.uniquindio.huellitas.entity.Foto;
 import co.edu.uniquindio.huellitas.entity.enums.EstadoCaso;
 import co.edu.uniquindio.huellitas.exception.ResourceNotFoundException;
+import co.edu.uniquindio.huellitas.exception.CloudinaryIntegrationException;
 import co.edu.uniquindio.huellitas.repository.CasoRepository;
 import co.edu.uniquindio.huellitas.repository.FotoRepository;
 import co.edu.uniquindio.huellitas.service.impl.CloudinaryServiceImpl;
@@ -25,6 +26,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -271,7 +273,7 @@ class CloudinaryServiceTest {
         when(cloudinary.uploader()).thenReturn(uploader);
         when(uploader.upload(any(byte[].class), anyMap())).thenThrow(new IOException("Error de conexión"));
 
-        IllegalStateException ex = assertThrows(IllegalStateException.class, () -> {
+        CloudinaryIntegrationException ex = assertThrows(CloudinaryIntegrationException.class, () -> {
             cloudinaryService.subirImagen(archivoMock, null);
         });
 
@@ -300,5 +302,19 @@ class CloudinaryServiceTest {
 
         assertEquals("Error en base de datos", ex.getMessage());
         verify(uploader, times(1)).destroy(eq("huellitas/casos/huerfana_123"), anyMap());
+    }
+
+    @Test
+    @DisplayName("Debe eliminar las fotos del caso de Cloudinary")
+    void debeEliminarFotosDeCloudinary() throws Exception {
+        ReflectionTestUtils.setField(cloudinaryService, "cloudName", "prod-cloud");
+        when(cloudinary.uploader()).thenReturn(uploader);
+        when(uploader.destroy(eq("huellitas/casos/animal_1"), anyMap()))
+                .thenReturn(Map.of("result", "ok"));
+        Foto foto = Foto.builder().publicId("huellitas/casos/animal_1").build();
+
+        cloudinaryService.eliminarFotos(List.of(foto));
+
+        verify(uploader).destroy(eq("huellitas/casos/animal_1"), anyMap());
     }
 }

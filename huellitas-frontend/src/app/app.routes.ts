@@ -78,8 +78,7 @@ export const routes: Routes = [
       {
         path: 'mis-reportes',
         loadComponent: () =>
-          import('./pages/placeholder/placeholder.component').then((m) => m.PlaceholderComponent),
-        data: { title: 'Mis reportes' },
+          import('./pages/mis-reportes/mis-reportes.component').then((m) => m.MisReportesComponent),
       },
       {
         path: 'mensajes',
@@ -106,6 +105,11 @@ export const routes: Routes = [
           import('./pages/not-found/not-found.component').then((m) => m.NotFoundComponent),
       },
       // Feature routes
+      {
+        path: 'casos/:id/editar',
+        loadComponent: () =>
+          import('./pages/reportar/reportar.component').then((m) => m.ReportarComponent),
+      },
       {
         path: 'casos',
         loadComponent: () => import('./pages/casos/casos.component').then((m) => m.CasosComponent),
