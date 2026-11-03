@@ -88,7 +88,9 @@ describe('CasoService: listarCasosEnCustodia', () => {
   });
   it('should include pageable params', () => {
     service.listarCasosEnCustodia({ page: 1, size: 10 }).subscribe();
-    const req = httpMock.expectOne((r) => r.url === `${apiUrl}/en-custodia` && r.params.get('page') === '1');
+    const req = httpMock.expectOne(
+      (r) => r.url === `${apiUrl}/en-custodia` && r.params.get('page') === '1',
+    );
     req.flush([]);
   });
   it('should return array', () => {
@@ -125,8 +127,14 @@ describe('CasoService: listarCasosSinCustodia', () => {
     pageable?: { page: number; size: number },
   ): ReturnType<typeof httpMock.expectOne> {
     return httpMock.expectOne((r) => {
-      const ok = r.url === `${apiUrl}/sin-custodia` && r.params.get('municipioId') === String(municipioId);
-      return ok && (!pageable || (r.params.get('page') === String(pageable.page) && r.params.get('size') === String(pageable.size)));
+      const ok =
+        r.url === `${apiUrl}/sin-custodia` && r.params.get('municipioId') === String(municipioId);
+      return (
+        ok &&
+        (!pageable ||
+          (r.params.get('page') === String(pageable.page) &&
+            r.params.get('size') === String(pageable.size)))
+      );
     });
   }
   it('should GET with municipioId param', () => {

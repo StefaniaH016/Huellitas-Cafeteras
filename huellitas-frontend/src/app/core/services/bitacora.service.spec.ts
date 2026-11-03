@@ -35,14 +35,14 @@ describe('BitacoraService', () => {
   });
 
   it('adds evolutions and registers discharges', () => {
-    const evolution = { descripcion: 'Mejora' };
+    const evolution = { diagnostico: 'Mejora significativa' };
     service.agregarEvolucion(6, evolution).subscribe();
     const evolutionRequest = http.expectOne(`${baseUrl}/evoluciones`);
     expect(evolutionRequest.request.method).toBe('POST');
     expect(evolutionRequest.request.body).toEqual(evolution);
     evolutionRequest.flush({});
 
-    const discharge = { observacion: 'Alta' };
+    const discharge = { condicionAlta: 'Curado' };
     service.registrarAlta(6, discharge).subscribe();
     const dischargeRequest = http.expectOne(`${baseUrl}/alta`);
     expect(dischargeRequest.request.method).toBe('PATCH');
@@ -50,7 +50,10 @@ describe('BitacoraService', () => {
     dischargeRequest.flush({});
   });
 
-  it('builds the PDF URL', () => {
-    expect(service.getPdfUrl(6)).toBe(`${baseUrl}/pdf`);
+  it('downloads medical record PDF', () => {
+    service.descargarPdf(6).subscribe();
+    const request = http.expectOne(`${baseUrl}/pdf`);
+    expect(request.request.method).toBe('GET');
+    request.flush(new Blob());
   });
 });

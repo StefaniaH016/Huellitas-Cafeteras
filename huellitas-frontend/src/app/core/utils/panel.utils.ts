@@ -49,4 +49,3 @@ export const FEED_PANEL = {
   size: 10,
   state: 'OPEN',
 };
-

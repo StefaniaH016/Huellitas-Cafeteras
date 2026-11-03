@@ -13,7 +13,11 @@ import {
 } from '../../core/utils/panel.utils';
 import { CustodiaDTO } from '../../../core/models/dtos';
 import { environment } from '../../../environments/environment';
-import { PanelTrabajoComponent, PanelConfig, ListaPanel } from '../../shared/components/panel-trabajo/panel-trabajo.component';
+import {
+  PanelTrabajoComponent,
+  PanelConfig,
+  ListaPanel,
+} from '../../shared/components/panel-trabajo/panel-trabajo.component';
 import { Figura } from '../../shared/components/dash-figures/dash-figures.component';
 
 interface UsuarioPerfilDTO {
@@ -45,7 +49,8 @@ export class PanelFundacionComponent implements OnInit {
     const nombre = this.authService.getNombre();
     return {
       titulo: `Mi panel · ${nombre}`,
-      resumen: 'Hay emergencias en tu municipio. Coordina rescates y gestiona los animales en custodia.',
+      resumen:
+        'Hay emergencias en tu municipio. Coordina rescates y gestiona los animales en custodia.',
       cta: { texto: 'Ver casos de mi zona', ruta: '/casos' },
       figuras: this.buildFiguras.bind(this),
       listas: this.buildListas.bind(this),
@@ -67,7 +72,7 @@ export class PanelFundacionComponent implements OnInit {
   cargarDatos(): void {
     this.cargando.set(true);
     this.errorMensaje.set('');
-    
+
     // Reset UI state
     this.fundacionStats.set({ enCustodia: 0, esperandoAtencion: 0, emergenciasZona: 0 });
     this.fundacionAlertas.set([]);
@@ -139,13 +144,11 @@ export class PanelFundacionComponent implements OnInit {
   private buildFiguras(casos: CasoListItem[]): Figura[] {
     // Count critical injured cases in the zone
     const criticosHeridos = casos.filter(
-      (c) => c.tipoCaso === 'HERIDO' && c.estado === 'REGISTRADO' && c.urgencia === 'CRITICA'
+      (c) => c.tipoCaso === 'HERIDO' && c.estado === 'REGISTRADO' && c.urgencia === 'CRITICA',
     ).length;
 
     // Count cases waiting for attention
-    const esperandoAtencion = casos.filter(
-      (c) => c.estado === 'EN_ATENCION'
-    ).length;
+    const esperandoAtencion = casos.filter((c) => c.estado === 'EN_ATENCION').length;
 
     return [
       { valor: '—', texto: 'Resumen' },
@@ -157,7 +160,7 @@ export class PanelFundacionComponent implements OnInit {
   private buildListas(casos: CasoListItem[]): ListaPanel[] {
     // Critical injured cases
     const criticosHeridos = casos.filter(
-      (c) => c.tipoCaso === 'HERIDO' && c.estado === 'REGISTRADO' && c.urgencia === 'CRITICA'
+      (c) => c.tipoCaso === 'HERIDO' && c.estado === 'REGISTRADO' && c.urgencia === 'CRITICA',
     );
 
     // Cases awaiting attention

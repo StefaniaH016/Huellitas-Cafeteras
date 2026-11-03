@@ -55,7 +55,7 @@ describe('caso display utilities', () => {
     expect(haceCuanto(oneHourAgo)).toMatch(/hace/i);
     expect(haceCuanto(oneDayAgo)).toMatch(/hace/i);
     expect(haceCuanto(fiveDaysAgo)).toMatch(/hace/i);
-    expect(haceCuanto(tenDaysAgo)).toMatch(/2026|202[0-9]/);  // Should show date (>7 days)
+    expect(haceCuanto(tenDaysAgo)).toMatch(/2026|202[0-9]/); // Should show date (>7 days)
     expect(haceCuanto('')).toBe('');
   });
 

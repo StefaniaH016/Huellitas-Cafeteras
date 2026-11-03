@@ -1,0 +1,6 @@
+@for (huella of huellas; track huella) {
+  <span class="paw paw-{{ huella }}">🐾</span>
+}
+@for (color of circulos; track $index) {
+  <span class="circle circle-{{ $index + 1 }} circle-{{ color }}"></span>
+}

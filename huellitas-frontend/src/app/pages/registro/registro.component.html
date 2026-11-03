@@ -309,7 +309,8 @@
             Huellitas Cafeteras usará tus datos para crear tu cuenta, contactarte por los casos en
             los que participes y enviarte alertas de tu zona. No los vendemos ni los usamos para
             publicidad. Puedes conocerlos, corregirlos, borrarlos o revocar esta autorización
-            escribiendo a <a href="mailto:soporte@huellitascafeteras.co">soporte@huellitascafeteras.co</a>.
+            escribiendo a
+            <a href="mailto:soporte@huellitascafeteras.co">soporte@huellitascafeteras.co</a>.
           </p>
         </div>
 
@@ -326,7 +327,9 @@
           </span>
         </label>
         @if (step2Form.get('aceptaDatos')?.invalid && step2Form.get('aceptaDatos')?.touched) {
-          <span class="field-error" role="alert">Debes aceptar los términos y la política de datos.</span>
+          <span class="field-error" role="alert"
+            >Debes aceptar los términos y la política de datos.</span
+          >
         }
 
         <div class="step-actions">

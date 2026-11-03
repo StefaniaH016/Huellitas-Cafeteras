@@ -1,0 +1,86 @@
+<section class="page page-narrow">
+  <h1>Mi cuenta</h1>
+  @if (perfil(); as perfil) {
+    <p class="lead">
+      {{ perfil.correo }} · {{ roleLabels[perfil.rol] }}
+      @if (perfil.rol === 'FUNDACION_REFUGIO' || perfil.rol === 'VETERINARIA') {
+        · {{ perfil.verificado ? 'Cuenta verificada' : 'Pendiente de validación' }}
+      }
+    </p>
+  }
+  @if (carga.cargando()) {
+    <p class="list-empty">Cargando tus datos...</p>
+  } @else if (carga.error()) {
+    <p class="feedback-error" role="alert">{{ carga.error() }}</p>
+  }
+
+  @if (perfil()) {
+    <form class="panel mt-sm" (ngSubmit)="guardar()">
+      <div class="panel-head"><h2>Datos de contacto</h2></div>
+      <div class="grid-2">
+        <div class="form-field">
+          <label for="cuenta-nombre">Nombre completo</label>
+          <input
+            id="cuenta-nombre"
+            name="nombre"
+            type="text"
+            maxlength="150"
+            required
+            [(ngModel)]="nombre"
+          />
+        </div>
+        <div class="form-field">
+          <label for="cuenta-telefono">Teléfono</label>
+          <input
+            id="cuenta-telefono"
+            name="telefono"
+            type="tel"
+            maxlength="20"
+            [(ngModel)]="telefono"
+          />
+        </div>
+      </div>
+      <app-ubicacion-selector
+        idPrefix="cuenta"
+        leyenda="Zona de interés"
+        [deptoId]="zona.departamentoId"
+        [munId]="zona.municipioId"
+        [barrioId]="zona.barrioId"
+        (deptoChange)="zona.departamentoId = $event"
+        (munChange)="zona.municipioId = $event"
+        (barrioChange)="zona.barrioId = $event"
+      />
+      <p class="note">Te enviamos las alertas de emergencias de esta zona.</p>
+      @if (guardado.exito()) {
+        <p class="feedback-success" role="status">{{ guardado.exito() }}</p>
+      }
+      @if (guardado.error()) {
+        <p class="feedback-error" role="alert">{{ guardado.error() }}</p>
+      }
+      <button
+        class="btn btn-primary mt-sm"
+        type="submit"
+        [disabled]="guardado.cargando() || !nombre.trim()"
+      >
+        {{ guardado.cargando() ? 'Guardando...' : 'Guardar cambios' }}
+      </button>
+    </form>
+
+    <div class="panel">
+      <div class="panel-head"><h2>Preferencias</h2></div>
+      <div class="pref-row">
+        <div>
+          <p class="list-title">Disponible para rescate</p>
+          <p class="list-meta">Recibe las emergencias que se reporten en tu zona de interés.</p>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" disabled aria-label="Disponible para rescate (próximamente)" />
+          <span class="track"></span>
+        </label>
+      </div>
+      <p class="note">Esta preferencia se activará cuando el backend la guarde en tu perfil.</p>
+    </div>
+
+    <button class="btn btn-secondary" type="button" (click)="salir()">Cerrar sesión</button>
+  }
+</section>

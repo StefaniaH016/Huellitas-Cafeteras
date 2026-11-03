@@ -76,4 +76,3 @@ export const ROLE_LABELS: Record<string, string> = {
   VETERINARIA: 'Veterinaria',
   CIUDADANO_VOLUNTARIO: 'Ciudadano',
 };
-

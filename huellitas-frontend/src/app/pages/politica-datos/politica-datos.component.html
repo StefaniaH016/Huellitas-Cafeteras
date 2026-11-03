@@ -14,7 +14,9 @@
   <nav class="policy-toc" aria-label="Contenido de la política">
     <ol>
       @for (s of secciones; track s.id) {
-        <li><a [href]="'#' + s.id" (click)="irA(s.id, $event)">{{ s.titulo }}</a></li>
+        <li>
+          <a [href]="'#' + s.id" (click)="irA(s.id, $event)">{{ s.titulo }}</a>
+        </li>
       }
     </ol>
   </nav>
@@ -25,7 +27,8 @@
       Huellitas Cafeteras, proyecto académico de Software III de la Universidad del Quindío, con
       domicilio en Armenia, Quindío, es responsable de los datos que se recogen en esta plataforma.
       Contacto para datos personales:
-      <a [href]="'mailto:' + correoContacto">{{ correoContacto }}</a>.
+      <a [href]="'mailto:' + correoContacto">{{ correoContacto }}</a
+      >.
     </p>
     <p>
       Esta política cumple la Constitución Política (artículo 15), la Ley 1581 de 2012, el Decreto
@@ -38,7 +41,11 @@
     <div class="policy-table">
       <table>
         <thead>
-          <tr><th>Quién</th><th>Datos</th><th>Para qué</th></tr>
+          <tr>
+            <th>Quién</th>
+            <th>Datos</th>
+            <th>Para qué</th>
+          </tr>
         </thead>
         <tbody>
           <tr>
@@ -84,18 +91,36 @@
     </p>
     <ul>
       <li>No pedimos datos sensibles (salud, origen, religión, opinión política).</li>
-      <li>Pedimos fotos del animal, no de personas. Una foto donde se reconozca a alguien puede ocultarse.</li>
-      <li>La plataforma es para mayores de 18 años, o menores con autorización de su representante legal.</li>
+      <li>
+        Pedimos fotos del animal, no de personas. Una foto donde se reconozca a alguien puede
+        ocultarse.
+      </li>
+      <li>
+        La plataforma es para mayores de 18 años, o menores con autorización de su representante
+        legal.
+      </li>
     </ul>
   </section>
 
   <section id="acceso">
     <h2>4. Quién ve qué</h2>
     <ul>
-      <li>El feed público muestra fotos, tipo de caso, barrio y municipio, nunca tu teléfono ni la dirección exacta.</li>
-      <li>La fundación con custodia y la veterinaria responsable ven los datos de contacto del reportante.</li>
-      <li>La bitácora médica completa solo la ve la veterinaria que la abrió; los demás ven un resumen.</li>
-      <li>El administrador ve los documentos de las entidades para validarlas y modera ocultando, sin borrar.</li>
+      <li>
+        El feed público muestra fotos, tipo de caso, barrio y municipio, nunca tu teléfono ni la
+        dirección exacta.
+      </li>
+      <li>
+        La fundación con custodia y la veterinaria responsable ven los datos de contacto del
+        reportante.
+      </li>
+      <li>
+        La bitácora médica completa solo la ve la veterinaria que la abrió; los demás ven un
+        resumen.
+      </li>
+      <li>
+        El administrador ve los documentos de las entidades para validarlas y modera ocultando, sin
+        borrar.
+      </li>
     </ul>
   </section>
 
@@ -115,8 +140,13 @@
       <li>Conocer, actualizar y rectificar tus datos.</li>
       <li>Pedir prueba de la autorización que diste.</li>
       <li>Saber cómo se han usado tus datos.</li>
-      <li>Revocar la autorización y pedir que se borren, si no hay un deber legal de conservarlos.</li>
-      <li>Presentar quejas ante la Superintendencia de Industria y Comercio, después de agotar el trámite con nosotros.</li>
+      <li>
+        Revocar la autorización y pedir que se borren, si no hay un deber legal de conservarlos.
+      </li>
+      <li>
+        Presentar quejas ante la Superintendencia de Industria y Comercio, después de agotar el
+        trámite con nosotros.
+      </li>
       <li>Acceder gratis a tus datos.</li>
     </ul>
     <p>Tus datos de perfil los puedes cambiar tú mismo en <strong>Mi cuenta</strong>.</p>
@@ -131,11 +161,23 @@
     <div class="policy-table">
       <table>
         <thead>
-          <tr><th>Tipo</th><th>Plazo de respuesta</th><th>Prórroga</th></tr>
+          <tr>
+            <th>Tipo</th>
+            <th>Plazo de respuesta</th>
+            <th>Prórroga</th>
+          </tr>
         </thead>
         <tbody>
-          <tr><td>Consulta</td><td>10 días hábiles</td><td>5 días hábiles más, avisando el motivo</td></tr>
-          <tr><td>Reclamo</td><td>15 días hábiles</td><td>8 días hábiles más, avisando el motivo</td></tr>
+          <tr>
+            <td>Consulta</td>
+            <td>10 días hábiles</td>
+            <td>5 días hábiles más, avisando el motivo</td>
+          </tr>
+          <tr>
+            <td>Reclamo</td>
+            <td>15 días hábiles</td>
+            <td>8 días hábiles más, avisando el motivo</td>
+          </tr>
         </tbody>
       </table>
     </div>
@@ -147,8 +189,13 @@
     <ul>
       <li>Las contraseñas se guardan cifradas y la sesión usa tokens con vencimiento.</li>
       <li>Toda la comunicación va por HTTPS y cada rol accede solo a lo que necesita.</li>
-      <li>Un caso resuelto se archiva a los 7 días y queda en solo lectura para conservar su historial.</li>
-      <li>Si pides borrar tu cuenta, eliminamos tus datos de contacto; los casos quedan sin tu nombre.</li>
+      <li>
+        Un caso resuelto se archiva a los 7 días y queda en solo lectura para conservar su
+        historial.
+      </li>
+      <li>
+        Si pides borrar tu cuenta, eliminamos tus datos de contacto; los casos quedan sin tu nombre.
+      </li>
     </ul>
   </section>
 

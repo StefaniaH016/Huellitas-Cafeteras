@@ -74,16 +74,18 @@ it('uses the role alias and falls back to the token claim', () => {
 it('registers a user with the expected request body', () => {
   const expected = { id: '1', correo: 'user@example.test', nombre: 'Luna' };
   let result: unknown;
-  service.registro({
-    nombre: 'Luna',
-    correo: 'user@example.test',
-    contrasena: 'secret',
-    telefono: '1234567890',
-    rol: 'CIUDADANO_VOLUNTARIO',
-    aceptoTratamientoDatos: true,
-  }).subscribe((response) => {
-    result = response;
-  });
+  service
+    .registro({
+      nombre: 'Luna',
+      correo: 'user@example.test',
+      contrasena: 'secret',
+      telefono: '1234567890',
+      rol: 'CIUDADANO_VOLUNTARIO',
+      aceptoTratamientoDatos: true,
+    })
+    .subscribe((response) => {
+      result = response;
+    });
 
   const request = http.expectOne(`${environment.apiUrl}/auth/registro`);
   expect(request.request.body).toEqual({

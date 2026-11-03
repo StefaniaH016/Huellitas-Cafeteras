@@ -11,9 +11,7 @@ describe('resolveApiUrl', () => {
   it.each(['huellitas-cafeteras-prod.azurewebsites.net', 'huellitas.example.com'])(
     'uses the production API for %s',
     (hostname) => {
-      expect(resolveApiUrl(hostname)).toBe(
-        'https://huellitas-cafeteras-prod.azurewebsites.net/v1',
-      );
+      expect(resolveApiUrl(hostname)).toBe('https://huellitas-cafeteras-prod.azurewebsites.net/v1');
     },
   );
 });
