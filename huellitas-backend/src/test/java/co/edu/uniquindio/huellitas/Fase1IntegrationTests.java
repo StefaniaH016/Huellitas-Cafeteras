@@ -175,9 +175,23 @@ class Fase1IntegrationTests {
     }
 
     @Test
-    @DisplayName("4. Casos - Flujo completo CRUD, feed, historial, estado, cierre y archivado")
+    @DisplayName("4. Casos - Flujo con permisos de reportante y administrador")
     void testCasosFlujoCompleto() throws Exception {
-        String token = obtenerTokenAuth("admin@huellitas.co", "Admin12345!");
+        String correoReportante = "reportante_flujo@huellitas.co";
+        RegistroUsuarioDTO registro = new RegistroUsuarioDTO(
+                "Reportante Flujo",
+                correoReportante,
+                "Password123!",
+                "3115551234",
+                barrioPruebaId,
+                Rol.CIUDADANO_VOLUNTARIO
+        );
+        mockMvc.perform(post("/v1/auth/registro")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(registro)))
+                .andExpect(status().isCreated());
+
+        String token = obtenerTokenAuth(correoReportante, "Password123!");
 
         AnimalReporteDTO animalDTO = new AnimalReporteDTO(
                 "Firulais",
@@ -242,7 +256,7 @@ class Fase1IntegrationTests {
                 .andExpect(jsonPath("$.content").isArray())
                 .andExpect(jsonPath("$.content[0].id").value(casoId));
 
-        // 6. Actualizar estado (PATCH /v1/casos/{id}/estado)
+        // 6. El reportante no puede asignar custodia ni cambiar directamente el estado.
         ActualizarEstadoDTO cambioEstadoDTO = new ActualizarEstadoDTO(
                 EstadoCaso.EN_ATENCION,
                 "Animal remitido a veterinaria de turno"
@@ -252,8 +266,11 @@ class Fase1IntegrationTests {
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(cambioEstadoDTO)))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/v1/casos/" + casoId))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.estado").value("EN_ATENCION"));
+                .andExpect(jsonPath("$.estado").value("REGISTRADO"));
 
         // 7. Cerrar caso (POST /v1/casos/{id}/cierre)
         CierreCasoRequestDTO cierreDTO = new CierreCasoRequestDTO(
@@ -269,11 +286,18 @@ class Fase1IntegrationTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.estado").value("RESUELTO"));
 
-        // 8. Archivar caso (PATCH /v1/casos/{id}/archivar)
+        // 8. Archivar caso: el reportante no tiene privilegios; solo un administrador puede hacerlo.
         ArchivarCasoDTO archivarDTO = new ArchivarCasoDTO("Caso concluido satisfactoriamente");
 
         mockMvc.perform(patch("/v1/casos/" + casoId + "/archivar")
                         .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(archivarDTO)))
+                .andExpect(status().isForbidden());
+
+        String tokenAdmin = obtenerTokenAuth("admin@huellitas.co", "Admin12345!");
+        mockMvc.perform(patch("/v1/casos/" + casoId + "/archivar")
+                        .header("Authorization", "Bearer " + tokenAdmin)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(archivarDTO)))
                 .andExpect(status().isOk())

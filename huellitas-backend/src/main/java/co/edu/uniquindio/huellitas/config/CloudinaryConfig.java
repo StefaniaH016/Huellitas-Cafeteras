@@ -20,12 +20,18 @@ public class CloudinaryConfig {
     public Cloudinary cloudinary(
             @Value("${cloudinary.cloud-name:}") String cloudName,
             @Value("${cloudinary.api-key:}") String apiKey,
-            @Value("${cloudinary.api-secret:}") String apiSecret) {
+            @Value("${cloudinary.api-secret:}") String apiSecret,
+            @Value("${cloudinary.timeout:30}") int timeoutSeconds) {
+        if (timeoutSeconds <= 0) {
+            throw new IllegalArgumentException("cloudinary.timeout debe ser mayor que cero.");
+        }
+
         Map<String, Object> config = new HashMap<>();
         config.put("cloud_name", cloudName != null ? cloudName.trim() : "");
         config.put("api_key", apiKey != null ? apiKey.trim() : "");
         config.put("api_secret", apiSecret != null ? apiSecret.trim() : "");
         config.put("secure", true);
+        config.put("timeout", timeoutSeconds);
         return new Cloudinary(config);
     }
 }

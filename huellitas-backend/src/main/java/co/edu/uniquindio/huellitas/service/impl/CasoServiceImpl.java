@@ -4,6 +4,7 @@ import co.edu.uniquindio.huellitas.dto.reporte.*;
 import co.edu.uniquindio.huellitas.entity.*;
 import co.edu.uniquindio.huellitas.entity.enums.EstadoCaso;
 import co.edu.uniquindio.huellitas.entity.enums.EstadoVerificacion;
+import co.edu.uniquindio.huellitas.entity.enums.Rol;
 import co.edu.uniquindio.huellitas.entity.enums.TipoAporte;
 import co.edu.uniquindio.huellitas.entity.enums.Urgencia;
 import co.edu.uniquindio.huellitas.exception.ConflictException;
@@ -27,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -218,8 +220,17 @@ public class CasoServiceImpl implements CasoService {
         Caso caso = casoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Caso", id));
 
-        Usuario usuario = usuarioRepository.findByCorreo(correoUsuario.trim().toLowerCase())
-                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con correo: " + correoUsuario));
+        Usuario usuario = obtenerUsuario(correoUsuario);
+        Fundacion fundacion = obtenerFundacionAprobada(usuario);
+        if (dto.estado() != EstadoCaso.EN_ATENCION) {
+            throw new ConflictException("La asignación del estado EN_ATENCION se realiza al asumir custodia.");
+        }
+        if (caso.getEstado() != EstadoCaso.EN_ATENCION
+                || caso.getFundacionCustodio() == null
+                || !Objects.equals(caso.getFundacionCustodio().getId(), fundacion.getId())) {
+            throw new AccessDeniedException(
+                    "Solo la fundación verificada que tiene el caso en custodia puede actualizar su seguimiento.");
+        }
 
         EstadoCaso anterior = caso.getEstado();
         EstadoCaso nuevo = dto.estado();
@@ -227,13 +238,6 @@ public class CasoServiceImpl implements CasoService {
         Instant now = Instant.now();
         caso.setEstado(nuevo);
         caso.setFechaUltimaActividad(now);
-
-        if (nuevo == EstadoCaso.ARCHIVADO) {
-            caso.setFechaArchivado(now);
-            if (dto.observacion() != null) {
-                caso.setMotivoModeracion(dto.observacion());
-            }
-        }
 
         caso = casoRepository.save(caso);
 
@@ -285,8 +289,11 @@ public class CasoServiceImpl implements CasoService {
         Caso caso = casoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Caso", id));
 
-        Usuario usuario = usuarioRepository.findByCorreo(correoUsuario.trim().toLowerCase())
-                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con correo: " + correoUsuario));
+        Usuario usuario = obtenerUsuario(correoUsuario);
+        validarPermisoCierre(caso, usuario);
+        if (caso.getEstado() == EstadoCaso.RESUELTO || caso.getEstado() == EstadoCaso.ARCHIVADO) {
+            throw new ConflictException("El caso ya está cerrado o archivado.");
+        }
 
         EstadoCaso anterior = caso.getEstado();
         Instant now = Instant.now();
@@ -346,8 +353,10 @@ public class CasoServiceImpl implements CasoService {
         Caso caso = casoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Caso", id));
 
-        Usuario usuario = usuarioRepository.findByCorreo(correoUsuario.trim().toLowerCase())
-                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con correo: " + correoUsuario));
+        Usuario usuario = obtenerUsuario(correoUsuario);
+        if (usuario.getRol() != Rol.ADMINISTRADOR) {
+            throw new AccessDeniedException("Solo un administrador puede archivar un caso.");
+        }
 
         EstadoCaso anterior = caso.getEstado();
         Instant now = Instant.now();
@@ -379,6 +388,41 @@ public class CasoServiceImpl implements CasoService {
         seguimientoRepository.save(seguimiento);
 
         return casoMapper.toResponseDTO(caso);
+    }
+
+    private Usuario obtenerUsuario(String correoUsuario) {
+        return usuarioRepository.findByCorreo(correoUsuario.trim().toLowerCase())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Usuario no encontrado con correo: " + correoUsuario));
+    }
+
+    private Fundacion obtenerFundacionAprobada(Usuario usuario) {
+        if (usuario.getRol() != Rol.FUNDACION_REFUGIO
+                || !(usuario.getOrganizacion() instanceof Fundacion fundacion)
+                || fundacion.getEstadoVerificacion() != EstadoVerificacion.VERIFICADA) {
+            throw new AccessDeniedException("Se requiere una cuenta de fundación verificada.");
+        }
+        return fundacion;
+    }
+
+    private void validarPermisoCierre(Caso caso, Usuario usuario) {
+        if (usuario.getRol() == Rol.CIUDADANO_VOLUNTARIO) {
+            boolean esReportante = caso.getReportante() != null
+                    && Objects.equals(caso.getReportante().getId(), usuario.getId());
+            if (!esReportante || caso.getFundacionCustodio() != null) {
+                throw new AccessDeniedException(
+                        "Solo el reportante puede cerrar un caso que no tenga fundación custodio.");
+            }
+            return;
+        }
+
+        Fundacion fundacion = obtenerFundacionAprobada(usuario);
+        boolean esCustodiaActual = caso.getFundacionCustodio() != null
+                && Objects.equals(caso.getFundacionCustodio().getId(), fundacion.getId());
+        if (!esCustodiaActual) {
+            throw new AccessDeniedException(
+                    "La fundación solo puede cerrar casos que tenga bajo su custodia.");
+        }
     }
 
     @Override

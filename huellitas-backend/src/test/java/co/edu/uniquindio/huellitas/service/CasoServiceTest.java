@@ -1,6 +1,9 @@
 package co.edu.uniquindio.huellitas.service;
 
 import co.edu.uniquindio.huellitas.dto.reporte.AnimalReporteDTO;
+import co.edu.uniquindio.huellitas.dto.reporte.ActualizarEstadoDTO;
+import co.edu.uniquindio.huellitas.dto.reporte.ArchivarCasoDTO;
+import co.edu.uniquindio.huellitas.dto.reporte.CierreCasoRequestDTO;
 import co.edu.uniquindio.huellitas.dto.reporte.CasoResponseDTO;
 import co.edu.uniquindio.huellitas.dto.reporte.CrearReporteDTO;
 import co.edu.uniquindio.huellitas.entity.*;
@@ -304,6 +307,113 @@ class CasoServiceTest {
         assertThrows(ConflictException.class,
                 () -> casoService.actualizarReporte(12L, dtoValido, "usuario@test.com"));
         verify(barrioRepository, never()).findById(any());
+    }
+
+    @Test
+    @DisplayName("El reportante no puede cambiar directamente el estado del caso")
+    void debeRechazarCambioEstadoPorReportante() {
+        Caso caso = Caso.builder()
+                .id(12L)
+                .estado(EstadoCaso.REGISTRADO)
+                .reportante(usuarioMock)
+                .build();
+        when(casoRepository.findById(12L)).thenReturn(Optional.of(caso));
+        when(usuarioRepository.findByCorreo("usuario@test.com")).thenReturn(Optional.of(usuarioMock));
+
+        assertThrows(AccessDeniedException.class, () -> casoService.actualizarEstado(
+                12L, new ActualizarEstadoDTO(EstadoCaso.EN_ATENCION, null), "usuario@test.com"));
+
+        verify(casoRepository, never()).save(any(Caso.class));
+    }
+
+    @Test
+    @DisplayName("Una fundación no verificada no puede asumir custodia")
+    void debeRechazarCustodiaPorFundacionNoVerificada() {
+        Fundacion fundacion = Fundacion.builder()
+                .id(7L)
+                .estadoVerificacion(EstadoVerificacion.PENDIENTE)
+                .aceptaCustodia(true)
+                .build();
+        Usuario usuarioFundacion = Usuario.builder()
+                .id(7L)
+                .correo("fundacion@test.com")
+                .rol(Rol.FUNDACION_REFUGIO)
+                .organizacion(fundacion)
+                .build();
+        Caso caso = Caso.builder()
+                .id(12L)
+                .estado(EstadoCaso.REGISTRADO)
+                .reportante(usuarioMock)
+                .build();
+        when(casoRepository.findById(12L)).thenReturn(Optional.of(caso));
+        when(usuarioRepository.findByCorreo("fundacion@test.com")).thenReturn(Optional.of(usuarioFundacion));
+
+        assertThrows(AccessDeniedException.class, () -> casoService.actualizarEstado(
+                12L, new ActualizarEstadoDTO(EstadoCaso.EN_ATENCION, null), "fundacion@test.com"));
+
+        verify(casoRepository, never()).save(any(Caso.class));
+    }
+
+    @Test
+    @DisplayName("El reportante puede cerrar su caso si ninguna fundación asumió custodia")
+    void debePermitirCierrePorReportanteSinCustodio() {
+        Caso caso = Caso.builder()
+                .id(12L)
+                .estado(EstadoCaso.REGISTRADO)
+                .reportante(usuarioMock)
+                .build();
+        when(casoRepository.findById(12L)).thenReturn(Optional.of(caso));
+        when(usuarioRepository.findByCorreo("usuario@test.com")).thenReturn(Optional.of(usuarioMock));
+        when(cierreCasoRepository.save(any(CierreCaso.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        when(casoRepository.save(any(Caso.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        CasoResponseDTO response = casoService.cerrarCaso(
+                12L,
+                new CierreCasoRequestDTO(ResultadoCierre.RECUPERADO, null, null),
+                "usuario@test.com");
+
+        assertEquals(EstadoCaso.RESUELTO, response.estado());
+        verify(cierreCasoRepository).save(any(CierreCaso.class));
+    }
+
+    @Test
+    @DisplayName("El reportante no puede cerrar un caso que ya está bajo custodia")
+    void debeRechazarCierrePorReportanteConCustodio() {
+        Fundacion fundacion = Fundacion.builder().id(8L).build();
+        Caso caso = Caso.builder()
+                .id(12L)
+                .estado(EstadoCaso.EN_ATENCION)
+                .reportante(usuarioMock)
+                .fundacionCustodio(fundacion)
+                .build();
+        when(casoRepository.findById(12L)).thenReturn(Optional.of(caso));
+        when(usuarioRepository.findByCorreo("usuario@test.com")).thenReturn(Optional.of(usuarioMock));
+
+        assertThrows(AccessDeniedException.class, () -> casoService.cerrarCaso(
+                12L,
+                new CierreCasoRequestDTO(ResultadoCierre.RECUPERADO, null, null),
+                "usuario@test.com"));
+
+        verify(cierreCasoRepository, never()).save(any(CierreCaso.class));
+    }
+
+    @Test
+    @DisplayName("Solo un administrador puede archivar un caso")
+    void debeRechazarArchivoPorCiudadano() {
+        Caso caso = Caso.builder()
+                .id(12L)
+                .estado(EstadoCaso.REGISTRADO)
+                .reportante(usuarioMock)
+                .build();
+        when(casoRepository.findById(12L)).thenReturn(Optional.of(caso));
+        when(usuarioRepository.findByCorreo("usuario@test.com")).thenReturn(Optional.of(usuarioMock));
+
+        assertThrows(AccessDeniedException.class, () -> casoService.archivarCaso(
+                12L, new ArchivarCasoDTO("motivo"), "usuario@test.com"));
+
+        verify(casoRepository, never()).save(any(Caso.class));
     }
 
     @Test
