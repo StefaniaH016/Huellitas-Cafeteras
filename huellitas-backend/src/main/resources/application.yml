@@ -70,6 +70,8 @@ cloudinary:
   cloud-name: ${CLOUDINARY_CLOUD_NAME}
   api-key: ${CLOUDINARY_API_KEY}
   api-secret: ${CLOUDINARY_API_SECRET}
+  # El SDK aplica este límite en segundos a conexión y lectura.
+  timeout: ${CLOUDINARY_TIMEOUT:30}
 
 # ── Email SMTP ─────────────────────────────────────────────────
 # Configuración del servidor SMTP para envío de correos
