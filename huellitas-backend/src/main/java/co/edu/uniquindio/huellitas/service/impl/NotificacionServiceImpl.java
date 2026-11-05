@@ -49,4 +49,10 @@ public class NotificacionServiceImpl implements NotificacionService {
 
         return notificacionMapper.toDTO(guardada);
     }
+
+    @Override
+    public long contarNoLeidas(String correo) {
+        String correoLimpio = correo.trim().toLowerCase();
+        return notificacionRepository.countByUsuarioCorreoAndLeida(correoLimpio, false);
+    }
 }

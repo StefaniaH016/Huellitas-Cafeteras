@@ -22,7 +22,13 @@ collection = {
         {"key": "user_correo", "value": ""},
         {"key": "user_contrasena", "value": "Voluntario12345!"},
         {"key": "vet_correo", "value": ""},
-        {"key": "notificacionId", "value": "1"}
+        {"key": "notificacionId", "value": "1"},
+        {"key": "custodiaId", "value": "1"},
+        {"key": "aporteId", "value": "1"},
+        {"key": "fundacion_correo", "value": ""},
+        {"key": "fundacion_contrasena", "value": "Fundacion12345!"},
+        {"key": "fundacion_token", "value": ""},
+        {"key": "fundacionUsuarioId", "value": "1"}
     ],
     "item": [
         # 00 - Health Check
@@ -162,6 +168,128 @@ collection = {
                                 "pm.test('Retorna datos del usuario autenticado', function () {",
                                 "    pm.expect(json.correo).to.eql(pm.environment.get('user_correo') || pm.collectionVariables.get('user_correo'));",
                                 "});"
+                            ]
+                        }
+                    }]
+                }
+            ]
+        },
+        # Módulo 01b - Autenticación Fundación (para HU-13 custodia)
+        {
+            "name": "Módulo 01b - Autenticación Fundación (/v1/auth) - Para Custodia",
+            "item": [
+                {
+                    "name": "POST /v1/auth/registro (Fundación Refugio)",
+                    "event": [
+                        {
+                            "listen": "prerequest",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "const randomId = Math.floor(Math.random() * 900000) + 100000;",
+                                    "const email = 'fundacion_' + randomId + '@huellitas.co';",
+                                    "pm.environment.set('fundacion_correo', email);",
+                                    "pm.collectionVariables.set('fundacion_correo', email);"
+                                ]
+                            }
+                        },
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('Status code es 201 Created', function () { pm.response.to.have.status(201); });",
+                                    "var json = pm.response.json();",
+                                    "pm.test('Rol asignado es FUNDACION_REFUGIO', function () { pm.expect(json.rol).to.eql('FUNDACION_REFUGIO'); });"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [{"key": "Content-Type", "value": "application/json"}],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"nombre\": \"Fundación Huellas de Amor\",\n  \"correo\": \"{{fundacion_correo}}\",\n  \"contrasena\": \"{{fundacion_contrasena}}\",\n  \"telefono\": \"3123456789\",\n  \"rol\": \"FUNDACION_REFUGIO\",\n  \"barrioId\": {{barrioId}}\n}"
+                        },
+                        "url": "{{baseUrl}}/v1/auth/registro"
+                    }
+                },
+                {
+                    "name": "POST /v1/auth/login (Fundación Refugio)",
+                    "request": {
+                        "method": "POST",
+                        "header": [{"key": "Content-Type", "value": "application/json"}],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"correo\": \"{{fundacion_correo}}\",\n  \"contrasena\": \"{{fundacion_contrasena}}\"\n}"
+                        },
+                        "url": "{{baseUrl}}/v1/auth/login"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
+                                "var json = pm.response.json();",
+                                "pm.test('Retorna token JWT de fundación', function () { pm.expect(json.token).to.not.be.empty; });",
+                                "pm.test('Rol es FUNDACION_REFUGIO', function () { pm.expect(json.usuario.rol).to.eql('FUNDACION_REFUGIO'); });",
+                                "pm.environment.set('fundacion_token', json.token);",
+                                "pm.collectionVariables.set('fundacion_token', json.token);",
+                                "pm.environment.set('fundacionUsuarioId', json.usuario.id);",
+                                "pm.collectionVariables.set('fundacionUsuarioId', json.usuario.id);"
+                            ]
+                        }
+                    }]
+                }
+            ]
+        },
+        # Módulo 01c - Verificación Fundación (para HU-13 custodia)
+        {
+            "name": "Módulo 01c - Verificación Fundación (/v1/verificaciones) - Para Custodia",
+            "item": [
+                {
+                    "name": "GET /v1/verificaciones/pendientes (Verificar Fundación)",
+                    "request": {
+                        "method": "GET",
+                        "header": [{"key": "Authorization", "value": "Bearer {{admin_token}}"}],
+                        "url": "{{baseUrl}}/v1/verificaciones/pendientes"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
+                                "var json = pm.response.json();",
+                                "pm.test('Retorna lista de verificaciones pendientes', function () { pm.expect(Array.isArray(json)).to.be.true; });"
+                            ]
+                        }
+                    }]
+                },
+                {
+                    "name": "PATCH /v1/verificaciones/{usuarioId} (Aprobar Fundación)",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {"key": "Authorization", "value": "Bearer {{admin_token}}"},
+                            {"key": "Content-Type", "value": "application/json"}
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"decision\": \"APROBAR\",\n  \"observacion\": \"Fundación verificada y aprobada para asumir custodia de animales\"\n}"
+                        },
+                        "url": "{{baseUrl}}/v1/verificaciones/{{fundacionUsuarioId}}"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
+                                "var json = pm.response.json();",
+                                "pm.test('Entidad verificada', function () { pm.expect(json.estadoVerificacion).to.eql('VERIFICADA'); });"
                             ]
                         }
                     }]
@@ -556,6 +684,97 @@ collection = {
                             ]
                         }
                     }]
+                },
+                # HU-13.3: Gestionar custodia (asumir o liberar)
+                {
+                    "name": "PATCH /v1/casos/{id}/custodia (Asumir Custodia)",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {"key": "Authorization", "value": "Bearer {{fundacion_token}}"},
+                            {"key": "Content-Type", "value": "application/json"}
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"accion\": \"ASUMIR\"\n}"
+                        },
+                        "url": "{{baseUrl}}/v1/casos/{{casoId}}/custodia"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
+                                "var json = pm.response.json();",
+                                "pm.test('Caso tiene custodia asignada', function () { pm.expect(json).to.have.property('fundacionCustodia'); });"
+                            ]
+                        }
+                    }]
+                },
+                {
+                    "name": "PATCH /v1/casos/{id}/custodia (Liberar Custodia)",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {"key": "Authorization", "value": "Bearer {{fundacion_token}}"},
+                            {"key": "Content-Type", "value": "application/json"}
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"accion\": \"LIBERAR\",\n  \"motivo\": \"Caso transferido a otra fundación\"\n}"
+                        },
+                        "url": "{{baseUrl}}/v1/casos/{{casoId}}/custodia"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });"
+                            ]
+                        }
+                    }]
+                },
+                # HU-13.4: Casos en custodia de la fundación
+                {
+                    "name": "GET /v1/casos/en-custodia",
+                    "request": {
+                        "method": "GET",
+                        "header": [{"key": "Authorization", "value": "Bearer {{fundacion_token}}"}],
+                        "url": "{{baseUrl}}/v1/casos/en-custodia?page=0&size=10"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
+                                "var json = pm.response.json();",
+                                "pm.test('Retorna estructura paginada con content', function () { pm.expect(json).to.have.property('content'); });"
+                            ]
+                        }
+                    }]
+                },
+                # HU-13.4: Casos sin custodia en un municipio
+                {
+                    "name": "GET /v1/casos/sin-custodia",
+                    "request": {
+                        "method": "GET",
+                        "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+                        "url": "{{baseUrl}}/v1/casos/sin-custodia?municipioId={{municipioId}}&page=0&size=10"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
+                                "var json = pm.response.json();",
+                                "pm.test('Retorna estructura paginada con content', function () { pm.expect(json).to.have.property('content'); });"
+                            ]
+                        }
+                    }]
                 }
             ]
         },
@@ -603,7 +822,11 @@ collection = {
                             "exec": [
                                 "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
                                 "var json = pm.response.json();",
-                                "pm.test('Lista contiene el aporte registrado', function () { pm.expect(json.length).to.be.at.least(1); });"
+                                "pm.test('Lista contiene el aporte registrado', function () { pm.expect(json.length).to.be.at.least(1); });",
+                                "if (json.length > 0) {",
+                                "    pm.environment.set('aporteId', json[0].id);",
+                                "    pm.collectionVariables.set('aporteId', json[0].id);",
+                                "}"
                             ]
                         }
                     }]
@@ -836,6 +1059,26 @@ collection = {
                             ]
                         }
                     }]
+                },
+                # HU-13.8: Contador de notificaciones no leídas
+                {
+                    "name": "GET /v1/notificaciones/no-leidas/count",
+                    "request": {
+                        "method": "GET",
+                        "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+                        "url": "{{baseUrl}}/v1/notificaciones/no-leidas/count"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
+                                "var json = pm.response.json();",
+                                "pm.test('Retorna cantidad de notificaciones no leídas', function () { pm.expect(json).to.be.a('number'); });"
+                            ]
+                        }
+                    }]
                 }
             ]
         },
@@ -884,6 +1127,33 @@ collection = {
                                 "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
                                 "var json = pm.response.json();",
                                 "pm.test('Decisión de moderación registrada', function () { pm.expect(json.decision).to.be.oneOf(['MANTENER', 'MANTENIDO']); });"
+                            ]
+                        }
+                    }]
+                },
+                # HU-13.2: Ocultar aporte (validación)
+                {
+                    "name": "PATCH /v1/moderacion/aportes/{id}/ocultar",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {"key": "Authorization", "value": "Bearer {{admin_token}}"},
+                            {"key": "Content-Type", "value": "application/json"}
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"motivo\": \"Aporte con información irrelevante para el caso\"\n}"
+                        },
+                        "url": "{{baseUrl}}/v1/moderacion/aportes/{{aporteId}}/ocultar"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
+                                "var json = pm.response.json();",
+                                "pm.test('Aporte oculto correctamente', function () { pm.expect(json).to.have.property('oculto'); });"
                             ]
                         }
                     }]

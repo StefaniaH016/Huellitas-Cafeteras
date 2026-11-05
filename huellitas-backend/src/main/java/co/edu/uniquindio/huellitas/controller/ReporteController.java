@@ -2,10 +2,13 @@ package co.edu.uniquindio.huellitas.controller;
 
 import co.edu.uniquindio.huellitas.dto.reporte.*;
 import co.edu.uniquindio.huellitas.service.CasoService;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -18,6 +21,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/v1/casos")
 @RequiredArgsConstructor
+@Tag(name = "Casos", description = "API para gestión de casos de animales")
 public class ReporteController {
 
     private final CasoService casoService;
@@ -36,7 +40,7 @@ public class ReporteController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('CIUDADANO_VOLUNTARIO')")
     public ResponseEntity<CasoResponseDTO> actualizarReporte(
             @PathVariable Long id,
             @Valid @RequestBody CrearReporteDTO dto,
@@ -49,7 +53,7 @@ public class ReporteController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('CIUDADANO_VOLUNTARIO')")
     public ResponseEntity<Void> eliminarCaso(
             @PathVariable Long id,
             @AuthenticationPrincipal UserDetails userDetails) {
@@ -61,7 +65,7 @@ public class ReporteController {
     }
 
     @DeleteMapping("/{id}/fotos/{fotoId}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('CIUDADANO_VOLUNTARIO')")
     public ResponseEntity<Void> eliminarFoto(
             @PathVariable Long id,
             @PathVariable Long fotoId,
@@ -82,7 +86,7 @@ public class ReporteController {
     }
 
     @GetMapping("/mis-reportes")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('CIUDADANO_VOLUNTARIO')")
     public ResponseEntity<Page<CasoListItemDTO>> misReportes(
             @AuthenticationPrincipal UserDetails userDetails,
             Pageable pageable) {
@@ -106,7 +110,7 @@ public class ReporteController {
     }
 
     @PatchMapping("/{id}/estado")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('FUNDACION_REFUGIO')")
     public ResponseEntity<CasoResponseDTO> actualizarEstado(
             @PathVariable Long id,
             @Valid @RequestBody ActualizarEstadoDTO dto,
@@ -125,7 +129,7 @@ public class ReporteController {
     }
 
     @PostMapping("/{id}/cierre")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAnyRole('CIUDADANO_VOLUNTARIO', 'FUNDACION_REFUGIO')")
     public ResponseEntity<CasoResponseDTO> cerrarCaso(
             @PathVariable Long id,
             @Valid @RequestBody CierreCasoRequestDTO dto,
@@ -138,7 +142,7 @@ public class ReporteController {
     }
 
     @PatchMapping("/{id}/archivar")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     public ResponseEntity<CasoResponseDTO> archivarCaso(
             @PathVariable Long id,
             @Valid @RequestBody ArchivarCasoDTO dto,
@@ -148,5 +152,45 @@ public class ReporteController {
         }
         CasoResponseDTO response = casoService.archivarCaso(id, dto, userDetails.getUsername());
         return ResponseEntity.ok(response);
+    }
+
+    // 13.3: Gestionar custodia (asumir o liberar)
+    @PatchMapping("/{id}/custodia")
+    @PreAuthorize("hasRole('FUNDACION_REFUGIO')")
+    @Operation(summary = "Gestionar custodia de un caso", description = "Asume o libera la custodia de un caso. Solo fundaciones verificadas con aceptaCustodia=true pueden asumir custodia.")
+    public ResponseEntity<CasoResponseDTO> gestionarCustodia(
+            @Parameter(description = "ID del caso") @PathVariable Long id,
+            @Valid @RequestBody CustodiaDTO dto,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        if (userDetails == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        CasoResponseDTO response = casoService.gestionarCustodia(id, dto, userDetails.getUsername());
+        return ResponseEntity.ok(response);
+    }
+
+    // 13.4: Casos en custodia de la fundación autenticada
+    @GetMapping("/en-custodia")
+    @PreAuthorize("hasAnyRole('FUNDACION_REFUGIO', 'ADMINISTRADOR')")
+    @Operation(summary = "Casos en custodia", description = "Lista los casos bajo custodia de la fundación autenticada")
+    public ResponseEntity<Page<CasoListItemDTO>> listarCasosEnCustodia(
+            @AuthenticationPrincipal UserDetails userDetails,
+            Pageable pageable) {
+        if (userDetails == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        Page<CasoListItemDTO> list = casoService.listarCasosEnCustodia(userDetails.getUsername(), pageable);
+        return ResponseEntity.ok(list);
+    }
+
+    // 13.4: Casos sin custodia en un municipio
+    @GetMapping("/sin-custodia")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Casos sin custodia", description = "Lista los casos sin custodia en un municipio específico")
+    public ResponseEntity<Page<CasoListItemDTO>> listarCasosSinCustodia(
+            @Parameter(description = "ID del municipio") @RequestParam Long municipioId,
+            Pageable pageable) {
+        Page<CasoListItemDTO> list = casoService.listarCasosSinCustodia(municipioId, pageable);
+        return ResponseEntity.ok(list);
     }
 }

@@ -188,11 +188,62 @@ class Fase2IntegrationTests {
     @DisplayName("Flujo Módulos 9 y 10: Bitácora médica, evoluciones, alta y generación de PDF")
     void testBitacoraMedicaYPdf() throws Exception {
         String adminToken = loginYObtenerToken("admin@huellitas.co", "Admin12345!");
+        String correoVeterinaria = "veterinaria_bitacora@huellitas.co";
+        RegistroUsuarioDTO registroVeterinaria = new RegistroUsuarioDTO(
+                "Veterinaria Bitacora",
+                correoVeterinaria,
+                "VetPassword123!",
+                "3101234567",
+                barrioId,
+                Rol.VETERINARIA
+        );
+        mockMvc.perform(post("/v1/auth/registro")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(registroVeterinaria)))
+                .andExpect(status().isCreated());
+
+        MvcResult pendientesResult = mockMvc.perform(get("/v1/verificaciones/pendientes")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andReturn();
+        JsonNode pendientes = objectMapper.readTree(pendientesResult.getResponse().getContentAsString());
+        Long veterinariaId = null;
+        for (JsonNode pendiente : pendientes) {
+            if ("Veterinaria Bitacora".equals(pendiente.get("nombreEntidad").asText())) {
+                veterinariaId = pendiente.get("usuarioId").asLong();
+                break;
+            }
+        }
+        assertThat(veterinariaId).isNotNull();
+
+        DecisionVerificacionDTO decision = new DecisionVerificacionDTO(
+                "APROBAR", "Credenciales profesionales verificadas");
+        mockMvc.perform(patch("/v1/verificaciones/" + veterinariaId)
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(decision)))
+                .andExpect(status().isOk());
+
+        String veterinariaToken = loginYObtenerToken(correoVeterinaria, "VetPassword123!");
 
         // 1. Abrir bitácora
         AbrirBitacoraDTO abrirDTO = new AbrirBitacoraDTO("Ingreso por posible deshidratación y laceraciones");
+        String ciudadanoToken = loginYObtenerToken(
+                "voluntario_fase2@huellitas.co", "Password123!");
+        mockMvc.perform(post("/v1/casos/" + casoCreadoId + "/bitacora")
+                        .header("Authorization", "Bearer " + ciudadanoToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(abrirDTO)))
+                .andExpect(status().isForbidden());
+
         mockMvc.perform(post("/v1/casos/" + casoCreadoId + "/bitacora")
                         .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(abrirDTO)))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(post("/v1/casos/" + casoCreadoId + "/bitacora")
+                        .header("Authorization", "Bearer " + veterinariaToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(abrirDTO)))
                 .andExpect(status().isCreated())
@@ -207,7 +258,7 @@ class Fase2IntegrationTests {
                 "Paciente estable y comiendo adecuadamente"
         );
         mockMvc.perform(post("/v1/casos/" + casoCreadoId + "/bitacora/evoluciones")
-                        .header("Authorization", "Bearer " + adminToken)
+                        .header("Authorization", "Bearer " + veterinariaToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(evoDTO)))
                 .andExpect(status().isCreated())
@@ -221,7 +272,7 @@ class Fase2IntegrationTests {
         // 4. Registrar alta médica
         AltaMedicaDTO altaDTO = new AltaMedicaDTO("Totalmente recuperado", "Mantener en reposo por 2 días");
         mockMvc.perform(patch("/v1/casos/" + casoCreadoId + "/bitacora/alta")
-                        .header("Authorization", "Bearer " + adminToken)
+                        .header("Authorization", "Bearer " + veterinariaToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(altaDTO)))
                 .andExpect(status().isOk())

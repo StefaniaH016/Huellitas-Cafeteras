@@ -3,6 +3,8 @@ package co.edu.uniquindio.huellitas.service.impl;
 import co.edu.uniquindio.huellitas.dto.reporte.*;
 import co.edu.uniquindio.huellitas.entity.*;
 import co.edu.uniquindio.huellitas.entity.enums.EstadoCaso;
+import co.edu.uniquindio.huellitas.entity.enums.EstadoVerificacion;
+import co.edu.uniquindio.huellitas.entity.enums.Rol;
 import co.edu.uniquindio.huellitas.entity.enums.TipoAporte;
 import co.edu.uniquindio.huellitas.entity.enums.Urgencia;
 import co.edu.uniquindio.huellitas.exception.ConflictException;
@@ -12,10 +14,12 @@ import co.edu.uniquindio.huellitas.mapper.CasoMapper;
 import co.edu.uniquindio.huellitas.repository.*;
 import co.edu.uniquindio.huellitas.service.CasoService;
 import co.edu.uniquindio.huellitas.service.CloudinaryService;
+import co.edu.uniquindio.huellitas.service.EmailService;
 import co.edu.uniquindio.huellitas.specification.CasoSpecification;
 import co.edu.uniquindio.huellitas.worker.FiltroWorker;
 import co.edu.uniquindio.huellitas.worker.NotificacionWorker;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
@@ -24,10 +28,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
 @Transactional
+@Slf4j
 public class CasoServiceImpl implements CasoService {
 
     private final CasoRepository casoRepository;
@@ -43,6 +49,7 @@ public class CasoServiceImpl implements CasoService {
     private final AporteMapper aporteMapper;
     private final NotificacionWorker notificacionWorker;
     private final FiltroWorker filtroWorker;
+    private final EmailService emailService;
 
     @Override
     public CasoResponseDTO crearCaso(CrearReporteDTO dto, String correoUsuario) {
@@ -83,6 +90,13 @@ public class CasoServiceImpl implements CasoService {
 
         // W-01: notificar al reportante si el caso es urgente
         notificacionWorker.notificarCasoUrgente(caso);
+
+        // 13.6: Notificar emergencia a rescuistas del municipio
+        try {
+            notificacionWorker.notificarEmergenciaARescuatistas(caso);
+        } catch (Exception e) {
+            log.warn("Error al notificar emergencias a rescuistas: {}", e.getMessage());
+        }
 
         return casoMapper.toResponseDTO(caso);
     }
@@ -206,8 +220,17 @@ public class CasoServiceImpl implements CasoService {
         Caso caso = casoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Caso", id));
 
-        Usuario usuario = usuarioRepository.findByCorreo(correoUsuario.trim().toLowerCase())
-                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con correo: " + correoUsuario));
+        Usuario usuario = obtenerUsuario(correoUsuario);
+        Fundacion fundacion = obtenerFundacionAprobada(usuario);
+        if (dto.estado() != EstadoCaso.EN_ATENCION) {
+            throw new ConflictException("La asignación del estado EN_ATENCION se realiza al asumir custodia.");
+        }
+        if (caso.getEstado() != EstadoCaso.EN_ATENCION
+                || caso.getFundacionCustodio() == null
+                || !Objects.equals(caso.getFundacionCustodio().getId(), fundacion.getId())) {
+            throw new AccessDeniedException(
+                    "Solo la fundación verificada que tiene el caso en custodia puede actualizar su seguimiento.");
+        }
 
         EstadoCaso anterior = caso.getEstado();
         EstadoCaso nuevo = dto.estado();
@@ -215,13 +238,6 @@ public class CasoServiceImpl implements CasoService {
         Instant now = Instant.now();
         caso.setEstado(nuevo);
         caso.setFechaUltimaActividad(now);
-
-        if (nuevo == EstadoCaso.ARCHIVADO) {
-            caso.setFechaArchivado(now);
-            if (dto.observacion() != null) {
-                caso.setMotivoModeracion(dto.observacion());
-            }
-        }
 
         caso = casoRepository.save(caso);
 
@@ -273,8 +289,11 @@ public class CasoServiceImpl implements CasoService {
         Caso caso = casoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Caso", id));
 
-        Usuario usuario = usuarioRepository.findByCorreo(correoUsuario.trim().toLowerCase())
-                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con correo: " + correoUsuario));
+        Usuario usuario = obtenerUsuario(correoUsuario);
+        validarPermisoCierre(caso, usuario);
+        if (caso.getEstado() == EstadoCaso.RESUELTO || caso.getEstado() == EstadoCaso.ARCHIVADO) {
+            throw new ConflictException("El caso ya está cerrado o archivado.");
+        }
 
         EstadoCaso anterior = caso.getEstado();
         Instant now = Instant.now();
@@ -317,6 +336,15 @@ public class CasoServiceImpl implements CasoService {
         // W-01: notificar cierre de caso
         notificacionWorker.notificarCierreCaso(caso, dto.motivoCierre().name());
 
+        // 13.7: Enviar correo de cierre al reportante
+        try {
+            if (caso.getReportante() != null) {
+                emailService.enviarCorreoCierre(caso, caso.getReportante().getCorreo(), dto.motivoCierre().name());
+            }
+        } catch (Exception e) {
+            log.warn("Error al enviar correo de cierre: {}", e.getMessage());
+        }
+
         return casoMapper.toResponseDTO(caso);
     }
 
@@ -325,8 +353,10 @@ public class CasoServiceImpl implements CasoService {
         Caso caso = casoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Caso", id));
 
-        Usuario usuario = usuarioRepository.findByCorreo(correoUsuario.trim().toLowerCase())
-                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con correo: " + correoUsuario));
+        Usuario usuario = obtenerUsuario(correoUsuario);
+        if (usuario.getRol() != Rol.ADMINISTRADOR) {
+            throw new AccessDeniedException("Solo un administrador puede archivar un caso.");
+        }
 
         EstadoCaso anterior = caso.getEstado();
         Instant now = Instant.now();
@@ -360,11 +390,217 @@ public class CasoServiceImpl implements CasoService {
         return casoMapper.toResponseDTO(caso);
     }
 
+    private Usuario obtenerUsuario(String correoUsuario) {
+        return usuarioRepository.findByCorreo(correoUsuario.trim().toLowerCase())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Usuario no encontrado con correo: " + correoUsuario));
+    }
+
+    private Fundacion obtenerFundacionAprobada(Usuario usuario) {
+        if (usuario.getRol() != Rol.FUNDACION_REFUGIO
+                || !(usuario.getOrganizacion() instanceof Fundacion fundacion)
+                || fundacion.getEstadoVerificacion() != EstadoVerificacion.VERIFICADA) {
+            throw new AccessDeniedException("Se requiere una cuenta de fundación verificada.");
+        }
+        return fundacion;
+    }
+
+    private void validarPermisoCierre(Caso caso, Usuario usuario) {
+        if (usuario.getRol() == Rol.CIUDADANO_VOLUNTARIO) {
+            boolean esReportante = caso.getReportante() != null
+                    && Objects.equals(caso.getReportante().getId(), usuario.getId());
+            if (!esReportante || caso.getFundacionCustodio() != null) {
+                throw new AccessDeniedException(
+                        "Solo el reportante puede cerrar un caso que no tenga fundación custodio.");
+            }
+            return;
+        }
+
+        Fundacion fundacion = obtenerFundacionAprobada(usuario);
+        boolean esCustodiaActual = caso.getFundacionCustodio() != null
+                && Objects.equals(caso.getFundacionCustodio().getId(), fundacion.getId());
+        if (!esCustodiaActual) {
+            throw new AccessDeniedException(
+                    "La fundación solo puede cerrar casos que tenga bajo su custodia.");
+        }
+    }
+
     @Override
     @Transactional(readOnly = true)
     public Page<CasoListItemDTO> getFeed(Pageable pageable) {
         List<Urgencia> urgentes = List.of(Urgencia.ALTA, Urgencia.CRITICA);
         return casoRepository.findByUrgenciaInAndVisibleTrueOrderByFechaRegistroDesc(urgentes, pageable)
+                .map(casoMapper::toListItemDTO);
+    }
+
+    // 13.3: Gestión de custodia (asumir o liberar)
+    @Override
+    public CasoResponseDTO gestionarCustodia(Long casoId, CustodiaDTO dto, String correoUsuario) {
+        // Obtener el usuario autenticado (fundación)
+        Usuario usuario = usuarioRepository.findByCorreo(correoUsuario.trim().toLowerCase())
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con correo: " + correoUsuario));
+
+        // Validar que es una fundación verificada
+        if (usuario.getOrganizacion() == null) {
+            throw new AccessDeniedException("Solo las fundaciones pueden gestionar la custodia");
+        }
+
+        if (!(usuario.getOrganizacion() instanceof Fundacion fundacion)) {
+            throw new AccessDeniedException("Solo las fundaciones pueden gestionar la custodia");
+        }
+
+        if (fundacion.getEstadoVerificacion() != EstadoVerificacion.VERIFICADA) {
+            throw new AccessDeniedException("La fundación debe estar verificada para gestionar custodia");
+        }
+
+        // Obtener el caso
+        Caso caso = casoRepository.findById(casoId)
+                .orElseThrow(() -> new ResourceNotFoundException("Caso", casoId));
+
+        String accion = dto.accion() != null ? dto.accion().toUpperCase().trim() : "";
+
+        if ("ASUMIR".equals(accion)) {
+            // Validar que la fundación acepta custodia
+            if (!fundacion.isAceptaCustodia()) {
+                throw new AccessDeniedException("Esta fundación no acepta custodia de animales");
+            }
+
+            // Validar que no tiene custodia asignada
+            if (caso.getFundacionCustodio() != null) {
+                throw new ConflictException("El caso ya tiene un custodio asignado");
+            }
+
+            // Validar capacidad de albergue
+            long casosEnCustodia = casoRepository.countByFundacionCustodio(fundacion);
+            if (casosEnCustodia >= fundacion.getCapacidadAlbergue()) {
+                throw new ConflictException("La fundación ha alcanzado su capacidad máxima de albergue");
+            }
+
+            // Asumir custodia
+            Instant now = Instant.now();
+            EstadoCaso estadoAnterior = caso.getEstado();
+
+            caso.setFundacionCustodio(fundacion);
+            caso.setFechaCustodia(now);
+            caso.setFechaUltimaActividad(now);
+
+            // Solo cambia a EN_ATENCION si está en REGISTRADO
+            if (estadoAnterior == EstadoCaso.REGISTRADO) {
+                caso.setEstado(EstadoCaso.EN_ATENCION);
+            }
+
+            caso = casoRepository.save(caso);
+
+            // Registrar en historial de estado
+            HistorialEstado historial = HistorialEstado.builder()
+                    .estadoAnterior(estadoAnterior)
+                    .estadoNuevo(caso.getEstado())
+                    .observacion("Custodia asumida por " + fundacion.getNombre())
+                    .fecha(now)
+                    .caso(caso)
+                    .usuario(usuario)
+                    .build();
+            historialEstadoRepository.save(historial);
+
+            // Registrar seguimiento
+            Seguimiento seguimiento = Seguimiento.builder()
+                    .tipo(TipoAporte.ACTUALIZACION)
+                    .comentario("Custodia asumida por la fundación: " + fundacion.getNombre())
+                    .fecha(now)
+                    .caso(caso)
+                    .autor(usuario)
+                    .visible(true)
+                    .build();
+            seguimientoRepository.save(seguimiento);
+
+            // Notificar al reportante (vía worker async)
+            notificacionWorker.notificarAsuncionCustodia(caso, fundacion);
+
+        } else if ("LIBERAR".equals(accion)) {
+            // Validar que la fundación es el custodio actual
+            if (caso.getFundacionCustodio() == null) {
+                throw new ConflictException("El caso no tiene custodia asignada");
+            }
+
+            if (!caso.getFundacionCustodio().getId().equals(fundacion.getId())) {
+                throw new AccessDeniedException("Solo el custodio actual puede liberar la custodia");
+            }
+
+            // Validar motivo
+            String motivo = dto.motivo();
+            if (motivo == null || motivo.trim().isBlank()) {
+                throw new IllegalArgumentException("El motivo es obligatorio para liberar la custodia");
+            }
+
+            // Liberar custodia
+            Instant now = Instant.now();
+            EstadoCaso estadoAnterior = caso.getEstado();
+
+            caso.setFundacionCustodio(null);
+            caso.setFechaCustodia(null);
+            caso.setFechaUltimaActividad(now);
+
+            // Cambiar a REGISTRADO si estaba en EN_ATENCION
+            if (estadoAnterior == EstadoCaso.EN_ATENCION) {
+                caso.setEstado(EstadoCaso.REGISTRADO);
+            }
+
+            caso = casoRepository.save(caso);
+
+            // Registrar en historial de estado
+            HistorialEstado historial = HistorialEstado.builder()
+                    .estadoAnterior(estadoAnterior)
+                    .estadoNuevo(caso.getEstado())
+                    .observacion("Custodia liberada. Motivo: " + motivo)
+                    .fecha(now)
+                    .caso(caso)
+                    .usuario(usuario)
+                    .build();
+            historialEstadoRepository.save(historial);
+
+            // Registrar seguimiento
+            Seguimiento seguimiento = Seguimiento.builder()
+                    .tipo(TipoAporte.ACTUALIZACION)
+                    .comentario("Custodia liberada por la fundación. Motivo: " + motivo)
+                    .fecha(now)
+                    .caso(caso)
+                    .autor(usuario)
+                    .visible(true)
+                    .build();
+            seguimientoRepository.save(seguimiento);
+
+        } else {
+            throw new IllegalArgumentException("Acción inválida. Use ASUMIR o LIBERAR");
+        }
+
+        return casoMapper.toResponseDTO(caso);
+    }
+
+    // 13.4: Listar casos en custodia de la fundación autenticada
+    @Override
+    @Transactional(readOnly = true)
+    public Page<CasoListItemDTO> listarCasosEnCustodia(String correoFundacion, Pageable pageable) {
+        Usuario usuario = usuarioRepository.findByCorreo(correoFundacion.trim().toLowerCase())
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con correo: " + correoFundacion));
+
+        if (usuario.getOrganizacion() == null || !(usuario.getOrganizacion() instanceof Fundacion fundacion)) {
+            throw new AccessDeniedException("Solo las fundaciones pueden consultar sus casos en custodia");
+        }
+
+        return casoRepository.findByFundacionCustodioAndVisibleTrue(fundacion, pageable)
+                .map(casoMapper::toListItemDTO);
+    }
+
+    // 13.4: Listar casos sin custodia en un municipio
+    @Override
+    @Transactional(readOnly = true)
+    public Page<CasoListItemDTO> listarCasosSinCustodia(Long municipioId, Pageable pageable) {
+        // Validar que el municipio existe
+        if (municipioId == null) {
+            throw new IllegalArgumentException("El municipioId es obligatorio");
+        }
+
+        return casoRepository.findBySinCustodiaAndMunicipioId(municipioId, pageable)
                 .map(casoMapper::toListItemDTO);
     }
 }

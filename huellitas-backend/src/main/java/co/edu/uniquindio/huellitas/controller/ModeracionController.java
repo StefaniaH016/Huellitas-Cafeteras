@@ -3,6 +3,7 @@ package co.edu.uniquindio.huellitas.controller;
 import co.edu.uniquindio.huellitas.dto.moderacion.CasoModeracionDTO;
 import co.edu.uniquindio.huellitas.dto.moderacion.DecisionModeracionDTO;
 import co.edu.uniquindio.huellitas.dto.moderacion.ModeracionResponseDTO;
+import co.edu.uniquindio.huellitas.dto.moderacion.OcultarAporteDTO;
 import co.edu.uniquindio.huellitas.service.ModeracionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -34,5 +35,18 @@ public class ModeracionController {
             @Valid @RequestBody DecisionModeracionDTO dto,
             @AuthenticationPrincipal UserDetails userDetails) {
         return ResponseEntity.ok(moderacionService.moderarCaso(id, dto, userDetails.getUsername()));
+    }
+
+    /**
+     * 13.2: Oculta un aporte (Seguimiento) registrando un motivo.
+     * Solo administradores pueden ocultar aportes.
+     */
+    @PatchMapping("/aportes/{id}/ocultar")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    public ResponseEntity<ModeracionResponseDTO> ocultarAporte(
+            @PathVariable Long id,
+            @Valid @RequestBody OcultarAporteDTO dto,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(moderacionService.ocultarAporte(id, dto.motivo(), userDetails.getUsername()));
     }
 }
