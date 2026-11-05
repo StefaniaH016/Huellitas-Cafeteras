@@ -38,6 +38,11 @@ public class BitacoraMedica {
     @JoinColumn(name = "veterinaria_id")
     private Veterinaria veterinaria;
 
+    /** Usuario veterinario profesional que abrió la bitácora médica. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "veterinario_id")
+    private Usuario veterinario;
+
     @OneToMany(mappedBy = "bitacoraMedica", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference("bitacora-registros")
     @Builder.Default

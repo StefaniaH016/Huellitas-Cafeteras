@@ -18,30 +18,39 @@ public class RegistroMedico {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(columnDefinition = "TEXT", updatable = false)
     private String diagnostico;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(columnDefinition = "TEXT", updatable = false)
     private String procedimiento;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(columnDefinition = "TEXT", updatable = false)
     private String tratamiento;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(columnDefinition = "TEXT", updatable = false)
+    private String medicamentos;
+
+    @Column(columnDefinition = "TEXT", updatable = false)
     private String evolucion;
 
-    @Column(nullable = false)
+    @Column(nullable = false, updatable = false)
     private Instant fecha;
 
+    @Column(updatable = false)
     private Instant fechaFirma;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "bitacora_id", nullable = false)
+    @JoinColumn(name = "bitacora_id", nullable = false, updatable = false)
     @JsonBackReference("bitacora-registros")
     private BitacoraMedica bitacoraMedica;
 
     /** Veterinario o usuario que firmó el registro. */
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "firmante_id")
+    @JoinColumn(name = "firmante_id", updatable = false)
     private Usuario firmante;
+
+    @PreUpdate
+    public void preUpdate() {
+        throw new UnsupportedOperationException("Los registros médicos son inmutables y no se pueden modificar.");
+    }
 }

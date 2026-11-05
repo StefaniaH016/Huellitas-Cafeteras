@@ -13,4 +13,12 @@ public record EvolucionDTO(
         String medicamentos,
 
         String observaciones
-) {}
+) {
+    public String procedimiento() {
+        return procedimientos;
+    }
+
+    public String evolucion() {
+        return observaciones;
+    }
+}

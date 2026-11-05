@@ -5,5 +5,7 @@ public enum TipoNotificacion {
     CAMBIO_ESTADO,
     CIERRE,
     RECORDATORIO,
-    CUSTODIA
+    CUSTODIA,
+    EVOLUCION_MEDICA,
+    ALTA_MEDICA
 }
