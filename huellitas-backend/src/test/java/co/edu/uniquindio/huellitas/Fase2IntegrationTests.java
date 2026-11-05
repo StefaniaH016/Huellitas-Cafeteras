@@ -11,11 +11,14 @@ import co.edu.uniquindio.huellitas.dto.reporte.AnimalReporteDTO;
 import co.edu.uniquindio.huellitas.dto.reporte.CrearReporteDTO;
 import co.edu.uniquindio.huellitas.dto.verificacion.DecisionVerificacionDTO;
 import co.edu.uniquindio.huellitas.entity.Barrio;
+import co.edu.uniquindio.huellitas.entity.Caso;
 import co.edu.uniquindio.huellitas.entity.enums.Especie;
+import co.edu.uniquindio.huellitas.entity.enums.EstadoCaso;
 import co.edu.uniquindio.huellitas.entity.enums.Rol;
 import co.edu.uniquindio.huellitas.entity.enums.TipoCaso;
 import co.edu.uniquindio.huellitas.entity.enums.Urgencia;
 import co.edu.uniquindio.huellitas.repository.BarrioRepository;
+import co.edu.uniquindio.huellitas.repository.CasoRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -49,6 +52,9 @@ class Fase2IntegrationTests {
 
     @Autowired
     private BarrioRepository barrioRepository;
+
+    @Autowired
+    private CasoRepository casoRepository;
 
     private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
@@ -226,6 +232,11 @@ class Fase2IntegrationTests {
 
         String veterinariaToken = loginYObtenerToken(correoVeterinaria, "VetPassword123!");
 
+        // HU 14.1: Caso debe estar en estado EN_ATENCION para permitir apertura de bitácora
+        Caso casoActual = casoRepository.findById(casoCreadoId).orElseThrow();
+        casoActual.setEstado(EstadoCaso.EN_ATENCION);
+        casoRepository.save(casoActual);
+
         // 1. Abrir bitácora
         AbrirBitacoraDTO abrirDTO = new AbrirBitacoraDTO("Ingreso por posible deshidratación y laceraciones");
         String ciudadanoToken = loginYObtenerToken(
@@ -264,10 +275,18 @@ class Fase2IntegrationTests {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").exists());
 
-        // 3. Consultar bitácora
-        mockMvc.perform(get("/v1/casos/" + casoCreadoId + "/bitacora"))
+        // 3. Consultar bitácora (14.4: Acceso restringido por confidencialidad clínica)
+        mockMvc.perform(get("/v1/casos/" + casoCreadoId + "/bitacora")
+                        .header("Authorization", "Bearer " + veterinariaToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.evoluciones").isArray());
+
+        // 3b. HU 14.5: Consultar mis-pacientes para panel de veterinaria
+        mockMvc.perform(get("/v1/bitacoras/mis-pacientes")
+                        .header("Authorization", "Bearer " + veterinariaToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[0].casoId").value(casoCreadoId));
 
         // 4. Registrar alta médica
         AltaMedicaDTO altaDTO = new AltaMedicaDTO("Totalmente recuperado", "Mantener en reposo por 2 días");

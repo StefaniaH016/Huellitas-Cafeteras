@@ -432,11 +432,31 @@
       "name": "Bitácora médica",
       "item": [
         {
-          "name": "Ver bitácora (público)",
+          "name": "Ver bitácora (veterinaria/custodia/reportante/admin)",
           "request": {
             "method": "GET",
-            "header": [],
-            "url": "{{baseUrl}}/v1/casos/{{casoId}}/bitacora"
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/casos/{{casoId}}/bitacora",
+            "description": "Acceso restringido por Ley 1581/2012 y Ley 576/2002 a la veterinaria tratante, usuario reportante, fundación custodia o administrador."
+          }
+        },
+        {
+          "name": "Mis pacientes (veterinaria)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/bitacoras/mis-pacientes",
+            "description": "Lista de pacientes atendidos o con bitácora abierta por la veterinaria autenticada. Requiere rol VETERINARIA verificada."
           }
         },
         {
@@ -455,6 +475,10 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
               }
             ],
             "body": {
@@ -478,11 +502,15 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"diagnostico\": \"Deshidratación leve\",\n  \"procedimientos\": \"Examen clínico\",\n  \"tratamiento\": \"Hidratación y observación\",\n  \"medicamentos\": \"Ninguno\",\n  \"observaciones\": \"Control en 24 horas\"\n}",
+              "raw": "{\n  \"diagnostico\": \"Deshidratación leve\",\n  \"procedimientos\": \"Examen clínico\",\n  \"tratamiento\": \"Hidratación y observación\",\n  \"medicamentos\": \"Suero fisiológico\",\n  \"observaciones\": \"Control en 24 horas\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -501,6 +529,10 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
               }
             ],
             "body": {

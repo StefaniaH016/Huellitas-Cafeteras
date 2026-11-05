@@ -1,8 +1,10 @@
 package co.edu.uniquindio.huellitas.worker;
 
+import co.edu.uniquindio.huellitas.entity.BitacoraMedica;
 import co.edu.uniquindio.huellitas.entity.Caso;
 import co.edu.uniquindio.huellitas.entity.Fundacion;
 import co.edu.uniquindio.huellitas.entity.Notificacion;
+import co.edu.uniquindio.huellitas.entity.RegistroMedico;
 import co.edu.uniquindio.huellitas.entity.Seguimiento;
 import co.edu.uniquindio.huellitas.entity.Usuario;
 import co.edu.uniquindio.huellitas.entity.enums.EstadoCaso;
@@ -217,6 +219,75 @@ public class NotificacionWorker {
                     caso.getUrgencia()
             );
             guardar(caso.getReportante(), caso, TipoNotificacion.EMERGENCIA, mensaje);
+        }
+    }
+
+    /**
+     * 14.6: Disparar notificación ante una nueva evolución médica registrada.
+     * Notifica al reportante y a la fundación custodia (si no son el firmante).
+     */
+    @Async
+    public void notificarEvolucionMedica(BitacoraMedica bitacora, RegistroMedico evolucion, Usuario firmante) {
+        if (bitacora == null || bitacora.getCaso() == null) return;
+        Caso caso = bitacora.getCaso();
+        Long firmanteId = firmante != null ? firmante.getId() : null;
+
+        String diagnostico = (evolucion != null && evolucion.getDiagnostico() != null)
+                ? (evolucion.getDiagnostico().length() > 50
+                    ? evolucion.getDiagnostico().substring(0, 50) + "..."
+                    : evolucion.getDiagnostico())
+                : "Nueva evolución clínica";
+
+        String mensajeReportante = String.format(
+                "🩺 Nueva evolución médica registrada en tu caso #%d: %s",
+                caso.getId(), diagnostico
+        );
+
+        if (caso.getReportante() != null && !caso.getReportante().getId().equals(firmanteId)) {
+            guardar(caso.getReportante(), caso, TipoNotificacion.EVOLUCION_MEDICA, mensajeReportante);
+        }
+
+        if (caso.getFundacionCustodio() != null) {
+            usuarioRepository.findByOrganizacionId(caso.getFundacionCustodio().getId())
+                    .ifPresent(fundacionUsuario -> {
+                        if (!fundacionUsuario.getId().equals(firmanteId)) {
+                            String mensajeFundacion = String.format(
+                                    "🩺 Nueva evolución médica en el caso #%d bajo tu custodia: %s",
+                                    caso.getId(), diagnostico
+                            );
+                            guardar(fundacionUsuario, caso, TipoNotificacion.EVOLUCION_MEDICA, mensajeFundacion);
+                        }
+                    });
+        }
+    }
+
+    /**
+     * 14.6: Disparar notificación ante el registro de un alta médica.
+     * Notifica al reportante y a la fundación custodia (si no son el firmante).
+     */
+    @Async
+    public void notificarAltaMedica(BitacoraMedica bitacora, Usuario firmante) {
+        if (bitacora == null || bitacora.getCaso() == null) return;
+        Caso caso = bitacora.getCaso();
+        Long firmanteId = firmante != null ? firmante.getId() : null;
+
+        String mensaje = String.format(
+                "🎉 ¡Alta médica emitida para el caso #%d (%s)! El animal ha completado su atención clínica.",
+                caso.getId(),
+                caso.getAnimal() != null ? caso.getAnimal().getNombre() : "Sin nombre"
+        );
+
+        if (caso.getReportante() != null && !caso.getReportante().getId().equals(firmanteId)) {
+            guardar(caso.getReportante(), caso, TipoNotificacion.ALTA_MEDICA, mensaje);
+        }
+
+        if (caso.getFundacionCustodio() != null) {
+            usuarioRepository.findByOrganizacionId(caso.getFundacionCustodio().getId())
+                    .ifPresent(fundacionUsuario -> {
+                        if (!fundacionUsuario.getId().equals(firmanteId)) {
+                            guardar(fundacionUsuario, caso, TipoNotificacion.ALTA_MEDICA, mensaje);
+                        }
+                    });
         }
     }
 
