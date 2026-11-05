@@ -29,24 +29,6 @@ spring:
         format_sql: false
     open-in-view: false
 
-  # ── Email SMTP (Spring Boot Starter Mail) ──────────────────────
-  # Configuración del servidor SMTP para envío de correos
-  mail:
-    host: ${MAIL_HOST:smtp.gmail.com}
-    port: ${MAIL_PORT:587}
-    username: ${MAIL_USERNAME:}
-    password: ${MAIL_PASSWORD:}
-    properties:
-      mail:
-        smtp:
-          auth: true
-          starttls:
-            enable: true
-          connectiontimeout: 5000
-          timeout: 3000
-          writetimeout: 5000
-    default-encoding: UTF-8
-
   # ── Docker Compose & DevTools ─────────────────────────────────
   docker:
     compose:
@@ -109,10 +91,6 @@ cloudinary:
   api-secret: ${CLOUDINARY_API_SECRET:}
   # El SDK aplica este límite en segundos a conexión y lectura.
   timeout: ${CLOUDINARY_TIMEOUT:30}
-
-# ── Email Remitente (compatibilidad con EmailServiceImpl) ───────
-mail:
-  username: ${MAIL_USERNAME:noreply@huellitas.org}
 
 # ── Actuator ───────────────────────────────────────────────────
 management:
