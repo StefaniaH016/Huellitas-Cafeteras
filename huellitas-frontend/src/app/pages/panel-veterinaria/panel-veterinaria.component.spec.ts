@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { Observable } from 'rxjs';
+import { of } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
 import { CasoService } from '../../core/services/caso.service';
 import { PanelVeterinariaComponent } from './panel-veterinaria.component';
@@ -13,7 +13,7 @@ beforeEach(() => {
       {
         provide: CasoService,
         useValue: {
-          listarCasos: vi.fn().mockReturnValue(new Observable(() => {})),
+          listarCasos: vi.fn().mockReturnValue(of({ content: [] })),
         },
       },
       { provide: AuthService, useValue: { getNombre: vi.fn().mockReturnValue('Vet Norte') } },

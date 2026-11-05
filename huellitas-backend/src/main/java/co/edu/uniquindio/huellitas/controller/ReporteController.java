@@ -40,7 +40,7 @@ public class ReporteController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('CIUDADANO_VOLUNTARIO')")
     public ResponseEntity<CasoResponseDTO> actualizarReporte(
             @PathVariable Long id,
             @Valid @RequestBody CrearReporteDTO dto,
@@ -53,7 +53,7 @@ public class ReporteController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('CIUDADANO_VOLUNTARIO')")
     public ResponseEntity<Void> eliminarCaso(
             @PathVariable Long id,
             @AuthenticationPrincipal UserDetails userDetails) {
@@ -65,7 +65,7 @@ public class ReporteController {
     }
 
     @DeleteMapping("/{id}/fotos/{fotoId}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('CIUDADANO_VOLUNTARIO')")
     public ResponseEntity<Void> eliminarFoto(
             @PathVariable Long id,
             @PathVariable Long fotoId,
@@ -86,7 +86,7 @@ public class ReporteController {
     }
 
     @GetMapping("/mis-reportes")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('CIUDADANO_VOLUNTARIO')")
     public ResponseEntity<Page<CasoListItemDTO>> misReportes(
             @AuthenticationPrincipal UserDetails userDetails,
             Pageable pageable) {
@@ -110,7 +110,7 @@ public class ReporteController {
     }
 
     @PatchMapping("/{id}/estado")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('FUNDACION_REFUGIO')")
     public ResponseEntity<CasoResponseDTO> actualizarEstado(
             @PathVariable Long id,
             @Valid @RequestBody ActualizarEstadoDTO dto,
@@ -129,7 +129,7 @@ public class ReporteController {
     }
 
     @PostMapping("/{id}/cierre")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAnyRole('CIUDADANO_VOLUNTARIO', 'FUNDACION_REFUGIO')")
     public ResponseEntity<CasoResponseDTO> cerrarCaso(
             @PathVariable Long id,
             @Valid @RequestBody CierreCasoRequestDTO dto,
@@ -142,7 +142,7 @@ public class ReporteController {
     }
 
     @PatchMapping("/{id}/archivar")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     public ResponseEntity<CasoResponseDTO> archivarCaso(
             @PathVariable Long id,
             @Valid @RequestBody ArchivarCasoDTO dto,
@@ -156,7 +156,7 @@ public class ReporteController {
 
     // 13.3: Gestionar custodia (asumir o liberar)
     @PatchMapping("/{id}/custodia")
-    @PreAuthorize("hasAnyRole('FUNDACION_REFUGIO', 'ADMINISTRADOR')")
+    @PreAuthorize("hasRole('FUNDACION_REFUGIO')")
     @Operation(summary = "Gestionar custodia de un caso", description = "Asume o libera la custodia de un caso. Solo fundaciones verificadas con aceptaCustodia=true pueden asumir custodia.")
     public ResponseEntity<CasoResponseDTO> gestionarCustodia(
             @Parameter(description = "ID del caso") @PathVariable Long id,

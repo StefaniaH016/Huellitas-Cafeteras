@@ -21,7 +21,7 @@ public class BitacoraController {
     private final BitacoraService bitacoraService;
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('VETERINARIA', 'ADMINISTRADOR')")
+    @PreAuthorize("hasRole('VETERINARIA')")
     public ResponseEntity<BitacoraResponseDTO> abrirBitacora(
             @PathVariable Long id,
             @RequestBody(required = false) AbrirBitacoraDTO dto,
@@ -36,7 +36,7 @@ public class BitacoraController {
     }
 
     @PostMapping("/evoluciones")
-    @PreAuthorize("hasAnyRole('VETERINARIA', 'ADMINISTRADOR')")
+    @PreAuthorize("hasRole('VETERINARIA')")
     public ResponseEntity<RegistroMedicoResponseDTO> agregarEvolucion(
             @PathVariable Long id,
             @Valid @RequestBody EvolucionDTO dto,
@@ -46,7 +46,7 @@ public class BitacoraController {
     }
 
     @PatchMapping("/alta")
-    @PreAuthorize("hasAnyRole('VETERINARIA', 'ADMINISTRADOR')")
+    @PreAuthorize("hasRole('VETERINARIA')")
     public ResponseEntity<AltaMedicaResponseDTO> registrarAlta(
             @PathVariable Long id,
             @Valid @RequestBody AltaMedicaDTO dto,
