@@ -1,16 +1,16 @@
 # ========================================
-# Configuración - Railway
+# Configuración - Railway & Local
 # ========================================
 
 spring:
   application:
     name: huellitas
 
-  # ── Base de datos PostgreSQL (Railway) ─────────────────────────
+  # ── Base de datos PostgreSQL (Railway / Local) ─────────────────
   datasource:
-    url: jdbc:postgresql://${PGHOST}:${PGPORT}/${PGDATABASE}
-    username: ${PGUSER}
-    password: ${PGPASSWORD}
+    url: jdbc:postgresql://${PGHOST:}:${PGPORT:}/${PGDATABASE:}
+    username: ${PGUSER:}
+    password: ${PGPASSWORD:}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 10
@@ -29,9 +29,8 @@ spring:
         format_sql: false
     open-in-view: false
 
-  # ── Email SMTP ─────────────────────────────────────────────────
+  # ── Email SMTP (Spring Boot Starter Mail) ──────────────────────
   # Configuración del servidor SMTP para envío de correos
-  # Las credenciales se cargan desde variables de entorno
   mail:
     host: ${MAIL_HOST:smtp.gmail.com}
     port: ${MAIL_PORT:587}
@@ -73,7 +72,7 @@ spring:
 
 # ── Servidor ───────────────────────────────────────────────────
 server:
-  port: 8080
+  port: ${SERVER_PORT:8080}
   servlet:
     context-path: /
   http2:
@@ -81,17 +80,20 @@ server:
 
 # ── JWT ────────────────────────────────────────────────────────
 jwt:
-  secret: ${JWT_SECRET}
-  expiration: ${JWT_EXPIRATION}
+  secret: ${JWT_SECRET:}
+  expiration: ${JWT_EXPIRATION:}
 
 # ── Cloudinary ─────────────────────────────────────────────────
 cloudinary:
-  cloud-name: ${CLOUDINARY_CLOUD_NAME}
-  api-key: ${CLOUDINARY_API_KEY}
-  api-secret: ${CLOUDINARY_API_SECRET}
+  cloud-name: ${CLOUDINARY_CLOUD_NAME:}
+  api-key: ${CLOUDINARY_API_KEY:}
+  api-secret: ${CLOUDINARY_API_SECRET:}
   # El SDK aplica este límite en segundos a conexión y lectura.
   timeout: ${CLOUDINARY_TIMEOUT:30}
 
+# ── Email Remitente (compatibilidad con EmailServiceImpl) ───────
+mail:
+  username: ${MAIL_USERNAME:noreply@huellitas.org}
 
 # ── Actuator ───────────────────────────────────────────────────
 management:
