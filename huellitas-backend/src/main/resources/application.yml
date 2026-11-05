@@ -29,6 +29,25 @@ spring:
         format_sql: false
     open-in-view: false
 
+  # ── Email SMTP ─────────────────────────────────────────────────
+  # Configuración del servidor SMTP para envío de correos
+  # Las credenciales se cargan desde variables de entorno
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+          connectiontimeout: 5000
+          timeout: 3000
+          writetimeout: 5000
+    default-encoding: UTF-8
+
   # ── Docker Compose & DevTools ─────────────────────────────────
   docker:
     compose:
@@ -73,24 +92,6 @@ cloudinary:
   # El SDK aplica este límite en segundos a conexión y lectura.
   timeout: ${CLOUDINARY_TIMEOUT:30}
 
-# ── Email SMTP ─────────────────────────────────────────────────
-# Configuración del servidor SMTP para envío de correos
-# Las credenciales se cargan desde variables de entorno
-mail:
-  host: ${MAIL_HOST:smtp.gmail.com}
-  port: ${MAIL_PORT:587}
-  username: ${MAIL_USERNAME:}
-  password: ${MAIL_PASSWORD:}
-  properties:
-    mail:
-      smtp:
-        auth: true
-        starttls:
-          enable: true
-        connectiontimeout: 5000
-        timeout: 3000
-        writetimeout: 5000
-  default-encoding: UTF-8
 
 # ── Actuator ───────────────────────────────────────────────────
 management:
