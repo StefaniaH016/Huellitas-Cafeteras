@@ -24,15 +24,19 @@ public class EmailServiceImpl implements EmailService {
 
     private final JavaMailSender mailSender;
 
-    @Value("${mail.username:noreply@huellitas.org}")
+    @Value("${spring.mail.username:${mail.username:noreply@huellitas.org}}")
     private String correoRemitente;
+
+    private String getRemitente() {
+        return (correoRemitente != null && !correoRemitente.isBlank()) ? correoRemitente : "noreply@huellitas.org";
+    }
 
     @Override
     @Async
     public void enviarCorreoCustodia(Caso caso, Fundacion fundacion, String correoReportante) {
         try {
             SimpleMailMessage mensaje = new SimpleMailMessage();
-            mensaje.setFrom(correoRemitente);
+            mensaje.setFrom(getRemitente());
             mensaje.setTo(correoReportante);
             mensaje.setSubject("🏠 Custodia asumida - Caso #" + caso.getId());
             mensaje.setText(String.format(
@@ -62,7 +66,7 @@ public class EmailServiceImpl implements EmailService {
     public void enviarCorreoCierre(Caso caso, String correoReportante, String resultado) {
         try {
             SimpleMailMessage mensaje = new SimpleMailMessage();
-            mensaje.setFrom(correoRemitente);
+            mensaje.setFrom(getRemitente());
             mensaje.setTo(correoReportante);
             mensaje.setSubject("✅ Caso cerrado - #" + caso.getId());
             mensaje.setText(String.format(
@@ -89,7 +93,7 @@ public class EmailServiceImpl implements EmailService {
         try {
             String urgencia = caso.getUrgencia() != null ? caso.getUrgencia().name() : "ALTA";
             SimpleMailMessage mensaje = new SimpleMailMessage();
-            mensaje.setFrom(correoRemitente);
+            mensaje.setFrom(getRemitente());
             mensaje.setTo(correoDestino);
             mensaje.setSubject("🚨 EMERGENCIA: Caso #" + caso.getId() + " - " + urgencia);
             mensaje.setText(String.format(
