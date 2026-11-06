@@ -38,6 +38,11 @@ export interface UsuarioPerfil {
   departamentoId?: number;
   municipioId?: number;
   barrioId?: number;
+  organizacionId?: number;
+  organizacionNombre?: string | null;
+  estadoVerificacionOrganizacion?: string | null;
+  aceptaCustodia?: boolean | null;
+  capacidadAlbergue?: number | null;
 }
 
 @Injectable({

@@ -347,6 +347,98 @@ export class CasoDetalleComponent implements OnInit {
   });
 
   esFundacion = computed(() => this.authService.tieneRol('FUNDACION_REFUGIO'));
+  esVeterinaria = computed(() => this.authService.tieneRol('VETERINARIA'));
+  esAdministrador = computed(() => this.authService.tieneRol('ADMINISTRADOR'));
+  puedeAsumirCustodia = computed(
+    () =>
+      this.esFundacion() &&
+      this.perfilHabilitadoParaCustodia() &&
+      this.casoDisponibleParaCustodia(),
+  );
+  puedeArchivarCaso = computed(
+    () => this.authService.tieneRol('ADMINISTRADOR') && this.caso()?.estado === 'RESUELTO',
+  );
+  esReportanteCaso = computed(() => {
+    const perfil = this.perfil();
+    const caso = this.caso();
+    return (
+      this.authService.tieneRol('CIUDADANO_VOLUNTARIO') &&
+      perfil !== null &&
+      caso !== null &&
+      perfil.id === caso.autorId
+    );
+  });
+  puedeDenunciarCaso = computed(() => {
+    const perfil = this.perfil();
+    const caso = this.caso();
+    return (
+      this.authService.tieneRol('CIUDADANO_VOLUNTARIO') &&
+      !!perfil &&
+      !!caso &&
+      perfil.id !== caso.autorId
+    );
+  });
+  puedeCerrarCaso = computed(() => {
+    const caso = this.caso();
+    return (
+      this.esReportanteCaso() &&
+      !!caso &&
+      esCasoAbierto(caso.estado ?? '') &&
+      !caso.fundacionCustodioId
+    );
+  });
+  puedeGestionarBitacora = computed(() => this.esVeterinariaResponsable());
+
+  private perfilHabilitadoParaCustodia(): boolean {
+    const perfil = this.perfil();
+    return (
+      !!perfil &&
+      perfil.estadoVerificacionOrganizacion === 'VERIFICADA' &&
+      perfil.aceptaCustodia === true
+    );
+  }
+
+  private casoDisponibleParaCustodia(): boolean {
+    const caso = this.caso();
+    return (
+      !caso?.fundacionCustodioId &&
+      (caso?.estado === 'REGISTRADO' || caso?.estado === 'EN_ATENCION')
+    );
+  }
+
+  private esVeterinariaResponsable(): boolean {
+    const caso = this.caso();
+    const perfil = this.perfil();
+    if (!this.esVeterinaria() || perfil?.verificado !== true) {
+      return false;
+    }
+    return !caso?.resumenMedico || caso.resumenMedico.responsableId === perfil.id;
+  }
+  puedeTomarAtencion = computed(
+    () =>
+      this.puedeGestionarBitacora() &&
+      this.sinBitacoraMedica() &&
+      (this.caso()?.estado === 'REGISTRADO' || this.caso()?.estado === 'EN_ATENCION'),
+  );
+  puedeAportarCaso = computed(() => {
+    const caso = this.caso();
+    const perfil = this.perfil();
+    if (!caso || !perfil || !esCasoAbierto(caso.estado ?? '')) {
+      return false;
+    }
+
+    return (
+      (this.authService.tieneRol('CIUDADANO_VOLUNTARIO') &&
+        (perfil.id !== caso.autorId || !caso.fundacionCustodioId)) ||
+      (this.esFundacion() &&
+        !!caso.fundacionCustodioId &&
+        perfil.organizacionId === caso.fundacionCustodioId)
+    );
+  });
+  puedeConsultarBitacora = computed(() => {
+    const perfil = this.perfil();
+    return this.esVeterinaria() && perfil?.verificado === true;
+  });
 
   casoDet = computed(() => {
     const c = this.caso();
@@ -363,14 +455,16 @@ export class CasoDetalleComponent implements OnInit {
       tipoCaso: c.tipo,
       municipio: c.municipio,
       barrio: c.barrio,
-      aportes: [],
-      historial: [],
       fotografias: c.fotos,
       foto: c.foto,
-      resumenMedico: undefined,
+      resumenMedico: c.resumenMedico,
       fundacionCustodioNombre: c.fundacion,
       veterinariaNombreResponsable: c.veterinaria,
       reportanteNombre: c.reportante,
+      autorId: c.autorId,
+      fundacionCustodioId: c.fundacionCustodioId,
+      aportes: c.aportes ?? [],
+      historial: c.historial ?? [],
     } as CasoDetalle;
   });
 

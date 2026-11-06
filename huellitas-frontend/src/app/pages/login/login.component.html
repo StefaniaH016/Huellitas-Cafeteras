@@ -20,9 +20,31 @@
       <div class="auth-accent" aria-hidden="true"></div>
       <h2>Ingresar</h2>
 
-      <div class="error-banner" [class.show]="showError()" role="alert">
-        Correo o contraseña incorrectos. Si tu cuenta es institucional, puede estar pendiente de
-        validación.
+    <div class="error-banner" [class.show]="showError()" role="alert">
+      Correo o contraseña incorrectos. Si tu cuenta es institucional, puede estar pendiente de
+      validación.
+    </div>
+
+    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" novalidate>
+      <div class="form-field">
+        <label for="email">Correo electrónico</label>
+        <input
+          type="email"
+          id="email"
+          formControlName="email"
+          placeholder="tucorreo@ejemplo.com"
+          [class.input-error]="loginForm.get('email')?.invalid && loginForm.get('email')?.touched"
+        />
+        @if (loginForm.get('email')?.invalid && loginForm.get('email')?.touched) {
+          <span class="field-error" role="alert">
+            @if (loginForm.get('email')?.hasError('required')) {
+              El correo es obligatorio.
+            }
+            @if (loginForm.get('email')?.hasError('email')) {
+              Ingresa un correo válido.
+            }
+          </span>
+        }
       </div>
 
       <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" novalidate>
