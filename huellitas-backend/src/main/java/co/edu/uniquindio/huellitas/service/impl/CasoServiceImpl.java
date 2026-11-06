@@ -1,6 +1,7 @@
 package co.edu.uniquindio.huellitas.service.impl;
 
 import co.edu.uniquindio.huellitas.dto.reporte.*;
+import co.edu.uniquindio.huellitas.dto.imagen.ImagenResponseDTO;
 import co.edu.uniquindio.huellitas.entity.*;
 import co.edu.uniquindio.huellitas.entity.enums.*;
 import co.edu.uniquindio.huellitas.exception.ConflictException;
@@ -23,8 +24,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -38,6 +43,7 @@ public class CasoServiceImpl implements CasoService {
     private final UsuarioRepository usuarioRepository;
     private final BarrioRepository barrioRepository;
     private final AnimalRepository animalRepository;
+    private final FotoRepository fotoRepository;
     private final HistorialEstadoRepository historialEstadoRepository;
     private final SeguimientoRepository seguimientoRepository;
     private final CierreCasoRepository cierreCasoRepository;
@@ -113,6 +119,12 @@ public class CasoServiceImpl implements CasoService {
 
     @Override
     public CasoResponseDTO crearCaso(CrearReporteDTO dto, String correoUsuario) {
+        Caso caso = crearCasoEntidad(dto, correoUsuario);
+        notificarDespuesDeConfirmarTransaccion(caso);
+        return casoMapper.toResponseDTO(caso);
+    }
+
+    private Caso crearCasoEntidad(CrearReporteDTO dto, String correoUsuario) {
         Usuario reportante = usuarioRepository.findByCorreo(correoUsuario.trim().toLowerCase())
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con correo: " + correoUsuario));
 
@@ -148,17 +160,72 @@ public class CasoServiceImpl implements CasoService {
                 .build();
         historialEstadoRepository.save(historial);
 
-        // W-01: notificar al reportante si el caso es urgente
-        notificacionWorker.notificarCasoUrgente(caso);
+        return caso;
+    }
 
-        // 13.6: Notificar emergencia a rescuistas del municipio
-        try {
-            notificacionWorker.notificarEmergenciaARescuatistas(caso);
-        } catch (Exception e) {
-            log.warn("Error al notificar emergencias a rescuistas: {}", e.getMessage());
+    @Override
+    public CasoResponseDTO crearCasoConImagen(
+            CrearReporteDTO dto,
+            List<MultipartFile> archivos,
+            String correoUsuario) {
+        if (archivos == null || archivos.isEmpty()) {
+            throw new ConflictException("Se requiere al menos una imagen para publicar el caso.");
         }
 
-        return casoMapper.toResponseDTO(caso);
+        List<ImagenResponseDTO> imagenesSubidas = new ArrayList<>();
+        try {
+            for (MultipartFile archivo : archivos) {
+                imagenesSubidas.add(cloudinaryService.subirImagen(archivo, null));
+            }
+
+            Caso caso = crearCasoEntidad(dto, correoUsuario);
+            for (int i = 0; i < imagenesSubidas.size(); i++) {
+                var imagen = imagenesSubidas.get(i);
+                Foto foto = Foto.builder()
+                        .url(imagen.url())
+                        .publicId(imagen.publicId())
+                        .principal(i == 0)
+                        .caso(caso)
+                        .build();
+                fotoRepository.save(foto);
+                caso.getFotos().add(foto);
+            }
+            notificarDespuesDeConfirmarTransaccion(caso);
+            return casoMapper.toResponseDTO(caso);
+        } catch (RuntimeException error) {
+            if (!imagenesSubidas.isEmpty()) {
+                List<Foto> imagenesParaEliminar = imagenesSubidas.stream()
+                        .map(imagen -> Foto.builder()
+                                .url(imagen.url())
+                                .publicId(imagen.publicId())
+                                .build())
+                        .toList();
+                try {
+                    cloudinaryService.eliminarFotos(imagenesParaEliminar);
+                } catch (RuntimeException errorLimpieza) {
+                    error.addSuppressed(errorLimpieza);
+                    log.error("No se pudieron limpiar imágenes temporales de Cloudinary tras fallar la publicación.", errorLimpieza);
+                }
+            }
+            throw error;
+        }
+    }
+
+    private void notificarDespuesDeConfirmarTransaccion(Caso caso) {
+        Runnable notificarPublicacion = () -> {
+            notificacionWorker.notificarCasoUrgente(caso);
+            notificacionWorker.notificarEmergenciaARescuatistas(caso);
+        };
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    notificarPublicacion.run();
+                }
+            });
+        } else {
+            notificarPublicacion.run();
+        }
     }
 
     @Override
