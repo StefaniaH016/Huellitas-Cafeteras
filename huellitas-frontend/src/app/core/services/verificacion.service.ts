@@ -8,6 +8,10 @@ export interface VerificacionPendiente {
   nombreEntidad: string;
   rolSolicitado: string;
   estado: string;
+  nit?: string | null;
+  municipio?: string | null;
+  documentoSoporteNombre?: string | null;
+  documentoSoporteDisponible: boolean;
 }
 
 export type DecisionVerificacion = 'APROBAR' | 'RECHAZAR';
@@ -37,5 +41,28 @@ export class VerificacionService {
       `${this.apiUrl}/verificaciones/${usuarioId}`,
       dto,
     );
+  }
+
+  solicitarRevision(
+    documentoSoporte: File,
+    organizacion?: { nombreEntidad: string; nit: string; municipioOperacion: string },
+  ): Observable<VerificacionResponse> {
+    const formData = new FormData();
+    formData.append('documentoSoporte', documentoSoporte, documentoSoporte.name);
+    if (organizacion) {
+      formData.append('nombreEntidad', organizacion.nombreEntidad);
+      formData.append('nit', organizacion.nit);
+      formData.append('municipioOperacion', organizacion.municipioOperacion);
+    }
+    return this.httpClient.post<VerificacionResponse>(
+      `${this.apiUrl}/verificaciones/solicitar-revision`,
+      formData,
+    );
+  }
+
+  obtenerDocumentoSoporte(usuarioId: number): Observable<Blob> {
+    return this.httpClient.get(`${this.apiUrl}/verificaciones/${usuarioId}/documento-soporte`, {
+      responseType: 'blob',
+    });
   }
 }

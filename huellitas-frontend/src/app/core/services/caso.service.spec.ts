@@ -1,8 +1,13 @@
 import { TestBed } from '@angular/core/testing';
-import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
-import { CasoService } from './caso.service';
+import {
+  HttpClientTestingModule,
+  HttpTestingController,
+  TestRequest,
+} from '@angular/common/http/testing';
+import { CasoService, CierreCasoDTO } from './caso.service';
 import { BitacoraService } from './bitacora.service';
 import { environment } from '../../../environments/environment';
+import { CustodiaDTO } from '../../../core/models/dtos';
 
 const apiUrl = `${environment.apiUrl}/casos`;
 
@@ -28,6 +33,23 @@ function setupCasoServiceTest(): { service: CasoService; httpMock: HttpTestingCo
   };
 }
 
+function expectSinCustodiaRequest(
+  httpMock: HttpTestingController,
+  municipioId: number,
+  pageable?: { page: number; size: number },
+): TestRequest {
+  return httpMock.expectOne((request) => {
+    const matchesMunicipio =
+      request.url === `${apiUrl}/sin-custodia` &&
+      request.params.get('municipioId') === String(municipioId);
+    const matchesPage =
+      !pageable ||
+      (request.params.get('page') === String(pageable.page) &&
+        request.params.get('size') === String(pageable.size));
+    return matchesMunicipio && matchesPage;
+  });
+}
+
 describe('CasoService: gestionarCustodia', () => {
   let service: CasoService;
   let httpMock: HttpTestingController;
@@ -40,19 +62,21 @@ describe('CasoService: gestionarCustodia', () => {
     httpMock.verify();
     vi.restoreAllMocks();
   });
-  function testPatchRequest(casoId: number, dto: { asumir: boolean }): void {
+  function testPatchRequest(casoId: number, dto: CustodiaDTO): void {
     service.gestionarCustodia(casoId, dto).subscribe();
     const req = httpMock.expectOne(`${apiUrl}/${casoId}/custodia`);
     expect(req.request.method).toBe('PATCH');
     expect(req.request.body).toEqual(dto);
     req.flush({});
   }
-  it('should PATCH /api/casos/{id}/custodia', () => testPatchRequest(5, { asumir: true }));
-  it('should use correct id and dto', () => testPatchRequest(10, { asumir: false }));
+  it('should PATCH /api/casos/{id}/custodia to assume', () =>
+    testPatchRequest(5, { accion: 'ASUMIR' }));
+  it('should PATCH /api/casos/{id}/custodia with a release reason', () =>
+    testPatchRequest(10, { accion: 'LIBERAR', motivo: 'Requiere atención especializada' }));
   it('should return server response', () => {
     const casoId = 3;
     return new Promise<void>((resolve) => {
-      service.gestionarCustodia(casoId, { asumir: true }).subscribe((result) => {
+      service.gestionarCustodia(casoId, { accion: 'ASUMIR' }).subscribe((result) => {
         expect(result).toEqual({ id: casoId, custodia: true });
         resolve();
       });
@@ -61,10 +85,64 @@ describe('CasoService: gestionarCustodia', () => {
   });
   it('should use PATCH not POST or PUT', () => {
     const casoId = 7;
-    service.gestionarCustodia(casoId, { asumir: false }).subscribe();
+    service.gestionarCustodia(casoId, { accion: 'LIBERAR', motivo: 'Motivo' }).subscribe();
     const req = httpMock.expectOne(`${apiUrl}/${casoId}/custodia`);
     expect(req.request.method).toBe('PATCH');
     req.flush({});
+  });
+});
+
+describe('CasoService: archivo', () => {
+  let service: CasoService;
+  let httpMock: HttpTestingController;
+
+  beforeEach(() => {
+    const setup = setupCasoServiceTest();
+    service = setup.service;
+    httpMock = setup.httpMock;
+  });
+
+  afterEach(() => httpMock.verify());
+
+  it('sends case archive as PATCH with a required reason', () => {
+    const dto = { motivo: 'Caso resuelto hace más de siete días' };
+    service.archivarCaso(8, dto).subscribe();
+    const request = httpMock.expectOne(`${apiUrl}/8/archivar`);
+
+    expect(request.request.method).toBe('PATCH');
+    expect(request.request.body).toEqual(dto);
+    request.flush({});
+  });
+});
+
+describe('CasoService: cierre de caso', () => {
+  let service: CasoService;
+  let httpMock: HttpTestingController;
+
+  beforeEach(() => {
+    const setup = setupCasoServiceTest();
+    service = setup.service;
+    httpMock = setup.httpMock;
+  });
+
+  afterEach(() => {
+    httpMock.verify();
+    vi.restoreAllMocks();
+  });
+
+  it('sends case closure with POST and the selected result', () => {
+    const dto: CierreCasoDTO = {
+      motivoCierre: 'ENTREGADO_A_CUIDADOR',
+      entregadoA: 'Familia Pérez',
+      observacion: 'Adoptado',
+    };
+
+    service.cerrarCaso(17, dto).subscribe();
+    const request = httpMock.expectOne(`${apiUrl}/17/cierre`);
+
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual(dto);
+    request.flush({});
   });
 });
 
@@ -110,7 +188,7 @@ describe('CasoService: listarCasosEnCustodia', () => {
   });
 });
 
-describe('CasoService: listarCasosSinCustodia', () => {
+describe('CasoService: listarCasosSinCustodia filters', () => {
   let service: CasoService;
   let httpMock: HttpTestingController;
   beforeEach(() => {
@@ -122,30 +200,29 @@ describe('CasoService: listarCasosSinCustodia', () => {
     httpMock.verify();
     vi.restoreAllMocks();
   });
-  function expectSinCustodiaRequest(
-    municipioId: number,
-    pageable?: { page: number; size: number },
-  ): ReturnType<typeof httpMock.expectOne> {
-    return httpMock.expectOne((r) => {
-      const ok =
-        r.url === `${apiUrl}/sin-custodia` && r.params.get('municipioId') === String(municipioId);
-      return (
-        ok &&
-        (!pageable ||
-          (r.params.get('page') === String(pageable.page) &&
-            r.params.get('size') === String(pageable.size)))
-      );
-    });
-  }
   it('should GET with municipioId param', () => {
     service.listarCasosSinCustodia(15).subscribe();
-    const req = expectSinCustodiaRequest(15);
+    const req = expectSinCustodiaRequest(httpMock, 15);
     expect(req.request.method).toBe('GET');
     req.flush([]);
   });
   it('should include pageable params', () => {
     service.listarCasosSinCustodia(20, { page: 2, size: 15 }).subscribe();
-    expectSinCustodiaRequest(20, { page: 2, size: 15 }).flush([]);
+    expectSinCustodiaRequest(httpMock, 20, { page: 2, size: 15 }).flush([]);
+  });
+});
+
+describe('CasoService: listarCasosSinCustodia results', () => {
+  let service: CasoService;
+  let httpMock: HttpTestingController;
+  beforeEach(() => {
+    const setup = setupCasoServiceTest();
+    service = setup.service;
+    httpMock = setup.httpMock;
+  });
+  afterEach(() => {
+    httpMock.verify();
+    vi.restoreAllMocks();
   });
   it('should return array', () => {
     return new Promise<void>((resolve) => {
@@ -153,12 +230,12 @@ describe('CasoService: listarCasosSinCustodia', () => {
         expect(Array.isArray(result)).toBe(true);
         resolve();
       });
-      expectSinCustodiaRequest(10).flush([{ id: 100, titulo: 'Caso 1' }]);
+      expectSinCustodiaRequest(httpMock, 10).flush([{ id: 100, titulo: 'Caso 1' }]);
     });
   });
   it('should combine municipioId with pageable', () => {
     service.listarCasosSinCustodia(25, { page: 0, size: 20 }).subscribe();
-    const req = expectSinCustodiaRequest(25, { page: 0, size: 20 });
+    const req = expectSinCustodiaRequest(httpMock, 25, { page: 0, size: 20 });
     expect(req.request.method).toBe('GET');
     req.flush([]);
   });

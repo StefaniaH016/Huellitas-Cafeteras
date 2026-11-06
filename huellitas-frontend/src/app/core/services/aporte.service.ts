@@ -2,7 +2,12 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { AporteResponseDTO, CrearAporteDTO, OcultarAporteDTO } from '../../../core/models/dtos';
+import {
+  AporteResponseDTO,
+  CrearAporteDTO,
+  ModeracionAporteResponseDTO,
+  OcultarAporteDTO,
+} from '../../../core/models/dtos';
 
 /** Alias para compatibilidad. Usar AporteResponseDTO desde dtos.ts */
 export type Aporte = AporteResponseDTO;
@@ -28,9 +33,9 @@ export class AporteService {
     return this.httpClient.post<Aporte>(this.url(casoId), dto);
   }
 
-  ocultarAporte(id: number, motivo: string): Observable<Aporte> {
+  ocultarAporte(id: number, motivo: string): Observable<ModeracionAporteResponseDTO> {
     const dto: OcultarAporteDTO = { motivo };
-    return this.httpClient.patch<Aporte>(
+    return this.httpClient.patch<ModeracionAporteResponseDTO>(
       `${environment.apiUrl}/moderacion/aportes/${id}/ocultar`,
       dto,
     );

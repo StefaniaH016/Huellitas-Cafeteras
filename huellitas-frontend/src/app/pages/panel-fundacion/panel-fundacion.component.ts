@@ -1,4 +1,4 @@
-import { Component, computed, signal, inject, OnInit } from '@angular/core';
+import { Component, signal, inject, OnInit, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -11,18 +11,16 @@ import {
   PanelCaso,
   scrollToDashboardPanel,
 } from '../../core/utils/panel.utils';
-import { CustodiaDTO } from '../../../core/models/dtos';
+import { pageContent, pageTotal } from '../../core/utils/page.utils';
+import { getServerErrorMessage } from '../../core/utils/request.utils';
 import { environment } from '../../../environments/environment';
-import {
-  PanelTrabajoComponent,
-  PanelConfig,
-  ListaPanel,
-} from '../../shared/components/panel-trabajo/panel-trabajo.component';
-import { Figura } from '../../shared/components/dash-figures/dash-figures.component';
+import { forkJoin } from 'rxjs';
+import { CasoMiniaturaComponent } from '../../shared/components/caso-miniatura/caso-miniatura.component';
 
 interface UsuarioPerfilDTO {
   id: number;
   nombre: string;
+  organizacionNombre?: string | null;
   correo: string;
   telefono?: string;
   rol: string;
@@ -30,11 +28,14 @@ interface UsuarioPerfilDTO {
   departamentoId?: number;
   municipioId?: number;
   barrioId?: number;
+  estadoVerificacionOrganizacion?: string | null;
+  aceptaCustodia?: boolean | null;
+  capacidadAlbergue?: number | null;
 }
 
 @Component({
   selector: 'app-panel-fundacion',
-  imports: [CommonModule, FormsModule, RouterLink, PanelTrabajoComponent],
+  imports: [CommonModule, FormsModule, RouterLink, CasoMiniaturaComponent],
   templateUrl: './panel-fundacion.component.html',
   styleUrl: './panel-fundacion.component.css',
 })
@@ -44,26 +45,28 @@ export class PanelFundacionComponent implements OnInit {
   private router = inject(Router);
   authService = inject(AuthService);
 
-  // Panel config
-  panelConfig = computed<PanelConfig>(() => {
-    const nombre = this.authService.getNombre();
-    return {
-      titulo: `Mi panel · ${nombre}`,
-      resumen:
-        'Hay emergencias en tu municipio. Coordina rescates y gestiona los animales en custodia.',
-      cta: { texto: 'Ver casos de mi zona', ruta: '/casos' },
-      figuras: this.buildFiguras.bind(this),
-      listas: this.buildListas.bind(this),
-    };
-  });
-
-  // Stats for legacy template
-  fundacionStats = signal({ enCustodia: 0, esperandoAtencion: 0, emergenciasZona: 0 });
+  fundacionStats = signal({ enCustodia: 0, casosSinCustodia: 0 });
   fundacionAlertas = signal<PanelCaso[]>([]);
   fundacionAnimales = signal<PanelCaso[]>([]);
 
   cargando = signal(false);
   errorMensaje = signal('');
+  custodiaEnCursoId = signal<number | null>(null);
+  liberandoId = signal<number | null>(null);
+  estadoVerificacion = signal('PENDIENTE');
+  nombreOrganizacion = signal('');
+  aceptaCustodia = signal(false);
+  capacidadAlbergue = signal(0);
+  puedeAsumirCustodia = computed(
+    () =>
+      this.estadoVerificacion() === 'VERIFICADA' &&
+      this.aceptaCustodia() &&
+      this.fundacionStats().enCustodia < this.capacidadAlbergue(),
+  );
+  cuposDisponibles = computed(() =>
+    Math.max(0, this.capacidadAlbergue() - this.fundacionStats().enCustodia),
+  );
+  motivoLiberacion = '';
 
   ngOnInit(): void {
     this.cargarDatos();
@@ -73,148 +76,109 @@ export class PanelFundacionComponent implements OnInit {
     this.cargando.set(true);
     this.errorMensaje.set('');
 
-    // Reset UI state
-    this.fundacionStats.set({ enCustodia: 0, esperandoAtencion: 0, emergenciasZona: 0 });
+    this.fundacionStats.set({ enCustodia: 0, casosSinCustodia: 0 });
     this.fundacionAlertas.set([]);
     this.fundacionAnimales.set([]);
 
-    // Obtener municipioId del usuario autenticado
     this.httpClient.get<UsuarioPerfilDTO>(`${environment.apiUrl}/usuarios/me`).subscribe({
       next: (usuario) => {
+        this.nombreOrganizacion.set(usuario.organizacionNombre?.trim() || usuario.nombre);
+        this.estadoVerificacion.set(usuario.estadoVerificacionOrganizacion ?? 'PENDIENTE');
+        this.aceptaCustodia.set(usuario.aceptaCustodia === true);
+        this.capacidadAlbergue.set(usuario.capacidadAlbergue ?? 0);
         if (usuario.municipioId) {
           this.cargarCasos(usuario.municipioId);
         } else {
           this.errorMensaje.set('No se pudo determinar tu municipio');
           this.cargando.set(false);
-          this.limpiarErrorDespuesDe3Segundos();
         }
       },
-      error: () => {
+      error: (error: unknown) => {
+        console.error('Error al cargar el perfil de la fundación:', error);
         this.errorMensaje.set('Error al cargar tu información');
         this.cargando.set(false);
-        this.limpiarErrorDespuesDe3Segundos();
       },
     });
   }
 
   private cargarCasos(municipioId: number): void {
-    // Cargar casos en custodia
-    this.casoService.listarCasosEnCustodia().subscribe({
-      next: (response) => {
-        const casos = Array.isArray(response.content)
-          ? response.content
-          : Array.isArray(response)
-            ? response
-            : [];
-        this.fundacionAnimales.set(casos);
-        this.fundacionStats.update((stats) => ({
-          ...stats,
-          enCustodia: casos.length,
-        }));
-      },
-      error: () => {
-        this.errorMensaje.set('Error al cargar casos en custodia');
-        this.limpiarErrorDespuesDe3Segundos();
-      },
-    });
-
-    // Cargar casos sin custodia
-    this.casoService.listarCasosSinCustodia(municipioId).subscribe({
-      next: (response) => {
-        const casos = Array.isArray(response.content)
-          ? response.content
-          : Array.isArray(response)
-            ? response
-            : [];
-        this.fundacionAlertas.set(casos);
-        this.fundacionStats.update((stats) => ({
-          ...stats,
-          emergenciasZona: casos.length,
-        }));
+    forkJoin({
+      enCustodia: this.casoService.listarCasosEnCustodia({ page: 0, size: 50 }),
+      sinCustodia: this.casoService.listarCasosSinCustodia(municipioId, { page: 0, size: 50 }),
+    }).subscribe({
+      next: ({ enCustodia, sinCustodia }) => {
+        this.fundacionAnimales.set(pageContent<CasoListItem>(enCustodia));
+        this.fundacionAlertas.set(pageContent<CasoListItem>(sinCustodia));
+        this.fundacionStats.set({
+          enCustodia: pageTotal(enCustodia),
+          casosSinCustodia: pageTotal(sinCustodia),
+        });
         this.cargando.set(false);
       },
-      error: () => {
-        this.errorMensaje.set('Error al cargar casos sin custodia');
+      error: (error: unknown) => {
+        console.error('Error al cargar los casos de la fundación:', error);
+        this.errorMensaje.set('No fue posible cargar los casos de la fundación.');
         this.cargando.set(false);
-        this.limpiarErrorDespuesDe3Segundos();
       },
     });
-  }
-
-  private buildFiguras(casos: CasoListItem[]): Figura[] {
-    // Count critical injured cases in the zone
-    const criticosHeridos = casos.filter(
-      (c) => c.tipoCaso === 'HERIDO' && c.estado === 'REGISTRADO' && c.urgencia === 'CRITICA',
-    ).length;
-
-    // Count cases waiting for attention
-    const esperandoAtencion = casos.filter((c) => c.estado === 'EN_ATENCION').length;
-
-    return [
-      { valor: '—', texto: 'Resumen' },
-      { valor: criticosHeridos, texto: 'Animales críticos' },
-      { valor: esperandoAtencion, texto: 'En atención' },
-    ];
-  }
-
-  private buildListas(casos: CasoListItem[]): ListaPanel[] {
-    // Critical injured cases
-    const criticosHeridos = casos.filter(
-      (c) => c.tipoCaso === 'HERIDO' && c.estado === 'REGISTRADO' && c.urgencia === 'CRITICA',
-    );
-
-    // Cases awaiting attention
-    const enAtencion = casos.filter((c) => c.estado === 'EN_ATENCION');
-
-    return [
-      {
-        titulo: 'Emergencias sin custodia',
-        casos: criticosHeridos,
-        vacio: 'No hay emergencias críticas',
-        accion: 'Asumir custodia',
-      },
-      {
-        titulo: 'Esperando atención',
-        casos: enAtencion,
-        vacio: 'Cargar desde el backend',
-        accion: 'Ver detalles',
-        pendiente: 'El backend no publica este endpoint aún',
-      },
-    ];
   }
 
   asumirCustodia(casoId: number): void {
-    this.casoService.gestionarCustodia(casoId, { asumir: true } as CustodiaDTO).subscribe({
+    if (this.custodiaEnCursoId() !== null) {
+      return;
+    }
+    this.errorMensaje.set('');
+    this.custodiaEnCursoId.set(casoId);
+    this.casoService.gestionarCustodia(casoId, { accion: 'ASUMIR' }).subscribe({
       next: () => {
+        this.custodiaEnCursoId.set(null);
         this.cargarDatos();
       },
-      error: () => {
-        this.errorMensaje.set('Error al asumir custodia');
-        this.limpiarErrorDespuesDe3Segundos();
+      error: (error: unknown) => {
+        this.custodiaEnCursoId.set(null);
+        this.errorMensaje.set(getServerErrorMessage(error) ?? 'Error al asumir custodia');
       },
     });
   }
 
+  iniciarLiberacion(casoId: number): void {
+    this.liberandoId.set(casoId);
+    this.motivoLiberacion = '';
+  }
+
+  cancelarLiberacion(): void {
+    this.liberandoId.set(null);
+    this.motivoLiberacion = '';
+  }
+
   liberarCustodia(casoId: number): void {
-    this.casoService.gestionarCustodia(casoId, { asumir: false } as CustodiaDTO).subscribe({
+    const motivo = this.motivoLiberacion.trim();
+    if (!motivo || this.custodiaEnCursoId() !== null) {
+      return;
+    }
+    this.errorMensaje.set('');
+    this.custodiaEnCursoId.set(casoId);
+    this.casoService.gestionarCustodia(casoId, { accion: 'LIBERAR', motivo }).subscribe({
       next: () => {
+        this.custodiaEnCursoId.set(null);
+        this.cancelarLiberacion();
         this.cargarDatos();
       },
-      error: () => {
-        this.errorMensaje.set('Error al liberar custodia');
-        this.limpiarErrorDespuesDe3Segundos();
+      error: (error: unknown) => {
+        this.custodiaEnCursoId.set(null);
+        this.errorMensaje.set(getServerErrorMessage(error) ?? 'Error al liberar custodia');
       },
     });
   }
 
   irAlCaso(casoId: number): void {
-    void this.router.navigate([`/casos/detalle/${casoId}`]);
+    void this.router.navigate(['/caso-detalle', casoId]);
   }
 
-  private limpiarErrorDespuesDe3Segundos(): void {
-    setTimeout(() => {
-      this.errorMensaje.set('');
-    }, 3000);
+  abrirBitacora(casoId: number): void {
+    void this.router.navigate(['/caso-detalle', casoId], {
+      queryParams: { tab: 'bitacora' },
+    });
   }
 
   getBadgeClass = getPanelBadgeClass;

@@ -78,6 +78,16 @@
             />
             Extraviado
           </label>
+          <label class="chip" [class.chip-selected]="formData.tipoCaso === 'EN_ADOPCION'">
+            <input
+              class="sr-only"
+              type="radio"
+              name="tipoCaso"
+              value="EN_ADOPCION"
+              [(ngModel)]="formData.tipoCaso"
+            />
+            Adopción
+          </label>
         </fieldset>
         <p class="type-hint" id="tipoHint">Elige la opción que mejor describe la situación.</p>
         <p class="field-error" id="error-tipoCaso" [hidden]="!errors['tipoCaso']">

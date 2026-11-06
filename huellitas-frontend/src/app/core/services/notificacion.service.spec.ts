@@ -26,21 +26,21 @@ it('lists all notifications or only the unread ones', () => {
   http.expectOne(`${baseUrl}?leidas=false&page=1&size=5`).flush({ content: [] });
 });
 
-it('updates the unread counter from the unread page total', () => {
+it('updates the unread counter from the dedicated count endpoint', () => {
   service.actualizarContador();
-  http.expectOne(`${baseUrl}?leidas=false&page=0&size=1`).flush({ content: [], totalElements: 4 });
+  http.expectOne(`${baseUrl}/no-leidas/count`).flush(4);
 
   expect(service.sinLeer()).toBe(4);
 });
 
-it('resets the counter when the request fails', () => {
+it('preserves the last counter and reports an error when the count request fails', () => {
   service.sinLeer.set(2);
+  const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
   service.actualizarContador();
-  http
-    .expectOne(`${baseUrl}?leidas=false&page=0&size=1`)
-    .flush(null, { status: 500, statusText: 'x' });
+  http.expectOne(`${baseUrl}/no-leidas/count`).flush(null, { status: 500, statusText: 'x' });
 
-  expect(service.sinLeer()).toBe(0);
+  expect(service.sinLeer()).toBe(2);
+  expect(errorSpy).toHaveBeenCalledOnce();
 });
 
 it('marks one as read and lowers the counter', () => {

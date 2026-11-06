@@ -1,3 +1,5 @@
+import { getUrgencyBadgeClass, getUrgencyBadgeLabel } from './caso-display.utils';
+
 export interface PanelCaso {
   id: number;
   titulo?: string;
@@ -6,6 +8,7 @@ export interface PanelCaso {
   municipio: string;
   barrio: string;
   foto?: string;
+  fotoPrincipal?: string;
   reportadoHace?: string;
   estado?: string;
   nombre?: string;
@@ -16,25 +19,17 @@ export interface PanelCaso {
 }
 
 export function getPanelBadgeClass(urgencia: string): string {
-  const urgenciaLower = (urgencia || '').toLowerCase();
-  if (urgenciaLower === 'critica' || urgenciaLower === 'emergencia') {
+  if (urgencia?.toUpperCase() === 'EMERGENCIA') {
     return 'badge-emergencia';
   }
-  if (urgenciaLower === 'alta' || urgenciaLower === 'extraviado') {
-    return 'badge-alta';
-  }
-  return 'badge-atencion';
+  return getUrgencyBadgeClass(urgencia);
 }
 
 export function getPanelBadgeLabel(urgencia: string): string {
-  const urgenciaLower = (urgencia || '').toLowerCase();
-  if (urgenciaLower === 'critica' || urgenciaLower === 'emergencia') {
+  if (urgencia?.toUpperCase() === 'EMERGENCIA') {
     return 'Emergencia';
   }
-  if (urgenciaLower === 'alta' || urgenciaLower === 'extraviado') {
-    return 'Extraviado';
-  }
-  return 'En atención';
+  return getUrgencyBadgeLabel(urgencia);
 }
 
 export function scrollToDashboardPanel(): void {

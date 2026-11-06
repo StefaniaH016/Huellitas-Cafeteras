@@ -7,19 +7,16 @@
       <span class="brand-name"><span>Huellitas</span><span>Cafeteras</span></span>
     </a>
     <nav class="header-nav" aria-label="Navegación principal">
-      <!-- Inicio link for all roles -->
-      @if (!isAdmin()) {
-        <a routerLink="/home" class="nav-link">
-          <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-6v-7h-4v7H4a1 1 0 0 1-1-1z" />
-          </svg>
-          Inicio
-        </a>
-      }
+      <a routerLink="/home" class="nav-link">
+        <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-6v-7h-4v7H4a1 1 0 0 1-1-1z" />
+        </svg>
+        Inicio
+      </a>
 
       <!-- Show "Mi panel" for non-ciudadano roles -->
       @if (isFundacion() || isVeterinaria()) {
-        <a routerLink="/home" fragment="mi-panel" class="nav-link">
+        <a [routerLink]="isVeterinaria() ? '/veterinaria' : '/fundacion'" class="nav-link">
           <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">
             <rect x="3" y="3" width="7" height="7" rx="1.5" />
             <rect x="14" y="3" width="7" height="7" rx="1.5" />
@@ -41,6 +38,14 @@
         </a>
       }
 
+      <a routerLink="/casos" class="nav-link">
+        <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="11" cy="11" r="7" />
+          <path d="m20 20-3.5-3.5" />
+        </svg>
+        Casos
+      </a>
+
       <!-- Show "Mis reportes" for ciudadano -->
       @if (isCiudadano()) {
         <a routerLink="/mis-reportes" class="nav-link">
@@ -59,12 +64,16 @@
           <path d="M10 20a2 2 0 0 0 4 0" />
         </svg>
         Notificaciones
-        <span class="badge" aria-label="3 notificaciones nuevas">3</span>
+        @if (sinLeer() > 0) {
+          <span class="badge" [attr.aria-label]="sinLeer() + ' notificaciones sin leer'">
+            {{ sinLeer() > 99 ? '99+' : sinLeer() }}
+          </span>
+        }
       </a>
-      <div class="user-chip">
+      <a routerLink="/cuenta" class="user-chip" [attr.aria-label]="'Perfil de ' + userName()">
         <div class="avatar" aria-hidden="true">{{ initials() }}</div>
         <span class="user-name">{{ userName() }}</span>
-      </div>
+      </a>
       <button class="btn-salir" (click)="logout()" type="button">
         <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">
           <path d="M9 21H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3" />

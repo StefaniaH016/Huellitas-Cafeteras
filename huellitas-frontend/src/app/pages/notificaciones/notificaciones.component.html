@@ -1,59 +1,183 @@
-<section class="page page-narrow">
-  <h1>Notificaciones</h1>
-  <p class="lead">Avisos de tus casos y de tu zona · se marcan como leídos al abrirlos</p>
-
-  <div class="chip-row mt-sm" role="group" aria-label="Filtrar notificaciones">
-    <button
-      class="chip"
-      type="button"
-      [class.active]="!soloSinLeer()"
-      [attr.aria-pressed]="!soloSinLeer()"
-      (click)="filtrar(false)"
-    >
-      Todas
-    </button>
-    <button
-      class="chip"
-      type="button"
-      [class.active]="soloSinLeer()"
-      [attr.aria-pressed]="soloSinLeer()"
-      (click)="filtrar(true)"
-    >
-      Sin leer<span class="count-pill">{{ sinLeer() }}</span>
-    </button>
-  </div>
-
-  @if (carga.cargando()) {
-    <p class="list-empty">Cargando notificaciones...</p>
-  } @else if (carga.error()) {
-    <p class="feedback-error" role="alert">{{ carga.error() }}</p>
-  }
-
-  @for (notificacion of notificaciones(); track notificacion.id) {
-    <article class="notif" [class.is-unread]="!notificacion.leida">
-      <span class="notif-dot" [attr.aria-label]="notificacion.leida ? 'Leída' : 'Sin leer'"></span>
-      <div class="list-thumb" aria-hidden="true">{{ icono(notificacion.tipo) }}</div>
-      <div class="list-info">
-        <p class="list-title">{{ notificacion.mensaje }}</p>
-        <p class="list-meta">{{ haceCuanto(notificacion.fecha) }}</p>
+<section id="notificaciones">
+  <div class="main-area wrap-1080">
+    <div class="back-row">
+      <button class="icon-btn" (click)="goBack()" aria-label="Volver al inicio">←</button>
+      <div class="flex-1">
+        <h1 class="m-0">Notificaciones</h1>
+        <p class="lead mt-2xs">
+          Avisos de tus casos y de tu zona · se marcan como leídos al abrirlos
+        </p>
       </div>
-      <div class="list-actions">
-        <button class="btn btn-secondary btn-sm" type="button" (click)="abrir(notificacion)">
-          {{ notificacion.casoId ? 'Ver caso' : 'Marcar leída' }}
-        </button>
-      </div>
-    </article>
-  } @empty {
-    @if (!carga.cargando()) {
-      <p class="list-empty">No tienes notificaciones{{ soloSinLeer() ? ' sin leer' : '' }}.</p>
-    }
-  }
+    </div>
 
-  <div class="panel mt-sm">
-    <div class="panel-head"><h2>Cómo te avisamos</h2></div>
-    <p class="note m-0">
-      De tus casos siempre te avisamos: aportes, custodia, atención médica, cierre y recordatorios.
-      Llegan aquí y a tu correo electrónico. Tu zona de interés la eliges en Mi cuenta.
-    </p>
+    <div class="two-col">
+      <div>
+        <div class="chip-row" role="group" aria-label="Filtrar notificaciones">
+          <button
+            class="chip"
+            type="button"
+            [class.active]="!soloSinLeer()"
+            [attr.aria-pressed]="!soloSinLeer()"
+            (click)="filtrar(false)"
+          >
+            Todas<span class="count-pill">{{ notificaciones().length }}</span>
+          </button>
+          <button
+            class="chip"
+            type="button"
+            [class.active]="soloSinLeer()"
+            [attr.aria-pressed]="soloSinLeer()"
+            (click)="filtrar(true)"
+          >
+            Sin leer<span class="count-pill">{{ sinLeer() }}</span>
+          </button>
+          @if (!isAdmin()) {
+            <button
+              class="chip"
+              type="button"
+              [class.active]="false"
+              [attr.aria-pressed]="false"
+              disabled
+            >
+              Mis casos<span class="count-pill">—</span>
+            </button>
+            <button
+              class="chip"
+              type="button"
+              [class.active]="false"
+              [attr.aria-pressed]="false"
+              disabled
+            >
+              Mi zona<span class="count-pill">—</span>
+            </button>
+            <button
+              class="chip"
+              type="button"
+              [class.active]="false"
+              [attr.aria-pressed]="false"
+              disabled
+            >
+              Recordatorios<span class="count-pill">—</span>
+            </button>
+          } @else {
+            <button
+              class="chip"
+              type="button"
+              [class.active]="false"
+              [attr.aria-pressed]="false"
+              disabled
+            >
+              Cuentas<span class="count-pill">—</span>
+            </button>
+            <button
+              class="chip"
+              type="button"
+              [class.active]="false"
+              [attr.aria-pressed]="false"
+              disabled
+            >
+              Moderación<span class="count-pill">—</span>
+            </button>
+            <button
+              class="chip"
+              type="button"
+              [class.active]="false"
+              [attr.aria-pressed]="false"
+              disabled
+            >
+              Sin actividad<span class="count-pill">—</span>
+            </button>
+          }
+        </div>
+
+        @if (carga.cargando()) {
+          <p class="list-empty">Cargando notificaciones...</p>
+        } @else if (carga.error()) {
+          <p class="feedback-error" role="alert">{{ carga.error() }}</p>
+        }
+
+        @for (notificacion of notificaciones(); track notificacion.id) {
+          <article class="notif" [class.is-unread]="!notificacion.leida">
+            <span
+              class="notif-dot"
+              [attr.aria-label]="notificacion.leida ? 'Leída' : 'Sin leer'"
+            ></span>
+            <div class="list-thumb" aria-hidden="true">{{ icono(notificacion.tipo) }}</div>
+            <div class="list-info">
+              <p class="list-title">{{ notificacion.mensaje }}</p>
+              <p class="list-meta">{{ haceCuanto(notificacion.fecha) }}</p>
+            </div>
+            <div class="list-actions">
+              @if (notificacion.casoId) {
+                <button
+                  class="btn btn-secondary btn-sm"
+                  type="button"
+                  (click)="abrir(notificacion)"
+                >
+                  Ver caso
+                </button>
+              } @else if (!notificacion.leida) {
+                <button
+                  class="btn btn-secondary btn-sm"
+                  type="button"
+                  (click)="abrir(notificacion)"
+                >
+                  Marcar leída
+                </button>
+              } @else {
+                <span class="list-meta">Leída</span>
+              }
+            </div>
+          </article>
+        } @empty {
+          @if (!carga.cargando()) {
+            <p class="list-empty">
+              No tienes notificaciones{{ soloSinLeer() ? ' sin leer' : '' }}.
+            </p>
+          }
+        }
+      </div>
+
+      <aside>
+        @if (isAdmin()) {
+          <div class="panel">
+            <div class="panel-head"><h3>Tus avisos</h3></div>
+            <p class="note">
+              Te avisamos cuando una fundación o veterinaria pide validar su cuenta, cuando un
+              contenido queda marcado para moderación y cuando W-04 encuentra casos sin actividad.
+              Cada aviso abre su pestaña en Administración.
+            </p>
+          </div>
+        } @else {
+          <div class="panel">
+            <div class="panel-head"><h3>Cómo te avisamos</h3></div>
+            <div class="pref-row">
+              <div>
+                <p class="list-title">Mi zona de interés</p>
+                <p class="list-meta">
+                  Armenia, Quindío ·
+                  <a class="panel-link" routerLink="/cuenta">Cambiar en Mi cuenta</a>
+                </p>
+              </div>
+            </div>
+            <div class="pref-row">
+              <div>
+                <p class="list-title">Disponible para rescate</p>
+                <p class="list-meta">Recibe las emergencias que se reporten en tu zona</p>
+              </div>
+              <label class="toggle"
+                ><input type="checkbox" checked aria-label="Disponible para rescate" /><span
+                  class="track"
+                ></span
+              ></label>
+            </div>
+            <p class="note">
+              De tus casos siempre te avisamos: aportes, custodia, atención médica, cierre y
+              recordatorios. Llegan aquí y a tu correo electrónico.
+            </p>
+          </div>
+        }
+      </aside>
+    </div>
   </div>
 </section>

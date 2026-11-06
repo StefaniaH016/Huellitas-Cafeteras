@@ -1,86 +1,176 @@
 <section class="page page-narrow">
-  <h1>Mi cuenta</h1>
-  @if (perfil(); as perfil) {
-    <p class="lead">
-      {{ perfil.correo }} · {{ roleLabels[perfil.rol] }}
-      @if (perfil.rol === 'FUNDACION_REFUGIO' || perfil.rol === 'VETERINARIA') {
-        · {{ perfil.verificado ? 'Cuenta verificada' : 'Pendiente de validación' }}
-      }
-    </p>
-  }
-  @if (carga.cargando()) {
-    <p class="list-empty">Cargando tus datos...</p>
-  } @else if (carga.error()) {
-    <p class="feedback-error" role="alert">{{ carga.error() }}</p>
-  }
+  <div class="main-area wrap-760">
+    <h1>Mi cuenta</h1>
+    @if (perfil(); as perfil) {
+      <p class="lead">
+        {{ perfil.correo }} · {{ roleLabels[perfil.rol] }}
+        @if (esInstitucional()) {
+          · Estado: {{ perfil.estadoVerificacionOrganizacion ?? 'PENDIENTE' }}
+        }
+      </p>
+    }
+    @if (carga.cargando()) {
+      <p class="list-empty">Cargando tus datos...</p>
+    } @else if (carga.error()) {
+      <p class="feedback-error" role="alert">{{ carga.error() }}</p>
+    }
 
-  @if (perfil()) {
-    <form class="panel mt-sm" (ngSubmit)="guardar()">
-      <div class="panel-head"><h2>Datos de contacto</h2></div>
-      <div class="grid-2">
-        <div class="form-field">
-          <label for="cuenta-nombre">Nombre completo</label>
-          <input
-            id="cuenta-nombre"
-            name="nombre"
-            type="text"
-            maxlength="150"
-            required
-            [(ngModel)]="nombre"
-          />
+    @if (perfil()) {
+      @if (esInstitucional()) {
+        <section class="panel mt-sm" aria-labelledby="verificacion-organizacion">
+          <div class="panel-head">
+            <h2 id="verificacion-organizacion">Verificación de la organización</h2>
+          </div>
+          @if (!puedeSolicitarRevision()) {
+            <p class="feedback-success" role="status">Tu organización ya está verificada.</p>
+          } @else {
+            <p class="note">
+              Adjunta el soporte actualizado para que el administrador pueda revisar nuevamente los
+              datos de tu {{ perfil()?.rol === 'VETERINARIA' ? 'veterinaria' : 'fundación' }}.
+            </p>
+            <form (ngSubmit)="solicitarRevision()">
+              @if (requiereAsociacionOrganizacion()) {
+                <p class="note">
+                  Esta cuenta aún no tiene una organización asociada. Completa estos datos para
+                  vincularla y enviar el soporte a revisión.
+                </p>
+                <div class="grid-2">
+                  <div class="form-field">
+                    <label for="cuenta-nombre-entidad">Nombre de la organización</label>
+                    <input
+                      id="cuenta-nombre-entidad"
+                      name="nombreEntidad"
+                      type="text"
+                      maxlength="150"
+                      required
+                      [(ngModel)]="nombreEntidad"
+                    />
+                  </div>
+                  <div class="form-field">
+                    <label for="cuenta-nit-entidad">NIT</label>
+                    <input
+                      id="cuenta-nit-entidad"
+                      name="nitEntidad"
+                      type="text"
+                      maxlength="20"
+                      required
+                      [(ngModel)]="nitEntidad"
+                    />
+                  </div>
+                  <div class="form-field">
+                    <label for="cuenta-municipio-operacion">Municipio de operación</label>
+                    <input
+                      id="cuenta-municipio-operacion"
+                      name="municipioOperacion"
+                      type="text"
+                      maxlength="100"
+                      required
+                      [(ngModel)]="municipioOperacion"
+                    />
+                  </div>
+                </div>
+              }
+              <div class="form-field">
+                <label for="cuenta-documento-soporte">Documento de soporte</label>
+                <input
+                  id="cuenta-documento-soporte"
+                  name="documentoSoporte"
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  (change)="seleccionarDocumento($event)"
+                />
+                <p class="note">PDF, JPG o PNG, máximo 5 MB.</p>
+              </div>
+              @if (documentoRevision(); as documento) {
+                <p class="list-meta">Archivo seleccionado: {{ documento.name }}</p>
+              }
+              @if (errorDocumento()) {
+                <p class="feedback-error" role="alert">{{ errorDocumento() }}</p>
+              }
+              @if (mensajeSolicitud()) {
+                <p class="feedback-success" role="status">{{ mensajeSolicitud() }}</p>
+              }
+              @if (errorSolicitud()) {
+                <p class="feedback-error" role="alert">{{ errorSolicitud() }}</p>
+              }
+              <button
+                class="btn btn-primary mt-sm"
+                type="submit"
+                [disabled]="solicitudEnCurso() || !documentoRevision()"
+              >
+                {{ solicitudEnCurso() ? 'Enviando...' : 'Solicitar revisión del administrador' }}
+              </button>
+            </form>
+          }
+        </section>
+      }
+
+      <form class="panel mt-sm" (ngSubmit)="guardar()">
+        <div class="panel-head"><h2>Datos de contacto</h2></div>
+        <div class="grid-2">
+          <div class="form-field">
+            <label for="cuenta-nombre">Nombre completo</label>
+            <input
+              id="cuenta-nombre"
+              name="nombre"
+              type="text"
+              maxlength="150"
+              required
+              [(ngModel)]="nombre"
+            />
+          </div>
+          <div class="form-field">
+            <label for="cuenta-correo">Correo electrónico</label>
+            <input id="cuenta-correo" name="correo" type="email" [(ngModel)]="correo" readonly />
+          </div>
         </div>
-        <div class="form-field">
-          <label for="cuenta-telefono">Teléfono</label>
-          <input
-            id="cuenta-telefono"
-            name="telefono"
-            type="tel"
-            maxlength="20"
-            [(ngModel)]="telefono"
-          />
+        <app-ubicacion-selector
+          idPrefix="cuenta"
+          leyenda="Zona de interés"
+          [deptoId]="zona.departamentoId"
+          [munId]="zona.municipioId"
+          [barrioId]="zona.barrioId"
+          (deptoChange)="zona.departamentoId = $event"
+          (munChange)="zona.municipioId = $event"
+          (barrioChange)="zona.barrioId = $event"
+        />
+        <p class="note">es la zona con la que filtramos tus alertas.</p>
+        @if (guardado.exito()) {
+          <p class="feedback-success" role="status">{{ guardado.exito() }}</p>
+        }
+        @if (guardado.error()) {
+          <p class="feedback-error" role="alert">{{ guardado.error() }}</p>
+        }
+        <button
+          class="btn btn-primary mt-sm"
+          type="submit"
+          [disabled]="guardado.cargando() || !nombre.trim()"
+        >
+          {{ guardado.cargando() ? 'Guardando...' : 'Guardar cambios' }}
+        </button>
+      </form>
+
+      <div class="panel">
+        <div class="panel-head"><h3>Preferencias</h3></div>
+        <div class="pref-row">
+          <div>
+            <p class="list-title">Disponible para rescate</p>
+            <p class="list-meta">Recibe las emergencias que se reporten en tu zona de interés</p>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" checked aria-label="Disponible para rescate" />
+            <span class="track"></span>
+          </label>
         </div>
+        <p class="note">
+          De tus casos siempre te avisamos dentro de la plataforma y por correo electrónico.
+        </p>
       </div>
-      <app-ubicacion-selector
-        idPrefix="cuenta"
-        leyenda="Zona de interés"
-        [deptoId]="zona.departamentoId"
-        [munId]="zona.municipioId"
-        [barrioId]="zona.barrioId"
-        (deptoChange)="zona.departamentoId = $event"
-        (munChange)="zona.municipioId = $event"
-        (barrioChange)="zona.barrioId = $event"
-      />
-      <p class="note">Te enviamos las alertas de emergencias de esta zona.</p>
-      @if (guardado.exito()) {
-        <p class="feedback-success" role="status">{{ guardado.exito() }}</p>
-      }
-      @if (guardado.error()) {
-        <p class="feedback-error" role="alert">{{ guardado.error() }}</p>
-      }
-      <button
-        class="btn btn-primary mt-sm"
-        type="submit"
-        [disabled]="guardado.cargando() || !nombre.trim()"
-      >
-        {{ guardado.cargando() ? 'Guardando...' : 'Guardar cambios' }}
-      </button>
-    </form>
 
-    <div class="panel">
-      <div class="panel-head"><h2>Preferencias</h2></div>
-      <div class="pref-row">
-        <div>
-          <p class="list-title">Disponible para rescate</p>
-          <p class="list-meta">Recibe las emergencias que se reporten en tu zona de interés.</p>
-        </div>
-        <label class="toggle">
-          <input type="checkbox" disabled aria-label="Disponible para rescate (próximamente)" />
-          <span class="track"></span>
-        </label>
+      <div class="row-gap-md">
+        <button class="btn btn-secondary" type="button">Cambiar contraseña</button>
+        <button class="btn btn-ghost" type="button" (click)="salir()">Cerrar sesión</button>
       </div>
-      <p class="note">Esta preferencia se activará cuando el backend la guarde en tu perfil.</p>
-    </div>
-
-    <button class="btn btn-secondary" type="button" (click)="salir()">Cerrar sesión</button>
-  }
+    }
+  </div>
 </section>

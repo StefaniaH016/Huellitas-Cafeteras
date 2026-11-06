@@ -134,6 +134,13 @@ export const routes: Routes = [
           import('./pages/reportar/reportar.component').then((m) => m.ReportarComponent),
       },
       {
+        path: 'casos/:id/editar',
+        canActivate: [roleGuard],
+        data: { roles: ['CIUDADANO_VOLUNTARIO'] },
+        loadComponent: () =>
+          import('./pages/reportar/reportar.component').then((m) => m.ReportarComponent),
+      },
+      {
         path: 'caso-detalle/:id',
         loadComponent: () =>
           import('./pages/caso-detalle/caso-detalle.component').then((m) => m.CasoDetalleComponent),

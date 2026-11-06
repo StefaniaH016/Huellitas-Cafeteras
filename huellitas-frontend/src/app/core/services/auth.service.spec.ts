@@ -100,6 +100,42 @@ it('registers a user with the expected request body', () => {
   expect(result).toEqual(expected);
 });
 
+it('registers an institutional account as multipart when support is attached', async () => {
+  const documento = new File(['%PDF-1.7'], 'soporte.pdf', { type: 'application/pdf' });
+  service
+    .registro({
+      nombre: 'Patitas',
+      correo: 'fundacion@example.test',
+      contrasena: 'secret',
+      telefono: '1234567890',
+      rol: 'FUNDACION_REFUGIO',
+      nombreEntidad: 'Fundación Patitas',
+      nit: '900123',
+      municipioOperacion: 'Armenia',
+      documentoSoporte: documento,
+      aceptoTratamientoDatos: true,
+    })
+    .subscribe();
+
+  const request = http.expectOne(`${environment.apiUrl}/auth/registro/institucional`);
+  expect(request.request.method).toBe('POST');
+  expect(request.request.body).toBeInstanceOf(FormData);
+  const formData = request.request.body as FormData;
+  expect(formData.get('documentoSoporte')).toMatchObject({
+    name: 'soporte.pdf',
+    type: 'application/pdf',
+  });
+  const datos = formData.get('datos');
+  expect(datos).toBeInstanceOf(Blob);
+  if (datos instanceof Blob) {
+    expect(JSON.parse(await datos.text())).toMatchObject({
+      rol: 'FUNDACION_REFUGIO',
+      nit: '900123',
+    });
+  }
+  request.flush({});
+});
+
 it('clears credentials and redirects on logout', () => {
   localStorage.setItem('hc_rol', 'ADMINISTRADOR');
 

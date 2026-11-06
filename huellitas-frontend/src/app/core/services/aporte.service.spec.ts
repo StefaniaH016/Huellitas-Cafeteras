@@ -257,17 +257,13 @@ describe('AporteService', () => {
       req.flush({});
     });
 
-    it('should return Observable<Aporte> with server response', () => {
+    it('should return the moderation response from the server', () => {
       const aporteId = 15;
       const motivo = 'Contenido duplicado';
       const mockResponse = {
-        id: 15,
-        casoId: 5,
-        autorId: 2,
-        descripcion: 'Aporte oculto',
-        ubicacionTexto: 'Ubicación',
-        fotografias: [],
-        fecha: '2024-01-10',
+        casoId: 15,
+        decision: 'OCULTADO',
+        fechaRevision: '2024-01-10',
       };
 
       let result: unknown;
@@ -278,7 +274,7 @@ describe('AporteService', () => {
       const req = httpMock.expectOne(`${moderacionUrl}/${aporteId}/ocultar`);
       req.flush(mockResponse);
       expect(result).toEqual(mockResponse);
-      expect((result as typeof mockResponse).id).toBe(15);
+      expect((result as typeof mockResponse).casoId).toBe(15);
     });
 
     it('should use PATCH method, not POST or PUT', () => {

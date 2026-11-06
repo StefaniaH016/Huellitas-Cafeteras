@@ -69,13 +69,26 @@ export interface OcultarAporteDTO {
   motivo: string;
 }
 
+export interface ModeracionAporteResponseDTO {
+  casoId: number;
+  decision: string;
+  fechaRevision: string;
+}
+
 /**
  * DTO para gestionar custodia de un caso
  * Se utiliza cuando una fundación/refugio asume o cede la custodia de un caso
  */
 export interface CustodiaDTO {
-  /** Indica si se asume (true) o se cede (false) la custodia */
-  asumir: boolean;
+  /** Acción de custodia solicitada */
+  accion: 'ASUMIR' | 'LIBERAR';
+
+  /** Motivo requerido al liberar la custodia */
+  motivo?: string;
+}
+
+export interface ArchivarCasoDTO {
+  motivo: string;
 }
 
 // ============================================================================
@@ -126,11 +139,31 @@ export interface EvolucionDetalleDTO {
   /** Diagnóstico registrado */
   diagnostico: string;
 
+  /** Procedimiento realizado */
+  procedimiento?: string;
+
   /** Tratamiento registrado */
-  tratamiento: string;
+  tratamiento?: string;
+
+  /** Medicamentos administrados */
+  medicamentos?: string;
+
+  /** Evolución clínica */
+  evolucion?: string;
 
   /** Observaciones registradas */
-  observaciones: string;
+  observaciones?: string;
+
+  /** Nombre de quien firmó la entrada */
+  firmanteNombre?: string;
+
+  /** Fecha de firma */
+  fechaFirma?: string;
+}
+
+export interface AltaMedicaDetalleDTO {
+  fechaAlta: string;
+  estado: string;
 }
 
 /**
@@ -214,7 +247,27 @@ export interface BitacoraDetalleDTO {
   evoluciones: EvolucionDetalleDTO[];
 
   /** Información del alta médica (si existe) */
-  alta?: object;
+  alta?: AltaMedicaDetalleDTO | null;
+}
+
+export interface PacienteResponseDTO {
+  /** ID de la bitácora */
+  id: number;
+  casoId: number;
+  nombre: string | null;
+  especie: string | null;
+  raza: string | null;
+  sexo: string | null;
+  descripcion: string | null;
+  urgencia: string | null;
+  estado: string;
+  municipio: string | null;
+  barrio: string | null;
+  foto: string | null;
+  fechaApertura: string;
+  altaMedica: boolean;
+  fechaAlta: string | null;
+  proximoControl: string | null;
 }
 
 // ============================================================================
@@ -242,5 +295,5 @@ export interface NotificacionDTO {
   fecha: string;
 
   /** ID del caso asociado a la notificación (si aplica) */
-  casoId: number;
+  casoId: number | null;
 }

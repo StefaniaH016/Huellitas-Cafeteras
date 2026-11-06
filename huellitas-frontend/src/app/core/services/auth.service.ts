@@ -67,7 +67,7 @@ export class AuthService {
     nit?: string;
     documentoLegal?: string;
     municipioOperacion?: string;
-    documentoSoporte?: string;
+    documentoSoporte?: File;
     aceptoTratamientoDatos: boolean;
   }): Observable<RegistroResponse> {
     const body = {
@@ -82,8 +82,16 @@ export class AuthService {
       ...(request.nit && { nit: request.nit }),
       ...(request.documentoLegal && { documentoLegal: request.documentoLegal }),
       ...(request.municipioOperacion && { municipioOperacion: request.municipioOperacion }),
-      ...(request.documentoSoporte && { documentoSoporte: request.documentoSoporte }),
     };
+    if (request.documentoSoporte) {
+      const formData = new FormData();
+      formData.append('datos', new Blob([JSON.stringify(body)], { type: 'application/json' }));
+      formData.append('documentoSoporte', request.documentoSoporte, request.documentoSoporte.name);
+      return this.httpClient.post<RegistroResponse>(
+        `${environment.apiUrl}/auth/registro/institucional`,
+        formData,
+      );
+    }
     return this.httpClient.post<RegistroResponse>(`${environment.apiUrl}/auth/registro`, body);
   }
 

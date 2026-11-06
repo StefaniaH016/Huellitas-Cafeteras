@@ -34,7 +34,6 @@ function llenar(component: RegistroComponent): void {
     nit: '900123',
     tarjetaProf: '',
     municipioOperacion: 'Armenia',
-    docSoporte: '',
     aceptaDatos: true,
   });
 }

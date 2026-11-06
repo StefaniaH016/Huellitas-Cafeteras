@@ -20,10 +20,9 @@ export interface CasoDisplay {
 
 export const ESTADO_LABELS: Record<string, string> = {
   REGISTRADO: 'Registrado',
-  EN_REVISION: 'En revisión',
-  EN_CUSTODIA: 'En custodia',
-  CERRADO: 'Cerrado',
-  DERIVADO: 'Derivado',
+  EN_ATENCION: 'En atención',
+  RESUELTO: 'Resuelto',
+  ARCHIVADO: 'Archivado',
 };
 
 export const TIPO_LABELS: Record<string, string> = {
@@ -47,6 +46,7 @@ export const URGENCIA_LABELS: Record<string, string> = {
 export const APORTE_LABELS: Record<string, string> = {
   COMENTARIO: 'Comentario',
   AVISTAMIENTO: 'Avistamiento',
+  ACTUALIZACION: 'Actualización',
   INFO: 'Información',
   DENUNCIA: 'Denuncia',
 };
@@ -113,7 +113,7 @@ export function getUrgencyBadgeLabel(urgencia: string): string {
 
 export function esCasoAbierto(estado: string): boolean {
   const estadoUpper = (estado || '').toUpperCase();
-  return estadoUpper !== 'CERRADO' && estadoUpper !== 'DERIVADO';
+  return estadoUpper === 'REGISTRADO' || estadoUpper === 'EN_ATENCION';
 }
 
 export function formatFecha(fecha?: string): string {
@@ -206,10 +206,13 @@ export function labelOf(labels: Record<string, string>, key: string): string {
 
 export function estadoBadge(estado: string): string {
   switch ((estado || '').toUpperCase()) {
+    case 'RESUELTO':
     case 'CERRADO':
       return 'badge-success';
+    case 'EN_ATENCION':
     case 'EN_CUSTODIA':
       return 'badge-warning';
+    case 'ARCHIVADO':
     case 'DERIVADO':
       return 'badge-info';
     default:

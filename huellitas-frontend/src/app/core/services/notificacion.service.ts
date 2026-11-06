@@ -2,7 +2,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { Page, compactParams, pageTotal } from '../utils/page.utils';
+import { Page, compactParams } from '../utils/page.utils';
 import { NotificacionDTO } from '../../../core/models/dtos';
 
 /** Alias para compatibilidad. Usar NotificacionDTO desde dtos.ts */
@@ -25,11 +25,12 @@ export class NotificacionService {
     });
   }
 
-  /** No hay endpoint de conteo: se usa el total de la página de no leídas. */
+  /** Actualiza el contador usando el endpoint de conteo del usuario autenticado. */
   actualizarContador(): void {
-    this.listar(true, 0, 1).subscribe({
-      next: (page) => this.sinLeer.set(pageTotal(page)),
-      error: () => this.sinLeer.set(0),
+    this.httpClient.get<number>(`${this.apiUrl}/no-leidas/count`).subscribe({
+      next: (count) => this.sinLeer.set(count),
+      error: (error: unknown) =>
+        console.error('Error cargando el contador de notificaciones:', error),
     });
   }
 

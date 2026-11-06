@@ -1,6 +1,4 @@
-<app-panel-trabajo [config]="panelConfig()" />
-
-<main>
+<main class="private-main">
   @if (errorMensaje() !== '') {
     <div class="error-banner" role="alert">
       <p>{{ errorMensaje() }}</p>
@@ -9,63 +7,78 @@
 
   <section class="dash-hello">
     <div>
-      <h1>Hola, Fundación {{ authService.getNombre() }}</h1>
+      <h1>Mi panel · {{ nombreOrganizacion() || authService.getNombre() }}</h1>
       <p class="dash-summary">
-        Hay emergencias en tu municipio. Coordina rescates y gestiona los animales en custodia.
+        Tienes {{ fundacionStats().enCustodia }} casos bajo custodia y
+        {{ fundacionStats().casosSinCustodia }} casos sin fundación asignada en tu municipio.
       </p>
     </div>
     <div class="dash-ctas">
       <button class="btn btn-primary" routerLink="/casos">Ver casos de mi zona</button>
-      <button class="btn btn-secondary" (click)="scrollToPanel()">Ir a mi panel</button>
     </div>
   </section>
 
   <section class="dash-figures" aria-label="Resumen de tu fundación">
-    <a href="#" class="figure">
+    <a href="#custodia" class="figure">
       <span class="figure-num">{{ fundacionStats().enCustodia }}</span>
-      <span class="figure-label">En custodia</span>
+      <span class="figure-label">En custodia, de {{ capacidadAlbergue() }} cupos</span>
       <progress
         class="figure-meter"
         [value]="fundacionStats().enCustodia"
-        max="20"
-        aria-label="Cupos de albergue usados"
-      ></progress>
+        [max]="capacidadAlbergue()"
+        [attr.aria-label]="'Cupos de albergue usados'"
+      >
+        {{ fundacionStats().enCustodia }} de {{ capacidadAlbergue() }}
+      </progress>
     </a>
-    <a href="#" class="figure">
-      <span class="figure-num">{{ fundacionStats().esperandoAtencion }}</span>
-      <span class="figure-label">Esperando atención médica</span>
+    <a href="#zona" class="figure">
+      <span class="figure-num">{{ fundacionStats().casosSinCustodia }}</span>
+      <span class="figure-label">Casos sin custodia en tu municipio</span>
     </a>
-    <a href="#" class="figure is-urgent">
-      <span class="figure-num">{{ fundacionStats().emergenciasZona }}</span>
-      <span class="figure-label">Emergencias en tu municipio</span>
+    <a href="#custodia" class="figure">
+      <span class="figure-num">{{ cuposDisponibles() }}</span>
+      <span class="figure-label">Cupos disponibles</span>
     </a>
   </section>
 
-  <div class="dash-grid" id="mi-panel">
-    <section class="panel">
+  <div class="dash-grid">
+    <section class="panel" id="zona">
       <div class="panel-head">
-        <h3>Emergencias sin custodia en tu zona</h3>
-        <a class="panel-link" href="#">Ver casos de mi zona</a>
+        <h3>Casos sin custodia en tu municipio</h3>
+        <a class="panel-link" routerLink="/casos">Ver casos de mi zona</a>
       </div>
-      @if (fundacionAlertas().length === 0) {
-        <p style="padding: 1rem; color: var(--ink-soft)">No hay emergencias en tu zona.</p>
+      @if (cargando()) {
+        <p class="list-empty">Cargando casos...</p>
+      } @else if (fundacionAlertas().length === 0) {
+        <p class="list-empty">No hay casos sin custodia en tu municipio.</p>
       } @else {
-        @for (alerta of fundacionAlertas(); track alerta.id) {
+        @for (alerta of fundacionAlertas().slice(0, 2); track alerta.id) {
           <div class="list-row">
-            <div class="list-thumb">🐾</div>
+            <app-caso-miniatura
+              [fotoPrincipal]="alerta.fotoPrincipal"
+              [foto]="alerta.foto"
+              [alt]="'Foto principal de ' + (alerta.titulo || alerta.descripcion)"
+            />
             <div class="list-info">
-              <p class="list-title">{{ alerta.titulo }}</p>
-              <p class="list-meta">{{ alerta.reportadoHace }} · sin custodia</p>
+              <p class="list-title">{{ alerta.descripcion || alerta.titulo }}</p>
+              <p class="list-meta">
+                {{ alerta.municipio }} · {{ alerta.barrio || 'Barrio no informado' }}
+              </p>
             </div>
             <span class="badge" [ngClass]="getBadgeClass(alerta.urgencia)">
               <span class="badge-dot"></span>
               {{ getBadgeLabel(alerta.urgencia) }}
             </span>
             <div class="list-actions">
-              <button class="btn btn-secondary btn-sm" (click)="asumirCustodia(alerta.id)">
-                Asumir custodia
+              <button
+                class="btn btn-primary btn-sm"
+                type="button"
+                [disabled]="custodiaEnCursoId() !== null || !puedeAsumirCustodia()"
+                (click)="asumirCustodia(alerta.id)"
+              >
+                {{ custodiaEnCursoId() === alerta.id ? 'Asumiendo...' : 'Asumir custodia' }}
               </button>
-              <button class="btn btn-secondary btn-sm" (click)="irAlCaso(alerta.id)">
+              <button class="btn btn-secondary btn-sm" type="button" (click)="irAlCaso(alerta.id)">
                 Ver caso
               </button>
             </div>
@@ -74,32 +87,99 @@
       }
     </section>
 
-    <section class="panel">
+    <section class="panel" id="custodia">
       <div class="panel-head">
-        <h3>En custodia ahora</h3>
-        <a class="panel-link" href="#">Ver mi panel</a>
+        <h3>En custodia</h3>
       </div>
-      @if (fundacionAnimales().length === 0) {
-        <p style="padding: 1rem; color: var(--ink-soft)">No hay animales en custodia.</p>
+      @if (cargando()) {
+        <p class="list-empty">Cargando casos...</p>
+      } @else if (fundacionAnimales().length === 0) {
+        <p class="list-empty">No hay casos bajo custodia.</p>
       } @else {
-        @for (animal of fundacionAnimales(); track animal.id) {
+        @for (animal of fundacionAnimales().slice(0, 2); track animal.id) {
           <div class="list-row">
-            <div class="list-thumb">🐾</div>
+            <app-caso-miniatura
+              [fotoPrincipal]="animal.fotoPrincipal"
+              [foto]="animal.foto"
+              [alt]="'Foto principal del caso ' + animal.id"
+            />
             <div class="list-info">
-              <p class="list-title">{{ animal.nombre || animal.titulo }}</p>
-              <p class="list-meta">{{ animal.estado || animal.descripcion }}</p>
+              <p class="list-title">
+                {{ animal.nombre || animal.descripcion || animal.titulo }} · Caso #{{ animal.id }}
+              </p>
+              <p class="list-meta">{{ animal.municipio }} · {{ animal.estado }}</p>
             </div>
+            <span class="badge badge-atencion">
+              <span class="badge-dot"></span>
+              En atención
+            </span>
             <div class="list-actions">
-              <button class="btn btn-secondary btn-sm" (click)="liberarCustodia(animal.id)">
-                Liberar custodia
+              <button
+                class="btn btn-secondary btn-sm"
+                type="button"
+                disabled
+                title="El cierre de casos por fundaciones permanece bloqueado."
+              >
+                Cerrar caso
               </button>
-              <button class="btn btn-secondary btn-sm" (click)="irAlCaso(animal.id)">
-                Ver caso
+              <button
+                class="btn btn-secondary btn-sm"
+                type="button"
+                (click)="abrirBitacora(animal.id)"
+              >
+                Ver bitácora
               </button>
+              @if (liberandoId() !== animal.id) {
+                <button
+                  class="btn btn-secondary btn-sm"
+                  type="button"
+                  [disabled]="custodiaEnCursoId() !== null"
+                  (click)="iniciarLiberacion(animal.id)"
+                >
+                  Liberar custodia
+                </button>
+              }
             </div>
+            @if (liberandoId() === animal.id) {
+              <form class="form-field" (ngSubmit)="liberarCustodia(animal.id)">
+                <label [for]="'motivo-liberacion-' + animal.id"
+                  >Motivo para liberar la custodia</label
+                >
+                <textarea
+                  [id]="'motivo-liberacion-' + animal.id"
+                  name="motivoLiberacion"
+                  [(ngModel)]="motivoLiberacion"
+                  required
+                  maxlength="1000"
+                ></textarea>
+                <div class="list-actions">
+                  <button
+                    class="btn btn-primary btn-sm"
+                    type="submit"
+                    [disabled]="custodiaEnCursoId() !== null || !motivoLiberacion.trim()"
+                  >
+                    {{
+                      custodiaEnCursoId() === animal.id ? 'Liberando...' : 'Confirmar liberación'
+                    }}
+                  </button>
+                  <button
+                    class="btn btn-secondary btn-sm"
+                    type="button"
+                    [disabled]="custodiaEnCursoId() !== null"
+                    (click)="cancelarLiberacion()"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </form>
+            }
           </div>
         }
       }
+      <p class="note">
+        Al llegar a {{ capacidadAlbergue() }} animales en custodia no podrás asumir más casos hasta
+        liberar cupos. El cierre de casos está bloqueado para las fundaciones.
+      </p>
     </section>
   </div>
 </main>

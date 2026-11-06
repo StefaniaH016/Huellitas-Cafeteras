@@ -10,6 +10,7 @@ import {
   AltaMedicaDTO,
   AltaMedicaResponseDTO,
   RegistroMedicoResponseDTO,
+  PacienteResponseDTO,
 } from '../../../core/models/dtos';
 
 /** Alias para compatibilidad. Usar EvolucionDetalleDTO desde dtos.ts */
@@ -57,6 +58,12 @@ export class BitacoraService {
 
   registrarAlta(casoId: number, dto: AltaMedica): Observable<AltaMedicaRegistrada> {
     return this.httpClient.patch<AltaMedicaRegistrada>(this.url(casoId, '/alta'), dto);
+  }
+
+  listarMisPacientes(): Observable<PacienteResponseDTO[]> {
+    return this.httpClient.get<PacienteResponseDTO[]>(
+      `${environment.apiUrl}/bitacoras/mis-pacientes`,
+    );
   }
 
   /** El PDF se pide con el token (el interceptor lo agrega), por eso se descarga como Blob. */

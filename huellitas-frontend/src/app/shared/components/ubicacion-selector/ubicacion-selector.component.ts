@@ -35,6 +35,7 @@ export class UbicacionSelectorComponent implements OnInit, OnChanges {
   /** Prefijo de los id de los campos, para usar el selector más de una vez en la misma pantalla. */
   @Input() idPrefix = 'zona';
   @Input() leyenda = 'Zona';
+  @Input() stacked = false;
 
   @Output() deptoChange = new EventEmitter<number | null>();
   @Output() munChange = new EventEmitter<number | null>();

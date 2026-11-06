@@ -1,7 +1,15 @@
-import { Component, OnInit, computed, inject, input, output, signal } from '@angular/core';
+import {
+  Component,
+  OnChanges,
+  SimpleChanges,
+  computed,
+  inject,
+  input,
+  output,
+  signal,
+} from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
-import { AuthService } from '../../../core/services/auth.service';
 import {
   AltaMedica,
   Bitacora,
@@ -17,47 +25,55 @@ import {
 import { Observable } from 'rxjs';
 import { EstadoAccion, EstadoCarga } from '../../../core/utils/request.utils';
 
-/**
- * Pestaña Bitácora médica. La veterinaria la abre, registra evoluciones y emite el alta.
- * Los demás roles solo ven el resumen (Ley 576 de 2000: reserva de la historia clínica).
- */
+/** Muestra el resumen a otros roles y las entradas clínicas solo a veterinarias verificadas. */
 @Component({
   selector: 'app-caso-bitacora',
   imports: [FormsModule],
   templateUrl: './caso-bitacora.component.html',
 })
-export class CasoBitacoraComponent implements OnInit {
+export class CasoBitacoraComponent implements OnChanges {
   private bitacoraService = inject(BitacoraService);
-  private authService = inject(AuthService);
 
   readonly caso = input.required<CasoDetalle>();
+  readonly puedeConsultar = input(false);
+  readonly puedeGestionar = input(false);
+  readonly formularioActivo = input<'entrada' | 'alta' | null>(null);
   readonly actualizado = output<void>();
+  readonly sinBitacoraChange = output<boolean>();
+  readonly formularioCerrado = output<void>();
 
-  readonly esVeterinaria = this.authService.tieneRol('VETERINARIA');
   readonly carga = new EstadoCarga();
   readonly accion = new EstadoAccion();
   readonly bitacora = signal<Bitacora | null>(null);
   readonly sinBitacora = signal(false);
+  readonly errorPdf = signal('');
 
-  observacionInicial = '';
   evolucion: NuevaEvolucion = { diagnostico: '' };
   alta: AltaMedica = { condicionAlta: '' };
+  confirmoAlta = false;
 
-  readonly conAlta = computed(() => this.caso().resumenMedico?.altaMedica === true);
+  readonly conAlta = computed(
+    () =>
+      this.bitacora()?.estado === 'ALTA_REGISTRADA' ||
+      this.caso().resumenMedico?.altaMedica === true,
+  );
   readonly admiteEntradas = computed(
-    () => this.esVeterinaria && esCasoAbierto(this.caso().estado) && !this.conAlta(),
+    () => this.puedeGestionar() && esCasoAbierto(this.caso().estado) && !this.conAlta(),
   );
   readonly formatFecha = formatFecha;
   readonly formatFechaHora = formatFechaHora;
 
-  ngOnInit(): void {
-    if (this.esVeterinaria) {
+  ngOnChanges(changes: SimpleChanges): void {
+    if (this.puedeConsultar() && (changes['caso'] || changes['puedeConsultar'])) {
       this.cargar();
     }
   }
 
   cargar(): void {
     this.sinBitacora.set(false);
+    this.sinBitacoraChange.emit(false);
+    this.bitacora.set(null);
+    this.carga.error.set('');
     this.carga.cargando.set(true);
     this.bitacoraService.getBitacora(this.caso().id).subscribe({
       next: (bitacora) => {
@@ -67,40 +83,44 @@ export class CasoBitacoraComponent implements OnInit {
       error: (err: unknown) => {
         // 404: el caso todavía no tiene bitácora.
         this.sinBitacora.set(err instanceof HttpErrorResponse && err.status === 404);
+        this.sinBitacoraChange.emit(this.sinBitacora());
         this.carga.error.set(this.sinBitacora() ? '' : 'No fue posible cargar la bitácora.');
         this.carga.cargando.set(false);
       },
     });
   }
 
-  abrir(): void {
-    this.ejecutar(
-      this.bitacoraService.abrirBitacora(
-        this.caso().id,
-        this.observacionInicial.trim() || undefined,
-      ),
-      'Abriste la bitácora: quedas como veterinaria responsable.',
-    );
-  }
-
   registrarEvolucion(): void {
+    if (!this.admiteEntradas() || !this.evolucion.diagnostico.trim()) {
+      return;
+    }
     this.ejecutar(
       this.bitacoraService.agregarEvolucion(this.caso().id, this.evolucion),
       'Entrada registrada.',
       () => {
         this.evolucion = { diagnostico: '' };
+        this.formularioCerrado.emit();
       },
     );
   }
 
   emitirAlta(): void {
+    if (!this.admiteEntradas() || !this.alta.condicionAlta.trim() || !this.confirmoAlta) {
+      return;
+    }
     this.ejecutar(
       this.bitacoraService.registrarAlta(this.caso().id, this.alta),
       'Alta médica emitida.',
+      () => {
+        this.alta = { condicionAlta: '' };
+        this.confirmoAlta = false;
+        this.formularioCerrado.emit();
+      },
     );
   }
 
   descargarPdf(): void {
+    this.errorPdf.set('');
     this.bitacoraService.descargarPdf(this.caso().id).subscribe({
       next: (pdf) => {
         const url = URL.createObjectURL(pdf);
@@ -110,7 +130,10 @@ export class CasoBitacoraComponent implements OnInit {
         enlace.click();
         URL.revokeObjectURL(url);
       },
-      error: (err: unknown) => console.error('Error descargando el PDF:', err),
+      error: (err: unknown) => {
+        console.error('Error descargando el PDF:', err);
+        this.errorPdf.set('No fue posible descargar el resumen clínico.');
+      },
     });
   }
 

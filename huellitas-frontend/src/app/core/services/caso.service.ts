@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { BitacoraService } from './bitacora.service';
-import { CustodiaDTO } from '../../../core/models/dtos';
+import { ArchivarCasoDTO, CustodiaDTO } from '../../../core/models/dtos';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ApiResponse = any;
@@ -13,6 +13,12 @@ export type EstadoCaso = string;
 export type TipoCaso = string;
 export type Urgencia = string;
 export type ResultadoCierre = 'REENCUENTRO' | 'ENTREGADO_A_CUIDADOR' | 'RECUPERADO' | 'FALLECIDO';
+
+export interface CierreCasoDTO {
+  motivoCierre: ResultadoCierre;
+  observacion?: string;
+  entregadoA?: string;
+}
 
 export interface CasoListItem {
   id: number;
@@ -30,12 +36,14 @@ export interface CasoListItem {
 }
 
 export interface ResumenMedico {
+  id?: number | null;
+  responsableId?: number | null;
   altaMedica?: boolean;
-  veterinariaId?: number;
-  veterinariaNombre?: string;
-  fechaApertura?: string;
-  fechaAlta?: string;
-  estado?: string;
+  veterinariaId?: number | null;
+  veterinariaNombre?: string | null;
+  fechaApertura?: string | null;
+  fechaAlta?: string | null;
+  estado?: string | null;
 }
 
 export interface CasoDetalle {
@@ -52,10 +60,13 @@ export interface CasoDetalle {
   historial?: Record<string, unknown>[];
   fotografias?: string[];
   foto?: string;
-  resumenMedico?: ResumenMedico;
+  resumenMedico?: ResumenMedico | null;
   fundacionCustodioNombre?: string;
   veterinariaNombreResponsable?: string;
   reportanteNombre?: string;
+  autorId?: number;
+  autorNombre?: string;
+  fundacionCustodioId?: number;
 }
 
 @Injectable({
@@ -76,9 +87,9 @@ export class CasoService {
     return this.httpClient.get<ApiResponse>(`${this.apiUrl}`, { params: filtros });
   }
 
-  getMisReportes(page = 0): Observable<ApiResponse> {
+  getMisReportes(page = 0, size = 20): Observable<ApiResponse> {
     return this.httpClient.get<ApiResponse>(`${this.apiUrl}/mis-reportes`, {
-      params: { page },
+      params: { page, size },
     });
   }
 
@@ -88,6 +99,13 @@ export class CasoService {
 
   crearReporte(dto: ApiResponse): Observable<ApiResponse> {
     return this.httpClient.post<ApiResponse>(`${this.apiUrl}`, dto);
+  }
+
+  crearReporteConImagen(dto: ApiResponse, archivos: File[]): Observable<ApiResponse> {
+    const formData = new FormData();
+    formData.append('reporte', new Blob([JSON.stringify(dto)], { type: 'application/json' }));
+    archivos.forEach((archivo) => formData.append('archivos', archivo, archivo.name));
+    return this.httpClient.post<ApiResponse>(`${this.apiUrl}/con-imagenes`, formData);
   }
 
   actualizarReporte(id: number, dto: ApiResponse): Observable<ApiResponse> {
@@ -134,10 +152,6 @@ export class CasoService {
     return this.bitacoraService.registrarAlta(casoId, dto);
   }
 
-  asumirCustodia(id: number): Observable<ApiResponse> {
-    return this.httpClient.post<ApiResponse>(`${this.apiUrl}/${id}/custodia`, {});
-  }
-
   gestionarCustodia(id: number, dto: CustodiaDTO): Observable<ApiResponse> {
     return this.httpClient.patch<ApiResponse>(`${this.apiUrl}/${id}/custodia`, dto);
   }
@@ -154,7 +168,11 @@ export class CasoService {
     });
   }
 
-  cerrarCaso(id: number, dto: ApiResponse): Observable<ApiResponse> {
-    return this.httpClient.patch<ApiResponse>(`${this.apiUrl}/${id}/cierre`, dto);
+  cerrarCaso(id: number, dto: CierreCasoDTO): Observable<ApiResponse> {
+    return this.httpClient.post<ApiResponse>(`${this.apiUrl}/${id}/cierre`, dto);
+  }
+
+  archivarCaso(id: number, dto: ArchivarCasoDTO): Observable<ApiResponse> {
+    return this.httpClient.patch<ApiResponse>(`${this.apiUrl}/${id}/archivar`, dto);
   }
 }

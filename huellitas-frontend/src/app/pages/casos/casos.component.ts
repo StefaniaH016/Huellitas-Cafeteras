@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -58,16 +58,34 @@ export class CasosComponent implements OnInit {
 
   casos = signal<Caso[]>([]);
   cargando = signal(false);
+  error = signal('');
   total = signal(0);
   page = signal(0);
   pageSize = 10;
+  mostrarFiltros = signal(false);
 
-  urgencias = signal<string[]>(['CRITICA', 'ALTA', 'MEDIA', 'BAJA']);
-  tipos = signal<string[]>(['HERIDO', 'VULNERABLE', 'EXTRAVIADO']);
-  estados = signal<string[]>(['REGISTRADO', 'EN_ATENCION']);
+  filtroDeptoId = signal<number | null>(null);
+  filtroMunId = signal<number | null>(null);
+  filtroBarrioId = signal<number | null>(null);
   deptoId = signal<number | null>(null);
   munId = signal<number | null>(null);
   barrioId = signal<number | null>(null);
+
+  urgencias = signal<string[]>(['CRITICA', 'ALTA', 'MEDIA', 'BAJA']);
+  tipos = signal<string[]>(['HERIDO', 'VULNERABLE', 'EXTRAVIADO', 'EN_ADOPCION']);
+  estados = signal<string[]>(['REGISTRADO', 'EN_ATENCION']);
+  urgenciasSeleccionadas = signal([...this.urgencias()]);
+  tiposSeleccionados = signal([...this.tipos()]);
+  estadosSeleccionados = signal([...this.estados()]);
+  fotosRota = signal(new Set<string | number>());
+
+  casosFiltrados = computed(() => {
+    const todos = this.casos();
+    return this.filterCasos(todos);
+  });
+
+  paginaActual = computed(() => this.page() + 1);
+  hayProxima = computed(() => this.casosFiltrados().length >= this.pageSize);
 
   ngOnInit(): void {
     this.loadCasos();
@@ -94,14 +112,14 @@ export class CasosComponent implements OnInit {
       params['barrioId'] = currentBarrio;
     }
 
-    if (this.urgencias().length === 1) {
-      params['urgencia'] = this.urgencias()[0];
+    if (this.urgencias().length < 4) {
+      params['urgencias'] = this.urgencias().join(',');
     }
-    if (this.tipos().length === 1) {
-      params['tipoCaso'] = this.tipos()[0];
+    if (this.tipos().length < 4) {
+      params['tiposCaso'] = this.tipos().join(',');
     }
-    if (this.estados().length === 1) {
-      params['estado'] = this.estados()[0];
+    if (this.estados().length < 3) {
+      params['estados'] = this.estados().join(',');
     }
 
     return params;
@@ -137,17 +155,9 @@ export class CasosComponent implements OnInit {
   private filterCasos(allCasos: Caso[]): Caso[] {
     let filtered = allCasos;
 
-    if (this.urgencias().length > 0) {
-      filtered = filtered.filter((c) => this.urgencias().includes(c.urgencia));
-    }
-
-    if (this.tipos().length > 0) {
-      filtered = filtered.filter((c) => this.tipos().includes(c.tipo));
-    }
-
-    if (this.estados().length > 0) {
-      filtered = filtered.filter((c) => this.estados().includes(c.estado));
-    }
+    filtered = filtered.filter((c) => this.urgencias().includes(c.urgencia));
+    filtered = filtered.filter((c) => this.tipos().includes(c.tipo));
+    filtered = filtered.filter((c) => this.estados().includes(c.estado));
 
     return filtered;
   }
@@ -174,51 +184,84 @@ export class CasosComponent implements OnInit {
   }
 
   toggleUrgencia(urgencia: string): void {
-    const current = this.urgencias();
+    const current = this.urgenciasSeleccionadas();
     if (current.includes(urgencia)) {
-      this.urgencias.set(current.filter((u) => u !== urgencia));
+      this.urgenciasSeleccionadas.set(current.filter((u) => u !== urgencia));
     } else {
-      this.urgencias.set([...current, urgencia]);
+      this.urgenciasSeleccionadas.set([...current, urgencia]);
     }
   }
 
   toggleTipo(tipo: string): void {
-    const current = this.tipos();
+    const current = this.tiposSeleccionados();
     if (current.includes(tipo)) {
-      this.tipos.set(current.filter((t) => t !== tipo));
+      this.tiposSeleccionados.set(current.filter((t) => t !== tipo));
     } else {
-      this.tipos.set([...current, tipo]);
+      this.tiposSeleccionados.set([...current, tipo]);
     }
   }
 
   toggleEstado(estado: string): void {
-    const current = this.estados();
+    const current = this.estadosSeleccionados();
     if (current.includes(estado)) {
-      this.estados.set(current.filter((e) => e !== estado));
+      this.estadosSeleccionados.set(current.filter((e) => e !== estado));
     } else {
-      this.estados.set([...current, estado]);
+      this.estadosSeleccionados.set([...current, estado]);
     }
   }
 
   onAplicarFiltros(): void {
-    this.page.set(0);
-    this.loadCasos();
+    this.aplicarFiltros();
   }
 
   onVerCaso(id: string | number): void {
     void this.router.navigate(['/caso-detalle', id]);
   }
 
+  toggleFiltros(): void {
+    this.mostrarFiltros.update((v) => !v);
+  }
+
+  aplicarFiltros(): void {
+    this.urgencias.set([...this.urgenciasSeleccionadas()]);
+    this.tipos.set([...this.tiposSeleccionados()]);
+    this.estados.set([...this.estadosSeleccionados()]);
+    this.deptoId.set(this.filtroDeptoId());
+    this.munId.set(this.filtroMunId());
+    this.barrioId.set(this.filtroBarrioId());
+    this.page.set(0);
+    this.loadCasos();
+  }
+
+  verCaso(id: string | number): void {
+    this.onVerCaso(id);
+  }
+
+  paginaAnterior(): void {
+    this.prevPage();
+  }
+
+  proximaPagina(): void {
+    this.nextPage();
+  }
+
   onDeptoChange(deptoId: number | null): void {
-    this.deptoId.set(deptoId);
+    this.filtroDeptoId.set(deptoId);
+    this.filtroMunId.set(null);
+    this.filtroBarrioId.set(null);
   }
 
   onMunChange(munId: number | null): void {
-    this.munId.set(munId);
+    this.filtroMunId.set(munId);
+    this.filtroBarrioId.set(null);
   }
 
   onBarrioChange(barrioId: number | null): void {
-    this.barrioId.set(barrioId);
+    this.filtroBarrioId.set(barrioId);
+  }
+
+  onCasePhotoError(id: string | number): void {
+    this.fotosRota.update((ids) => new Set(ids).add(id));
   }
 
   prevPage(): void {

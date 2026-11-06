@@ -16,6 +16,11 @@ export interface UsuarioPerfil {
   departamentoId?: number;
   municipioId?: number;
   barrioId?: number;
+  organizacionId?: number;
+  organizacionNombre?: string | null;
+  estadoVerificacionOrganizacion?: string | null;
+  aceptaCustodia?: boolean | null;
+  capacidadAlbergue?: number | null;
 }
 
 @Injectable({
@@ -25,8 +30,8 @@ export class UsuarioService {
   private httpClient = inject(HttpClient);
   private readonly apiUrl = `${environment.apiUrl}/usuarios`;
 
-  getMiPerfil(): Observable<ApiResponse> {
-    return this.httpClient.get<ApiResponse>(`${this.apiUrl}/me`);
+  getMiPerfil(): Observable<UsuarioPerfil> {
+    return this.httpClient.get<UsuarioPerfil>(`${this.apiUrl}/me`);
   }
 
   actualizarPerfil(dto: ApiResponse): Observable<ApiResponse> {

@@ -1,5 +1,12 @@
 /* Google Fonts */
 @import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Public+Sans:wght@400;500;600;700&display=swap');
+@import './styles/buttons.css';
+@import './styles/forms.css';
+@import './styles/badges.css';
+@import './styles/layout.css';
+@import './styles/navigation.css';
+@import './styles/surfaces.css';
+@import './styles/utilities.css';
 
 /* Design Tokens */
 :root {

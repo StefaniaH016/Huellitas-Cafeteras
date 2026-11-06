@@ -1,9 +1,31 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { CasoService, CasoDetalle } from '../../core/services/caso.service';
+import { FormsModule } from '@angular/forms';
+import {
+  CasoService,
+  CasoDetalle,
+  CierreCasoDTO,
+  ResultadoCierre,
+  ResumenMedico,
+} from '../../core/services/caso.service';
 import { AuthService } from '../../core/services/auth.service';
-import { getUrgencyBadgeLabel } from '../../core/utils/caso-display.utils';
+import { UsuarioPerfil, UsuarioService } from '../../core/services/usuario.service';
+import {
+  ESTADO_LABELS,
+  TIPO_LABELS,
+  esCasoAbierto,
+  getUrgencyBadgeLabel,
+  labelOf,
+} from '../../core/utils/caso-display.utils';
+import { getServerErrorMessage } from '../../core/utils/request.utils';
+import { BitacoraService } from '../../core/services/bitacora.service';
+import {
+  CasoReportado,
+  DecisionModeracion,
+  ModeracionResponse,
+  ModeracionService,
+} from '../../core/services/moderacion.service';
 import { CasoSeguimientoComponent } from './caso-seguimiento/caso-seguimiento.component';
 import { CasoBitacoraComponent } from './caso-bitacora/caso-bitacora.component';
 
@@ -26,6 +48,11 @@ interface Caso {
   fundacion?: string;
   veterinaria?: string;
   reportante?: string;
+  resumenMedico?: ResumenMedico | null;
+  autorId?: number;
+  fundacionCustodioId?: number;
+  aportes?: Record<string, unknown>[];
+  historial?: Record<string, unknown>[];
 }
 
 interface AnimalResponse {
@@ -78,25 +105,63 @@ interface CasoResponse {
   reportanteNombre?: string;
   fundacionCustodioNombre?: string;
   veterinariaNombreResponsable?: string;
+  resumenMedico?: ResumenMedico | null;
+  autorId?: number;
+  autorNombre?: string;
+  fundacionCustodioId?: number;
+  historial?: Record<string, unknown>[];
+  aportes?: Record<string, unknown>[];
 }
 
 @Component({
   selector: 'app-caso-detalle',
   standalone: true,
-  imports: [CommonModule, CasoSeguimientoComponent, CasoBitacoraComponent],
+  imports: [CommonModule, FormsModule, CasoSeguimientoComponent, CasoBitacoraComponent],
   templateUrl: './caso-detalle.component.html',
   styleUrls: ['./caso-detalle.component.css'],
 })
 export class CasoDetalleComponent implements OnInit {
   private activatedRoute = inject(ActivatedRoute);
   private casoService = inject(CasoService);
+  private bitacoraService = inject(BitacoraService);
   private authService = inject(AuthService);
+  private usuarioService = inject(UsuarioService);
+  private moderacionService = inject(ModeracionService);
   private router = inject(Router);
 
   caso = signal<Caso | null>(null);
+  perfil = signal<UsuarioPerfil | null>(null);
   cargando = signal(true);
   activeTab = signal<'informacion' | 'seguimiento' | 'bitacora'>('informacion');
   asumiendo = signal(false);
+  tomandoAtencion = signal(false);
+  sinBitacoraMedica = signal(false);
+  observacionInicialMedica = '';
+  formularioBitacora = signal<'entrada' | 'alta' | null>(null);
+  accionEnCurso = signal(false);
+  errorAccion = signal('');
+  mensajeAccion = signal('');
+  mostrandoArchivo = signal(false);
+  motivoArchivo = '';
+  mostrandoCierre = signal(false);
+  motivoCierre: ResultadoCierre = 'RECUPERADO';
+  observacionCierre = '';
+  entregadoA = '';
+  casoModeracion = signal<CasoReportado | null>(null);
+  cargandoModeracion = signal(false);
+  moderacionEnCurso = signal(false);
+  errorModeracion = signal('');
+  mensajeModeracion = signal('');
+  motivoMarcaModeracion = '';
+  motivoDecisionModeracion = 'Duplicado de otro reporte';
+  marcacionModeracionLocal = signal(false);
+  moderacionFinalizada = signal(false);
+  mostrandoDenuncia = signal(false);
+  denunciaEnCurso = signal(false);
+  denunciaEnviada = signal(false);
+  errorDenuncia = signal('');
+  mensajeDenuncia = signal('');
+  motivoDenuncia = '';
 
   fotos = signal<string[]>([]);
   selectedFotoIndex = signal<number>(0);
@@ -108,8 +173,99 @@ export class CasoDetalleComponent implements OnInit {
     }
     return this.caso()?.foto || '';
   });
-
   esFundacion = computed(() => this.authService.tieneRol('FUNDACION_REFUGIO'));
+  esVeterinaria = computed(() => this.authService.tieneRol('VETERINARIA'));
+  esAdministrador = computed(() => this.authService.tieneRol('ADMINISTRADOR'));
+  puedeAsumirCustodia = computed(
+    () =>
+      this.esFundacion() &&
+      this.perfilHabilitadoParaCustodia() &&
+      this.casoDisponibleParaCustodia(),
+  );
+  puedeArchivarCaso = computed(
+    () => this.authService.tieneRol('ADMINISTRADOR') && this.caso()?.estado === 'RESUELTO',
+  );
+  esReportanteCaso = computed(() => {
+    const perfil = this.perfil();
+    const caso = this.caso();
+    return (
+      this.authService.tieneRol('CIUDADANO_VOLUNTARIO') &&
+      perfil !== null &&
+      caso !== null &&
+      perfil.id === caso.autorId
+    );
+  });
+  puedeDenunciarCaso = computed(() => {
+    const perfil = this.perfil();
+    const caso = this.caso();
+    return (
+      this.authService.tieneRol('CIUDADANO_VOLUNTARIO') &&
+      !!perfil &&
+      !!caso &&
+      perfil.id !== caso.autorId
+    );
+  });
+  puedeCerrarCaso = computed(() => {
+    const caso = this.caso();
+    return (
+      this.esReportanteCaso() &&
+      !!caso &&
+      esCasoAbierto(caso.estado ?? '') &&
+      !caso.fundacionCustodioId
+    );
+  });
+  puedeGestionarBitacora = computed(() => this.esVeterinariaResponsable());
+
+  private perfilHabilitadoParaCustodia(): boolean {
+    const perfil = this.perfil();
+    return (
+      !!perfil &&
+      perfil.estadoVerificacionOrganizacion === 'VERIFICADA' &&
+      perfil.aceptaCustodia === true
+    );
+  }
+
+  private casoDisponibleParaCustodia(): boolean {
+    const caso = this.caso();
+    return (
+      !caso?.fundacionCustodioId &&
+      (caso?.estado === 'REGISTRADO' || caso?.estado === 'EN_ATENCION')
+    );
+  }
+
+  private esVeterinariaResponsable(): boolean {
+    const caso = this.caso();
+    const perfil = this.perfil();
+    if (!this.esVeterinaria() || perfil?.verificado !== true) {
+      return false;
+    }
+    return !caso?.resumenMedico || caso.resumenMedico.responsableId === perfil.id;
+  }
+  puedeTomarAtencion = computed(
+    () =>
+      this.puedeGestionarBitacora() &&
+      this.sinBitacoraMedica() &&
+      (this.caso()?.estado === 'REGISTRADO' || this.caso()?.estado === 'EN_ATENCION'),
+  );
+  puedeAportarCaso = computed(() => {
+    const caso = this.caso();
+    const perfil = this.perfil();
+    if (!caso || !perfil || !esCasoAbierto(caso.estado ?? '')) {
+      return false;
+    }
+
+    return (
+      (this.authService.tieneRol('CIUDADANO_VOLUNTARIO') &&
+        (perfil.id !== caso.autorId || !caso.fundacionCustodioId)) ||
+      (this.esFundacion() &&
+        !!caso.fundacionCustodioId &&
+        perfil.organizacionId === caso.fundacionCustodioId)
+    );
+  });
+  puedeConsultarBitacora = computed(() => {
+    const perfil = this.perfil();
+    return this.esVeterinaria() && perfil?.verificado === true;
+  });
 
   casoDet = computed(() => {
     const c = this.caso();
@@ -126,23 +282,185 @@ export class CasoDetalleComponent implements OnInit {
       tipoCaso: c.tipo,
       municipio: c.municipio,
       barrio: c.barrio,
-      aportes: [],
-      historial: [],
       fotografias: c.fotos,
       foto: c.foto,
-      resumenMedico: undefined,
+      resumenMedico: c.resumenMedico,
       fundacionCustodioNombre: c.fundacion,
       veterinariaNombreResponsable: c.veterinaria,
       reportanteNombre: c.reportante,
+      autorId: c.autorId,
+      fundacionCustodioId: c.fundacionCustodioId,
+      aportes: c.aportes ?? [],
+      historial: c.historial ?? [],
     } as CasoDetalle;
   });
 
   ngOnInit(): void {
+    this.activatedRoute.queryParamMap.subscribe((params) => {
+      if (params.get('tab') === 'bitacora') {
+        this.selectTab('bitacora');
+      }
+      const formulario = params.get('formulario');
+      if (formulario === 'entrada' || formulario === 'alta') {
+        this.formularioBitacora.set(formulario);
+        this.selectTab('bitacora');
+      }
+    });
+    this.usuarioService.getMiPerfil().subscribe({
+      next: (perfil) => this.perfil.set(perfil),
+      error: (error: unknown) => {
+        console.error('Error loading current user profile:', error);
+        this.errorAccion.set(
+          'No fue posible verificar tu perfil. No se mostrarán acciones que requieren validar tu relación con el caso.',
+        );
+      },
+    });
     this.activatedRoute.params.subscribe((params) => {
       const id = params['id'];
       if (id) {
         this.loadDetalle(id);
+        if (this.esAdministrador()) {
+          this.cargarModeracionCaso(id);
+        }
       }
+    });
+  }
+
+  cargarModeracionCaso(casoId: string | number): void {
+    this.cargandoModeracion.set(true);
+    this.errorModeracion.set('');
+    this.moderacionService.getCasosReportados().subscribe({
+      next: (casos) => {
+        this.casoModeracion.set(
+          casos.find((caso) => Number(caso.casoId) === Number(casoId)) ?? null,
+        );
+        this.marcacionModeracionLocal.set(false);
+        this.moderacionFinalizada.set(false);
+        this.cargandoModeracion.set(false);
+      },
+      error: (error: unknown) => {
+        console.error('Error al cargar la moderación del caso:', error);
+        this.errorModeracion.set(
+          'No fue posible cargar el estado de moderación. Intenta nuevamente.',
+        );
+        this.cargandoModeracion.set(false);
+      },
+    });
+  }
+
+  resolverModeracion(decision: DecisionModeracion): void {
+    const caso = this.caso();
+    const motivo = this.motivoDecisionModeracion.trim();
+    if (!caso || !this.esAdministrador() || this.moderacionEnCurso()) {
+      return;
+    }
+    if (!this.casoModeracion() && !this.marcacionModeracionLocal()) {
+      this.errorModeracion.set('Primero marca el caso para moderación.');
+      return;
+    }
+    if (!motivo) {
+      this.errorModeracion.set('Escribe el motivo de la decisión de moderación.');
+      return;
+    }
+
+    const motivoMarcacion =
+      this.motivoMarcaModeracion.trim() || this.casoModeracion()?.motivo.trim();
+    const motivoCompleto = motivoMarcacion
+      ? `Motivo de marcación: ${motivoMarcacion}. Decisión: ${motivo}`
+      : motivo;
+    this.guardarDecisionModeracion(caso.id, decision, motivoCompleto);
+  }
+
+  marcarParaModeracion(): void {
+    const caso = this.caso();
+    const motivo = this.motivoMarcaModeracion.trim();
+    if (!caso || !this.esAdministrador() || this.casoModeracion() || this.moderacionEnCurso()) {
+      return;
+    }
+    if (!motivo) {
+      this.errorModeracion.set('Selecciona el motivo para marcar el caso para moderación.');
+      return;
+    }
+
+    this.errorModeracion.set('');
+    this.mensajeModeracion.set('');
+    this.marcacionModeracionLocal.set(true);
+    this.mensajeModeracion.set('Caso marcado para moderación. Selecciona la decisión final.');
+  }
+
+  private guardarDecisionModeracion(
+    casoId: string | number,
+    decision: DecisionModeracion,
+    motivo: string,
+  ): void {
+    this.moderacionEnCurso.set(true);
+    this.errorModeracion.set('');
+    this.mensajeModeracion.set('');
+    this.moderacionService.resolverModeracion(Number(casoId), { decision, motivo }).subscribe({
+      next: () => {
+        this.moderacionEnCurso.set(false);
+        this.moderacionFinalizada.set(true);
+        this.mensajeModeracion.set(
+          decision === 'MANTENER'
+            ? 'El caso se mantuvo publicado.'
+            : 'El caso fue ocultado del feed.',
+        );
+        this.loadDetalle(casoId);
+      },
+      error: (error: unknown) => {
+        console.error('Error al moderar el caso:', error);
+        this.moderacionEnCurso.set(false);
+        this.errorModeracion.set('No fue posible guardar la decisión. Intenta nuevamente.');
+      },
+    });
+  }
+
+  iniciarDenuncia(): void {
+    if (!this.puedeDenunciarCaso() || this.denunciaEnviada()) {
+      return;
+    }
+    this.errorDenuncia.set('');
+    this.mostrandoDenuncia.set(true);
+  }
+
+  cancelarDenuncia(): void {
+    if (!this.denunciaEnCurso()) {
+      this.mostrandoDenuncia.set(false);
+    }
+  }
+
+  enviarDenunciaCaso(): void {
+    const caso = this.caso();
+    const motivo = this.motivoDenuncia.trim();
+    if (!caso || !this.puedeDenunciarCaso() || this.denunciaEnCurso() || this.denunciaEnviada()) {
+      return;
+    }
+    if (motivo.length < 10 || motivo.length > 500) {
+      this.errorDenuncia.set('El motivo debe tener entre 10 y 500 caracteres.');
+      return;
+    }
+
+    this.denunciaEnCurso.set(true);
+    this.errorDenuncia.set('');
+    this.mensajeDenuncia.set('');
+    this.moderacionService.reportarCaso(Number(caso.id), { motivo }).subscribe({
+      next: (response: ModeracionResponse) => {
+        this.denunciaEnCurso.set(false);
+        this.denunciaEnviada.set(true);
+        this.mostrandoDenuncia.set(false);
+        this.mensajeDenuncia.set(
+          response.decision === 'YA_REPORTADO'
+            ? 'Este caso ya estaba marcado para revisión por el equipo.'
+            : 'El caso fue enviado a revisión por el equipo.',
+        );
+      },
+      error: (error: unknown) => {
+        console.error('Error al reportar el caso para moderación:', error);
+        this.denunciaEnCurso.set(false);
+        this.errorDenuncia.set(
+          getServerErrorMessage(error) ?? 'No fue posible reportar el caso. Intenta de nuevo.',
+        );
+      },
     });
   }
 
@@ -295,6 +613,10 @@ export class CasoDetalleComponent implements OnInit {
       fundacion: fundacion ? fundacion : '',
       veterinaria: veterinaria ? veterinaria : '',
       reportante: reportante ? reportante : '',
+      autorId: undefined,
+      fundacionCustodioId: undefined,
+      aportes: [],
+      historial: [],
     };
   }
 
@@ -348,6 +670,17 @@ export class CasoDetalleComponent implements OnInit {
     this.casoService.getDetalle(Number(id)).subscribe({
       next: (response: CasoResponse): void => {
         const mapped = this.mapResponseToCaso(response, id);
+        mapped.resumenMedico = response.resumenMedico;
+        mapped.veterinaria =
+          response.resumenMedico?.veterinariaNombre ??
+          response.veterinariaNombreResponsable ??
+          mapped.veterinaria;
+        mapped.autorId = response.autorId;
+        mapped.reportante = response.autorNombre ?? mapped.reportante;
+        mapped.fundacionCustodioId = response.fundacionCustodioId;
+        mapped.fundacion = response.fundacionCustodioNombre ?? '';
+        mapped.aportes = response.aportes ?? [];
+        mapped.historial = response.historial ?? [];
         this.caso.set(mapped);
         this.fotos.set(mapped.fotos);
         this.selectedFotoIndex.set(0);
@@ -368,25 +701,149 @@ export class CasoDetalleComponent implements OnInit {
     this.activeTab.set(tab);
   }
 
+  iniciarCierre(): void {
+    if (!this.puedeCerrarCaso()) {
+      return;
+    }
+    this.motivoCierre = this.caso()?.tipo === 'EXTRAVIADO' ? 'REENCUENTRO' : 'RECUPERADO';
+    this.observacionCierre = '';
+    this.entregadoA = '';
+    this.errorAccion.set('');
+    this.mostrandoCierre.set(true);
+  }
+
+  cancelarCierre(): void {
+    if (!this.accionEnCurso()) {
+      this.mostrandoCierre.set(false);
+    }
+  }
+
+  cerrarCaso(): void {
+    const caso = this.caso();
+    if (
+      !caso ||
+      !this.puedeCerrarCaso() ||
+      this.accionEnCurso() ||
+      (this.motivoCierre === 'REENCUENTRO' && caso.tipo !== 'EXTRAVIADO')
+    ) {
+      return;
+    }
+
+    const dto: CierreCasoDTO = {
+      motivoCierre: this.motivoCierre,
+      observacion: this.observacionCierre.trim() || undefined,
+      entregadoA:
+        this.motivoCierre === 'ENTREGADO_A_CUIDADOR'
+          ? this.entregadoA.trim() || undefined
+          : undefined,
+    };
+
+    this.accionEnCurso.set(true);
+    this.errorAccion.set('');
+    this.mensajeAccion.set('');
+    this.casoService.cerrarCaso(Number(caso.id), dto).subscribe({
+      next: () => {
+        this.accionEnCurso.set(false);
+        this.mostrandoCierre.set(false);
+        this.mensajeAccion.set(
+          this.motivoCierre === 'REENCUENTRO'
+            ? 'El reencuentro quedó confirmado y el caso fue cerrado.'
+            : 'El caso fue cerrado correctamente.',
+        );
+        this.loadDetalle(caso.id);
+      },
+      error: (error: unknown) => {
+        console.error('Error al cerrar el caso:', error);
+        this.accionEnCurso.set(false);
+        this.errorAccion.set(
+          getServerErrorMessage(error) ?? 'No fue posible cerrar el caso. Intenta de nuevo.',
+        );
+      },
+    });
+  }
+
+  abrirFormularioBitacora(formulario: 'entrada' | 'alta'): void {
+    this.formularioBitacora.set(formulario);
+    this.selectTab('bitacora');
+  }
+
+  tomarAtencionMedica(): void {
+    const caso = this.caso();
+    if (!caso || !this.puedeTomarAtencion() || this.tomandoAtencion()) {
+      return;
+    }
+
+    this.tomandoAtencion.set(true);
+    this.errorAccion.set('');
+    this.mensajeAccion.set('');
+    this.bitacoraService
+      .abrirBitacora(Number(caso.id), this.observacionInicialMedica.trim() || undefined)
+      .subscribe({
+        next: () => {
+          this.tomandoAtencion.set(false);
+          this.sinBitacoraMedica.set(false);
+          this.observacionInicialMedica = '';
+          this.mensajeAccion.set('La atención médica quedó a tu cargo.');
+          this.activeTab.set('bitacora');
+          this.loadDetalle(caso.id);
+        },
+        error: (error: unknown) => {
+          console.error('Error al tomar atención médica:', error);
+          this.tomandoAtencion.set(false);
+          this.errorAccion.set(
+            getServerErrorMessage(error) ??
+              'No fue posible tomar la atención médica. Intenta de nuevo.',
+          );
+        },
+      });
+  }
+
   asumirCustodia(): void {
-    if (!this.caso()?.id) {
-      console.error('No case ID available');
+    const caso = this.caso();
+    if (!caso || !this.puedeAsumirCustodia() || this.asumiendo()) {
       return;
     }
 
     this.asumiendo.set(true);
-    this.casoService.asumirCustodia(Number(this.caso()?.id)).subscribe({
+    this.errorAccion.set('');
+    this.mensajeAccion.set('');
+    this.casoService.gestionarCustodia(Number(caso.id), { accion: 'ASUMIR' }).subscribe({
       next: () => {
         this.asumiendo.set(false);
-        console.warn('Custodia asumida exitosamente');
-        // Reload case details
-        if (this.caso()?.id) {
-          this.loadDetalle(this.caso()!.id);
-        }
+        this.mensajeAccion.set('La custodia quedó a cargo de tu fundación.');
+        this.loadDetalle(caso.id);
       },
       error: (err: unknown) => {
         this.asumiendo.set(false);
         console.error('Error al asumir custodia:', err);
+        this.errorAccion.set(
+          getServerErrorMessage(err) ??
+            'No fue posible asumir la custodia. Verifica que tu fundación esté habilitada y tenga cupo.',
+        );
+      },
+    });
+  }
+
+  archivarCaso(): void {
+    const caso = this.caso();
+    const motivo = this.motivoArchivo.trim();
+    if (!caso || !this.puedeArchivarCaso() || !motivo || this.accionEnCurso()) {
+      return;
+    }
+    this.accionEnCurso.set(true);
+    this.errorAccion.set('');
+    this.mensajeAccion.set('');
+    this.casoService.archivarCaso(Number(caso.id), { motivo }).subscribe({
+      next: () => {
+        this.accionEnCurso.set(false);
+        this.mostrandoArchivo.set(false);
+        this.mensajeAccion.set('El caso fue archivado y quedó en solo lectura.');
+        this.loadDetalle(caso.id);
+      },
+      error: (error: unknown) => {
+        console.error('Error al archivar el caso:', error);
+        this.accionEnCurso.set(false);
+        this.errorAccion.set('No fue posible archivar el caso. Intenta de nuevo.');
       },
     });
   }
@@ -408,5 +865,28 @@ export class CasoDetalleComponent implements OnInit {
 
   getBadgeLabel(urgencia?: string): string {
     return getUrgencyBadgeLabel(urgencia || 'MEDIA');
+  }
+
+  getEstadoLabel(estado?: string): string {
+    return estado ? labelOf(ESTADO_LABELS, estado) : '';
+  }
+
+  getEstadoBadgeClass(estado?: string): string {
+    switch (estado?.toUpperCase()) {
+      case 'REGISTRADO':
+        return 'badge-registrado';
+      case 'EN_ATENCION':
+        return 'badge-atencion';
+      case 'RESUELTO':
+        return 'badge-resuelto';
+      case 'ARCHIVADO':
+        return 'badge-archivado';
+      default:
+        return 'badge-atencion';
+    }
+  }
+
+  getTipoLabel(tipo?: string): string {
+    return tipo ? labelOf(TIPO_LABELS, tipo) : '';
   }
 }

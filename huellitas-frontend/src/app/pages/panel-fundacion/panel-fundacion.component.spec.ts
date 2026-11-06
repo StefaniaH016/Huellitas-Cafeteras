@@ -28,21 +28,19 @@ it('renders the foundation dashboard and initializes empty state', () => {
   const fixture = TestBed.createComponent(PanelFundacionComponent);
   fixture.detectChanges();
 
-  expect(fixture.nativeElement.textContent).toContain('Fundación Patitas');
-  expect(fixture.nativeElement.textContent).toContain('No hay emergencias en tu zona.');
+  expect(fixture.nativeElement.textContent).toContain('Mi panel · Patitas');
+  expect(fixture.nativeElement.textContent).toContain('Cargando casos...');
   expect(fixture.componentInstance.fundacionStats()).toEqual({
     enCustodia: 0,
-    esperandoAtencion: 0,
-    emergenciasZona: 0,
+    casosSinCustodia: 0,
   });
-  // cargando is true by default until async load completes; with mocked service, it stays true
   expect(fixture.componentInstance.cargando()).toBe(true);
 });
 
 it('resets foundation data when reloading', () => {
   const component = TestBed.createComponent(PanelFundacionComponent).componentInstance;
   // Set initial data
-  component.fundacionStats.set({ enCustodia: 4, esperandoAtencion: 2, emergenciasZona: 1 });
+  component.fundacionStats.set({ enCustodia: 4, casosSinCustodia: 1 });
   component.fundacionAlertas.set([
     { id: 1, descripcion: 'Caso', urgencia: 'ALTA', municipio: '', barrio: '' },
   ]);
@@ -53,13 +51,11 @@ it('resets foundation data when reloading', () => {
   // After reset, stats should be back to initial empty state
   expect(component.fundacionStats()).toEqual({
     enCustodia: 0,
-    esperandoAtencion: 0,
-    emergenciasZona: 0,
+    casosSinCustodia: 0,
   });
   expect(component.fundacionAlertas()).toEqual([]);
   expect(component.fundacionAnimales()).toEqual([]);
   expect(component.errorMensaje()).toBe('');
-  // cargando is true after cargarDatos() is called (loading state)
   expect(component.cargando()).toBe(true);
 });
 
@@ -71,7 +67,7 @@ it('delegates badge helpers and scrolls to the panel', () => {
   } as unknown as HTMLElement);
 
   expect(component.getBadgeClass('CRITICA')).toBe('badge-emergencia');
-  expect(component.getBadgeLabel('ALTA')).toBe('Extraviado');
+  expect(component.getBadgeLabel('ALTA')).toBe('Alta');
   component.scrollToPanel();
   expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth' });
 });

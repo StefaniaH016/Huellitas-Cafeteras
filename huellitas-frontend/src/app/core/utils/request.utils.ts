@@ -3,6 +3,18 @@ import { Observable } from 'rxjs';
 
 export const ERROR_CARGA = 'No fue posible cargar la información. Intenta de nuevo.';
 
+export function getServerErrorMessage(error: unknown): string | null {
+  if (typeof error !== 'object' || error === null) {
+    return null;
+  }
+  const body = (error as { error?: unknown }).error;
+  if (typeof body !== 'object' || body === null) {
+    return null;
+  }
+  const message = (body as { message?: unknown }).message;
+  return typeof message === 'string' && message.trim() ? message.trim() : null;
+}
+
 /**
  * Estado de una petición al backend (cargando y mensaje de error) y la forma única de
  * suscribirse a ella, para no repetir el mismo next/error en cada pantalla.

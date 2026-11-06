@@ -86,16 +86,6 @@
   border-bottom-color: var(--pine-700);
 }
 
-.tab[aria-disabled='true'] {
-  opacity: 0.6;
-  cursor: not-allowed;
-  color: var(--ink-soft);
-}
-
-.tab[aria-disabled='true']:hover {
-  color: var(--ink-soft);
-}
-
 .gallery-container {
   margin-bottom: 1.25rem;
 }

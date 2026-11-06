@@ -75,10 +75,62 @@ it('loads and maps the cases feed on initialization', () => {
   ]);
   expect(component.total()).toBe(2);
   expect(component.cargando()).toBe(false);
-  expect(casoService.listarCasos).toHaveBeenCalledWith({ page: 0, size: 50 });
+  expect(casoService.listarCasos).toHaveBeenCalledWith({
+    page: 0,
+    size: 50,
+    estados: 'REGISTRADO,EN_ATENCION',
+  });
 });
 
-it('builds location and single-choice filter parameters', () => {
+it('shows the filters heading and makes the location selector responsive inside the sidebar', () => {
+  const fixture = TestBed.createComponent(CasosComponent);
+  fixture.detectChanges();
+
+  expect(fixture.nativeElement.querySelector('.filters-title')?.textContent.trim()).toBe('Filtros');
+  expect(
+    fixture.nativeElement.querySelector('#filtros app-ubicacion-selector fieldset')?.classList,
+  ).toContain('stacked');
+});
+
+it('shows each case primary photo and falls back to the paw icon when it fails', () => {
+  vi.mocked(casoService.listarCasos).mockReturnValue(
+    of({
+      content: [
+        {
+          id: 8,
+          descripcion: 'Caso con fotografía',
+          tipoCaso: 'HERIDO',
+          estado: 'REGISTRADO',
+          urgencia: 'ALTA',
+          fotoPrincipal: 'https://example.test/primary.jpg',
+        },
+      ],
+    }),
+  );
+  const fixture = TestBed.createComponent(CasosComponent);
+  fixture.detectChanges();
+
+  const image = fixture.nativeElement.querySelector('.list-thumb-img') as HTMLImageElement;
+  expect(image.getAttribute('src')).toBe('https://example.test/primary.jpg');
+
+  image.dispatchEvent(new Event('error'));
+  fixture.detectChanges();
+
+  expect(fixture.nativeElement.querySelector('.list-thumb-img')).toBeNull();
+  expect(fixture.nativeElement.querySelector('.list-thumb-fallback')?.textContent).toContain('🐾');
+});
+
+it('shows adoption as an available case type filter', () => {
+  const fixture = TestBed.createComponent(CasosComponent);
+  fixture.detectChanges();
+  const adoptionFilter = fixture.nativeElement.querySelector(
+    '#check-tipo-adopcion',
+  ) as HTMLInputElement;
+
+  expect(adoptionFilter.checked).toBe(true);
+});
+
+it('builds applied location and multi-choice filter parameters for the backend', () => {
   const component = createComponent();
   component.deptoId.set(1);
   component.munId.set(2);
@@ -93,9 +145,9 @@ it('builds location and single-choice filter parameters', () => {
     departamentoId: 1,
     municipioId: 2,
     barrioId: 3,
-    urgencia: 'ALTA',
-    tipoCaso: 'HERIDO',
-    estado: 'REGISTRADO',
+    urgencias: 'ALTA',
+    tiposCaso: 'HERIDO',
+    estados: 'REGISTRADO',
   });
 });
 
@@ -104,19 +156,22 @@ it('toggles urgency, type, and status filters in both directions', () => {
   component.toggleUrgencia('CRITICA');
   component.toggleTipo('HERIDO');
   component.toggleEstado('REGISTRADO');
-  expect(component.urgencias()).not.toContain('CRITICA');
-  expect(component.tipos()).not.toContain('HERIDO');
-  expect(component.estados()).not.toContain('REGISTRADO');
+  expect(component.urgenciasSeleccionadas()).not.toContain('CRITICA');
+  expect(component.tiposSeleccionados()).not.toContain('HERIDO');
+  expect(component.estadosSeleccionados()).not.toContain('REGISTRADO');
+  expect(component.urgencias()).toContain('CRITICA');
+  expect(component.tipos()).toContain('HERIDO');
+  expect(component.estados()).toContain('REGISTRADO');
 
   component.toggleUrgencia('CRITICA');
   component.toggleTipo('HERIDO');
   component.toggleEstado('REGISTRADO');
-  expect(component.urgencias()).toContain('CRITICA');
-  expect(component.tipos()).toContain('HERIDO');
-  expect(component.estados()).toContain('REGISTRADO');
+  expect(component.urgenciasSeleccionadas()).toContain('CRITICA');
+  expect(component.tiposSeleccionados()).toContain('HERIDO');
+  expect(component.estadosSeleccionados()).toContain('REGISTRADO');
 });
 
-it('filters cases by selected urgency, type, and status', () => {
+it('keeps current results until applying draft filter selections', () => {
   vi.mocked(casoService.listarCasos).mockReturnValue(
     of([
       { id: 1, urgencia: 'CRITICA', tipoCaso: 'HERIDO', estado: 'REGISTRADO' },
@@ -127,6 +182,40 @@ it('filters cases by selected urgency, type, and status', () => {
 
   expect(component.casos().map((caso) => caso.id)).toEqual([1]);
   expect(component.total()).toBe(1);
+
+  vi.mocked(casoService.listarCasos).mockClear();
+  component.toggleUrgencia('CRITICA');
+  component.toggleTipo('HERIDO');
+  component.toggleEstado('REGISTRADO');
+  component.toggleEstado('RESUELTO');
+
+  expect(casoService.listarCasos).not.toHaveBeenCalled();
+  expect(component.casos().map((caso) => caso.id)).toEqual([1]);
+
+  component.aplicarFiltros();
+
+  expect(component.casos().map((caso) => caso.id)).toEqual([2]);
+  expect(component.total()).toBe(1);
+});
+
+it('sends checkbox selections to the API when applying filters', () => {
+  const component = createComponent();
+  component.toggleUrgencia('CRITICA');
+  component.toggleTipo('HERIDO');
+  component.toggleEstado('REGISTRADO');
+  component.toggleEstado('RESUELTO');
+
+  vi.mocked(casoService.listarCasos).mockClear();
+  expect(casoService.listarCasos).not.toHaveBeenCalled();
+  component.aplicarFiltros();
+
+  expect(casoService.listarCasos).toHaveBeenLastCalledWith({
+    page: 0,
+    size: 50,
+    urgencias: 'ALTA,MEDIA,BAJA',
+    tiposCaso: 'VULNERABLE,EXTRAVIADO,EN_ADOPCION',
+    estados: 'EN_ATENCION,RESUELTO',
+  });
 });
 
 it('supports array responses and legacy case type aliases', () => {
@@ -148,6 +237,15 @@ it('updates the selected location ids', () => {
   component.onDeptoChange(1);
   component.onMunChange(2);
   component.onBarrioChange(3);
+
+  expect(component.filtroDeptoId()).toBe(1);
+  expect(component.filtroMunId()).toBe(2);
+  expect(component.filtroBarrioId()).toBe(3);
+  expect(component.deptoId()).toBeNull();
+  expect(component.munId()).toBeNull();
+  expect(component.barrioId()).toBeNull();
+
+  component.aplicarFiltros();
 
   expect(component.deptoId()).toBe(1);
   expect(component.munId()).toBe(2);

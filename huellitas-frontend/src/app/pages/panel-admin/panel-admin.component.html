@@ -1,60 +1,246 @@
-<main>
+<main class="private-main">
   <section class="dash-hello">
     <div>
       <h1>Panel de administración</h1>
-      <p class="dash-summary">Revisa y valida las cuentas institucionales pendientes.</p>
+      <p class="dash-summary">
+        {{ adminValidaciones().length }} cuentas esperan validación,
+        {{ casosReportados().length }} contenidos están marcados para moderación.
+      </p>
+    </div>
+    <div class="dash-ctas">
+      <button class="btn btn-secondary" routerLink="/casos">Ver todos los casos</button>
     </div>
   </section>
+  <section class="dash-figures" aria-label="Resumen de la plataforma">
+    <button class="figure" type="button" (click)="selectTab('validar')">
+      <span class="figure-num">{{ adminValidaciones().length }}</span>
+      <span class="figure-label">Cuentas por validar</span>
+    </button>
+    <button class="figure is-urgent" type="button" (click)="selectTab('moderacion')">
+      <span class="figure-num">{{ casosReportados().length }}</span>
+      <span class="figure-label">Contenidos por moderar</span>
+    </button>
+    <button class="figure" type="button" (click)="selectTab('casos')">
+      <span class="figure-num">{{ totalCasos() }}</span>
+      <span class="figure-label">Casos del sistema</span>
+    </button>
+  </section>
 
-  @if (mensaje()) {
-    <p class="feedback-success" role="status">{{ mensaje() }}</p>
-  }
-  @if (errorMensaje()) {
-    <div class="feedback-error" role="alert">
-      <span>{{ errorMensaje() }}</span>
-      <button class="btn btn-secondary btn-sm" type="button" (click)="cargarDatos()">
-        Reintentar
+  <div class="tabs-block">
+    <div class="tabs" role="tablist" aria-label="Tareas del administrador">
+      <button
+        class="tab"
+        [class.active]="selectedTab() === 'validar'"
+        data-tab="validar"
+        role="tab"
+        (click)="selectTab('validar')"
+      >
+        Validar cuentas
+      </button>
+      <button
+        class="tab"
+        [class.active]="selectedTab() === 'moderacion'"
+        data-tab="moderacion"
+        role="tab"
+        (click)="selectTab('moderacion')"
+      >
+        Moderar contenido
+      </button>
+      <button
+        class="tab"
+        [class.active]="selectedTab() === 'casos'"
+        data-tab="casos"
+        role="tab"
+        (click)="selectTab('casos')"
+      >
+        Casos del sistema
       </button>
     </div>
-  }
 
-  <section class="panel" aria-labelledby="cuentas-validar">
-    <div class="panel-head">
-      <h2 id="cuentas-validar">Cuentas por validar</h2>
-      <span class="panel-count">{{ adminValidaciones().length }}</span>
-    </div>
-    @if (cargando()) {
-      <p class="panel-message" role="status">Cargando solicitudes...</p>
-    } @else if (adminValidaciones().length === 0) {
-      <p class="panel-message">No hay cuentas por validar.</p>
-    } @else {
-      @for (cuenta of adminValidaciones(); track cuenta.usuarioId) {
-        <div class="list-row">
-          <div class="list-thumb" aria-hidden="true">🏠</div>
-          <div class="list-info">
-            <p class="list-title">{{ cuenta.nombreEntidad }}</p>
-            <p class="list-meta">{{ cuenta.rolSolicitado }} · Estado: {{ cuenta.estado }}</p>
+    <!-- Tab: Validar cuentas -->
+    <section
+      class="panel tab-panel"
+      [class.active]="selectedTab() === 'validar'"
+      data-tab-panel="validar"
+      [hidden]="selectedTab() !== 'validar'"
+    >
+      <div class="panel-head"><h3>Cuentas por validar</h3></div>
+      <p class="note">
+        Las fundaciones y veterinarias no pueden asumir custodias ni abrir bitácoras hasta que las
+        apruebes.
+      </p>
+      @if (cargando()) {
+        <p class="list-empty">Cargando solicitudes...</p>
+      } @else if (adminValidaciones().length === 0) {
+        <p class="list-empty">No hay cuentas por validar.</p>
+      } @else {
+        @for (cuenta of adminValidaciones(); track cuenta.usuarioId) {
+          <div class="list-row">
+            <div class="list-thumb" aria-hidden="true">
+              @if (cuenta.rolSolicitado === 'VETERINARIA') {
+                🩺
+              } @else {
+                🏠
+              }
+            </div>
+            <div class="list-info">
+              <p class="list-title">{{ cuenta.nombreEntidad }}</p>
+              <p class="list-meta">
+                {{ cuenta.rolSolicitado }} · {{ cuenta.municipio || 'Municipio sin informar' }} ·
+                NIT: {{ cuenta.nit || 'No informado' }} · {{ cuenta.estado }}
+              </p>
+            </div>
+            <div class="list-actions">
+              @if (cuenta.documentoSoporteDisponible) {
+                @if (documentosSoporte()[cuenta.usuarioId]; as documentoUrl) {
+                  <a
+                    class="btn btn-secondary btn-sm"
+                    [href]="documentoUrl"
+                    target="_blank"
+                    rel="noopener"
+                  >
+                    Ver documento
+                  </a>
+                } @else {
+                  <button
+                    class="btn btn-secondary btn-sm"
+                    type="button"
+                    [disabled]="documentoEnCurso() !== null"
+                    (click)="cargarDocumentoSoporte(cuenta.usuarioId)"
+                  >
+                    {{ documentoEnCurso() === cuenta.usuarioId ? 'Cargando...' : 'Ver documento' }}
+                  </button>
+                }
+              }
+              <button
+                class="btn btn-primary btn-sm"
+                type="button"
+                [disabled]="accionEnCurso() !== null || cargando()"
+                (click)="resolverVerificacion(cuenta.usuarioId, 'APROBAR')"
+              >
+                Aprobar
+              </button>
+              <button
+                class="btn btn-secondary btn-sm"
+                type="button"
+                [disabled]="accionEnCurso() !== null || cargando()"
+                (click)="resolverVerificacion(cuenta.usuarioId, 'RECHAZAR')"
+              >
+                Rechazar
+              </button>
+            </div>
           </div>
-          <div class="list-actions">
-            <button
-              class="btn btn-primary btn-sm"
-              type="button"
-              [disabled]="accionEnCurso() !== null || cargando()"
-              (click)="resolverVerificacion(cuenta.usuarioId, 'APROBAR')"
-            >
-              Aprobar
-            </button>
-            <button
-              class="btn btn-secondary btn-sm"
-              type="button"
-              [disabled]="accionEnCurso() !== null || cargando()"
-              (click)="resolverVerificacion(cuenta.usuarioId, 'RECHAZAR')"
-            >
-              Rechazar
-            </button>
+        }
+      }
+      @if (errorDocumento()) {
+        <p class="feedback-error" role="alert">{{ errorDocumento() }}</p>
+      }
+      @if (mensaje()) {
+        <p class="feedback-success" role="status">{{ mensaje() }}</p>
+      }
+      @if (errorMensaje()) {
+        <p class="feedback-error" role="alert">{{ errorMensaje() }}</p>
+      }
+    </section>
+
+    <!-- Tab: Moderar contenido -->
+    <section
+      class="panel tab-panel"
+      [class.active]="selectedTab() === 'moderacion'"
+      data-tab-panel="moderacion"
+      [hidden]="selectedTab() !== 'moderacion'"
+    >
+      <div class="panel-head"><h3>Contenidos por moderar</h3></div>
+      @if (cargandoModeracion()) {
+        <p class="list-empty">Cargando casos reportados...</p>
+      } @else if (casosReportados().length === 0) {
+        <p class="list-empty">No hay casos reportados o moderados.</p>
+      } @else {
+        @for (caso of casosReportados(); track caso.casoId) {
+          <div class="list-row">
+            <div class="list-thumb" aria-hidden="true">⚑</div>
+            <div class="list-info">
+              <p class="list-title">Caso #{{ caso.casoId }}</p>
+              <p class="list-meta">{{ caso.motivo }} · marcado {{ caso.fechaCreacion }}</p>
+            </div>
+            <span class="badge badge-alta"><span class="badge-dot"></span>Caso</span>
+            <div class="list-actions">
+              <a class="btn btn-primary btn-sm" [routerLink]="['/caso-detalle', caso.casoId]">
+                Revisar caso
+              </a>
+            </div>
           </div>
+        }
+      }
+      @if (errorModeracion()) {
+        <p class="feedback-error" role="alert">{{ errorModeracion() }}</p>
+      }
+    </section>
+
+    <!-- Tab: Casos del sistema -->
+    <section
+      class="panel tab-panel"
+      [class.active]="selectedTab() === 'casos'"
+      data-tab-panel="casos"
+      [hidden]="selectedTab() !== 'casos'"
+    >
+      <div class="panel-head">
+        <h3>Casos del sistema</h3>
+        <span class="panel-count">{{ totalCasos() }}</span>
+      </div>
+      @if (cargandoCasos()) {
+        <p class="list-empty">Cargando casos...</p>
+      } @else if (errorCasos()) {
+        <div class="feedback-error" role="alert">
+          <span>{{ errorCasos() }}</span>
+          <button class="btn btn-secondary btn-sm" type="button" (click)="cargarCasos()">
+            Reintentar
+          </button>
+        </div>
+      } @else if (casosSistema().length === 0) {
+        <p class="list-empty">No hay casos para mostrar.</p>
+      } @else {
+        @for (caso of casosSistema(); track caso.id) {
+          <div class="list-row">
+            <app-caso-miniatura
+              [fotoPrincipal]="caso.fotoPrincipal"
+              [foto]="caso.foto"
+              [alt]="'Foto principal de ' + (caso.titulo || caso.descripcion)"
+            />
+            <div class="list-info">
+              <p class="list-title">{{ caso.titulo || caso.descripcion }} · Caso #{{ caso.id }}</p>
+              <p class="list-meta">{{ caso.estado }} · {{ caso.municipio }} · {{ caso.barrio }}</p>
+            </div>
+            <span class="badge" [ngClass]="getBadgeClass(caso.urgencia)">
+              <span class="badge-dot"></span>{{ getBadgeLabel(caso.urgencia) }}
+            </span>
+            <div class="list-actions">
+              <a class="btn btn-secondary btn-sm" [routerLink]="['/caso-detalle', caso.id]">
+                Ver caso
+              </a>
+            </div>
+          </div>
+        }
+        <div class="list-actions mt-sm">
+          <button
+            class="btn btn-secondary btn-sm"
+            type="button"
+            [disabled]="paginaCasos() === 0 || cargandoCasos()"
+            (click)="cambiarPaginaCasos(-1)"
+          >
+            Anterior
+          </button>
+          <span class="list-meta">Página {{ paginaCasos() + 1 }}</span>
+          <button
+            class="btn btn-secondary btn-sm"
+            type="button"
+            [disabled]="(paginaCasos() + 1) * 10 >= totalCasos() || cargandoCasos()"
+            (click)="cambiarPaginaCasos(1)"
+          >
+            Siguiente
+          </button>
         </div>
       }
-    }
-  </section>
+    </section>
+  </div>
 </main>

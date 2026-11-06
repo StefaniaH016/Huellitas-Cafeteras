@@ -5,6 +5,8 @@ import { RouterLink } from '@angular/router';
 import { CasoService } from '../../core/services/caso.service';
 import { AuthService } from '../../core/services/auth.service';
 import { UbicacionService } from '../../core/services/ubicacion.service';
+import { NotificacionService } from '../../core/services/notificacion.service';
+import { EMPTY, expand, forkJoin, reduce } from 'rxjs';
 import {
   ESTADO_LABELS,
   TIPO_LABELS,
@@ -15,6 +17,11 @@ import {
   normalizeCasoDisplay,
 } from '../../core/utils/caso-display.utils';
 import { normalizeRole } from '../../core/utils/role.utils';
+import {
+  VerificacionPendiente,
+  VerificacionService,
+} from '../../core/services/verificacion.service';
+import { CasoReportado, ModeracionService } from '../../core/services/moderacion.service';
 
 interface Ubicacion {
   id: number;
@@ -72,6 +79,9 @@ export class HomeComponent implements OnInit {
   private casoService = inject(CasoService);
   authService = inject(AuthService);
   private ubicacionService = inject(UbicacionService);
+  private notificacionService = inject(NotificacionService);
+  private verificacionService = inject(VerificacionService);
+  private moderacionService = inject(ModeracionService);
 
   // Ubicación signals
   departamentos = signal<Ubicacion[]>([]);
@@ -103,32 +113,27 @@ export class HomeComponent implements OnInit {
   isFundacion = computed(() => this.rol() === 'FUNDACION_REFUGIO');
   isVeterinaria = computed(() => this.rol() === 'VETERINARIA');
   isAdmin = computed(() => this.rol() === 'ADMINISTRADOR');
-
-  casosEnCustodia = computed(() => {
-    const nombre = this.authService.getNombre();
-    if (!nombre) {
-      return [];
-    }
-    return this.casos().filter((c) => c.estado === 'EN_ATENCION' && c.fundacion === nombre);
-  });
-
-  emergenciasZona = computed(() =>
-    this.casos().filter((c) => c.urgencia === 'CRITICA' || c.urgencia === 'ALTA'),
-  );
-
-  esperandoAtencionMedica = computed(() =>
-    this.casos().filter(
-      (c) => c.estado === 'EN_ATENCION' && (c.tipoCaso === 'HERIDO' || c.urgencia === 'CRITICA'),
-    ),
-  );
+  resumenAdmin = signal({ cuentasPendientes: 0, casosReportados: 0 });
+  cuentasPendientesAdmin = signal<VerificacionPendiente[]>([]);
+  casosReportadosAdmin = signal<CasoReportado[]>([]);
+  cargandoResumenAdmin = signal(false);
+  errorResumenAdmin = signal('');
+  totalCasosFeed = signal(0);
 
   // Mis reportes (Ciudadano)
   misReportes = signal<Caso[]>([]);
   cargandoMisReportes = signal(false);
+  errorMisReportes = signal('');
+  readonly notificacionesSinLeer = this.notificacionService.sinLeer;
 
-  misReportesActivos = computed(() => this.misReportes().filter((c) => c.estado !== 'RESUELTO'));
+  misReportesActivos = computed(() =>
+    this.misReportes().filter((c) => c.estado === 'REGISTRADO' || c.estado === 'EN_ATENCION'),
+  );
 
   misReportesResueltos = computed(() => this.misReportes().filter((c) => c.estado === 'RESUELTO'));
+
+  // Primer caso activo (Ciudadano)
+  primerCasoActivo = computed(() => this.misReportesActivos()[0] || null);
 
   ngOnInit(): void {
     const rawRole = this.authService.getRol();
@@ -140,7 +145,8 @@ export class HomeComponent implements OnInit {
       !role ||
       role === 'CIUDADANO_VOLUNTARIO' ||
       role === 'FUNDACION_REFUGIO' ||
-      role === 'VETERINARIA'
+      role === 'VETERINARIA' ||
+      role === 'ADMINISTRADOR'
     ) {
       this.cargarDepartamentos();
       this.cargarFeed();
@@ -149,22 +155,69 @@ export class HomeComponent implements OnInit {
     if (this.isCiudadano()) {
       this.cargarMisReportes();
     }
+    if (this.isAdmin()) {
+      this.cargarResumenAdmin();
+    }
+  }
+
+  cargarResumenAdmin(): void {
+    this.cargandoResumenAdmin.set(true);
+    this.errorResumenAdmin.set('');
+    forkJoin({
+      cuentas: this.verificacionService.getPendientes(),
+      casos: this.moderacionService.getCasosReportados(),
+    }).subscribe({
+      next: ({ cuentas, casos }) => {
+        this.resumenAdmin.set({
+          cuentasPendientes: cuentas.length,
+          casosReportados: casos.length,
+        });
+        this.cuentasPendientesAdmin.set(cuentas.slice(0, 3));
+        this.casosReportadosAdmin.set(casos.slice(0, 3));
+        this.cargandoResumenAdmin.set(false);
+      },
+      error: (error: unknown) => {
+        console.error('Error al cargar el resumen administrativo:', error);
+        this.errorResumenAdmin.set('No fue posible cargar el resumen. Intenta nuevamente.');
+        this.cargandoResumenAdmin.set(false);
+      },
+    });
   }
 
   cargarMisReportes(): void {
     this.cargandoMisReportes.set(true);
-    this.casoService.getMisReportes(0).subscribe({
-      next: (resp: unknown): void => {
-        const list = this.extractCasosArray(resp);
-        this.misReportes.set(list);
-        this.cargandoMisReportes.set(false);
-      },
-      error: (err: unknown): void => {
-        console.error('Error cargando mis reportes:', err);
-        this.misReportes.set([]);
-        this.cargandoMisReportes.set(false);
-      },
-    });
+    this.errorMisReportes.set('');
+    this.casoService
+      .getMisReportes(0, 50)
+      .pipe(
+        expand((response: unknown, index: number) => {
+          if (!response || typeof response !== 'object' || Array.isArray(response)) {
+            return EMPTY;
+          }
+          const page = response as Record<string, unknown>;
+          const currentPage = Number(page['number'] ?? index);
+          const totalPages = Number(page['totalPages'] ?? 1);
+          return currentPage + 1 < totalPages
+            ? this.casoService.getMisReportes(currentPage + 1, 50)
+            : EMPTY;
+        }),
+        reduce(
+          (all: Caso[], response: unknown) => [...all, ...this.extractCasosArray(response)],
+          [],
+        ),
+      )
+      .subscribe({
+        next: (reports) => {
+          this.misReportes.set(reports);
+          this.cargandoMisReportes.set(false);
+        },
+        error: (err: unknown) => {
+          console.error('Error cargando mis reportes:', err);
+          this.errorMisReportes.set('No fue posible cargar tus reportes. Intenta nuevamente.');
+          this.misReportes.set([]);
+          this.cargandoMisReportes.set(false);
+        },
+      });
   }
 
   cargarDepartamentos(): void {
@@ -262,13 +315,9 @@ export class HomeComponent implements OnInit {
     }
 
     const obj = response as Record<string, unknown>;
-    const casosArray: unknown = obj['casos'] || obj['content'] || response;
-
-    if (!Array.isArray(casosArray)) {
-      return [];
-    }
-
-    return (casosArray as RawHomeCaso[]).map((c) => this.mapRawHomeCaso(c));
+    const rawCases = obj['casos'] ?? obj['content'];
+    const casosArray = Array.isArray(rawCases) ? (rawCases as RawHomeCaso[]) : [];
+    return casosArray.map((c) => this.mapRawHomeCaso(c));
   }
 
   cargarFeed(): void {
@@ -280,12 +329,18 @@ export class HomeComponent implements OnInit {
       next: (response: unknown) => {
         const casosArray = this.extractCasosArray(response);
         this.casos.set(casosArray);
+        const total =
+          response && typeof response === 'object' && !Array.isArray(response)
+            ? Number((response as Record<string, unknown>)['totalElements'])
+            : Number.NaN;
+        this.totalCasosFeed.set(Number.isFinite(total) ? total : casosArray.length);
         this.cargando.set(false);
       },
       error: (error: unknown) => {
         console.error('Error al cargar feed de casos:', error);
         this.errorMensaje.set('Error al cargar los casos. Intente más tarde.');
         this.casos.set([]);
+        this.totalCasosFeed.set(0);
         this.cargando.set(false);
       },
     });

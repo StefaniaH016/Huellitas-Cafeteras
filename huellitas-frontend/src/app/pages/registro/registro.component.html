@@ -296,9 +296,16 @@
               <input
                 id="docSoporte"
                 type="file"
-                formControlName="docSoporte"
                 accept=".pdf,.jpg,.jpeg,.png"
+                (change)="seleccionarDocumento($event)"
               />
+              <p class="note">PDF, JPG o PNG, máximo 5 MB. Puedes adjuntarlo ahora o después.</p>
+              @if (documentoSoporte(); as documento) {
+                <p class="list-meta">Archivo seleccionado: {{ documento.name }}</p>
+              }
+              @if (errorDocumento()) {
+                <span class="field-error" role="alert">{{ errorDocumento() }}</span>
+              }
             </div>
           </div>
         }

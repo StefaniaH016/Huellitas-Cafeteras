@@ -42,6 +42,8 @@ it('loads all notifications and can filter the unread ones', () => {
 
   expect(servicio['listar']).toHaveBeenLastCalledWith(true);
   expect(component.icono('EMERGENCIA')).toBe('🚨');
+  expect(component.icono('CUSTODIA')).toBe('🏠');
+  expect(component.icono('VERIFICACION')).toBe('✅');
   expect(component.icono('OTRA')).toBe('🔔');
 });
 

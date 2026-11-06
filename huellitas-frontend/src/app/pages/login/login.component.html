@@ -16,93 +16,66 @@
     <span class="intro-paw" aria-hidden="true">🐾</span>
   </aside>
 
-  @if (!showRecovery()) {
-    <div class="auth-card login-panel">
-      <div class="auth-accent"></div>
-      <h2>Ingresar</h2>
+  <div class="auth-card login-panel">
+    <div class="auth-accent"></div>
+    <h2>Ingresar</h2>
 
-      <div class="error-banner" [class.show]="showError()" role="alert">
-        Correo o contraseña incorrectos. Si tu cuenta es institucional, puede estar pendiente de
-        validación.
+    <div class="error-banner" [class.show]="showError()" role="alert">
+      Correo o contraseña incorrectos. Si tu cuenta es institucional, puede estar pendiente de
+      validación.
+    </div>
+
+    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" novalidate>
+      <div class="form-field">
+        <label for="email">Correo electrónico</label>
+        <input
+          type="email"
+          id="email"
+          formControlName="email"
+          placeholder="tucorreo@ejemplo.com"
+          [class.input-error]="loginForm.get('email')?.invalid && loginForm.get('email')?.touched"
+        />
+        @if (loginForm.get('email')?.invalid && loginForm.get('email')?.touched) {
+          <span class="field-error" role="alert">
+            @if (loginForm.get('email')?.hasError('required')) {
+              El correo es obligatorio.
+            }
+            @if (loginForm.get('email')?.hasError('email')) {
+              Ingresa un correo válido.
+            }
+          </span>
+        }
       </div>
-
-      <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" novalidate>
-        <div class="form-field">
-          <label for="email">Correo electrónico</label>
-          <input
-            type="email"
-            id="email"
-            formControlName="email"
-            placeholder="tucorreo@ejemplo.com"
-            [class.input-error]="loginForm.get('email')?.invalid && loginForm.get('email')?.touched"
-          />
-          @if (loginForm.get('email')?.invalid && loginForm.get('email')?.touched) {
-            <span class="field-error" role="alert">
-              @if (loginForm.get('email')?.hasError('required')) {
-                El correo es obligatorio.
-              }
-              @if (loginForm.get('email')?.hasError('email')) {
-                Ingresa un correo válido.
-              }
-            </span>
-          }
-        </div>
-        <div class="form-field">
-          <label for="pass">Contraseña</label>
-          <input
-            type="password"
-            id="pass"
-            formControlName="password"
-            placeholder="••••••••"
-            [class.input-error]="
-              loginForm.get('password')?.invalid && loginForm.get('password')?.touched
-            "
-          />
-          @if (loginForm.get('password')?.invalid && loginForm.get('password')?.touched) {
-            <span class="field-error" role="alert">La contraseña es obligatoria.</span>
-          }
-        </div>
-        <div class="form-row">
-          <label class="checkline"
-            ><input type="checkbox" formControlName="mantenerSesion" />Mantener sesión
-            iniciada</label
-          >
-          <a href="#" class="link" (click)="toggleRecovery($event)">¿Olvidaste tu contraseña?</a>
-        </div>
-        <button type="submit" class="btn btn-primary btn-block" [disabled]="isLoading()">
-          @if (isLoading()) {
-            Ingresando...
-          } @else {
-            Ingresar
-          }
-        </button>
-        <p class="auth-foot">
-          ¿No tienes cuenta? <a routerLink="/registro" class="link">Regístrate</a>
-        </p>
-      </form>
-    </div>
-  }
-
-  @if (showRecovery()) {
-    <div class="auth-card recover-panel">
-      <div class="auth-accent"></div>
-      <h2>Recuperar acceso</h2>
-      <p class="sub">Te enviaremos un enlace para restablecer tu contraseña.</p>
-      <form [formGroup]="recoveryForm" (ngSubmit)="onRecovery()" novalidate>
-        <div class="form-field">
-          <label for="recEmail">Correo electrónico</label>
-          <input
-            type="email"
-            id="recEmail"
-            formControlName="recoveryEmail"
-            placeholder="tucorreo@ejemplo.com"
-          />
-        </div>
-        <button type="submit" class="btn btn-primary btn-block">Enviar enlace</button>
-        <p class="auth-foot">
-          <a href="#" class="link" (click)="toggleRecovery($event)">Volver a iniciar sesión</a>
-        </p>
-      </form>
-    </div>
-  }
+      <div class="form-field">
+        <label for="pass">Contraseña</label>
+        <input
+          type="password"
+          id="pass"
+          formControlName="password"
+          placeholder="••••••••"
+          [class.input-error]="
+            loginForm.get('password')?.invalid && loginForm.get('password')?.touched
+          "
+        />
+        @if (loginForm.get('password')?.invalid && loginForm.get('password')?.touched) {
+          <span class="field-error" role="alert">La contraseña es obligatoria.</span>
+        }
+      </div>
+      <div class="form-row">
+        <label class="checkline"
+          ><input type="checkbox" formControlName="mantenerSesion" />Mantener sesión iniciada</label
+        >
+      </div>
+      <button type="submit" class="btn btn-primary btn-block" [disabled]="isLoading()">
+        @if (isLoading()) {
+          Ingresando...
+        } @else {
+          Ingresar
+        }
+      </button>
+      <p class="auth-foot">
+        ¿No tienes cuenta? <a routerLink="/registro" class="link">Regístrate</a>
+      </p>
+    </form>
+  </div>
 </div>

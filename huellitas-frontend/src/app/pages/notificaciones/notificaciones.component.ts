@@ -1,6 +1,8 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
+import { CommonModule } from '@angular/common';
 import { Notificacion, NotificacionService } from '../../core/services/notificacion.service';
+import { AuthService } from '../../core/services/auth.service';
 import { haceCuanto } from '../../core/utils/caso-display.utils';
 import { pageContent } from '../../core/utils/page.utils';
 import { EstadoCarga } from '../../core/utils/request.utils';
@@ -11,15 +13,23 @@ const ICONOS: Record<string, string> = {
   CAMBIO_ESTADO: '🔄',
   CIERRE: '✅',
   RECORDATORIO: '⏰',
+  CUSTODIA: '🏠',
+  VERIFICACION: '✅',
+  CUENTAS: '🏢',
+  MODERACION: '⚑',
+  INACTIVOS: '⏰',
 };
 
 /** Notificaciones: todas o solo las sin leer; abrir una la marca como leída y lleva al caso. */
 @Component({
   selector: 'app-notificaciones',
   templateUrl: './notificaciones.component.html',
+  standalone: true,
+  imports: [CommonModule, RouterLink],
 })
 export class NotificacionesComponent implements OnInit {
   private notificacionService = inject(NotificacionService);
+  private authService = inject(AuthService);
   private router = inject(Router);
 
   readonly carga = new EstadoCarga();
@@ -67,5 +77,13 @@ export class NotificacionesComponent implements OnInit {
       },
       error: (err: unknown) => console.error('Error marcando la notificación:', err),
     });
+  }
+
+  isAdmin(): boolean {
+    return this.authService.tieneRol('ADMIN');
+  }
+
+  goBack(): void {
+    void this.router.navigate(['/']);
   }
 }

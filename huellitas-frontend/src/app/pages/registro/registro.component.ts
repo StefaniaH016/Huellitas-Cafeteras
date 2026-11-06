@@ -7,7 +7,6 @@ import {
   ValidationErrors,
 } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../core/services/auth.service';
 import { AuthBrandHeaderComponent } from '../../shared/components/auth-brand-header/auth-brand-header.component';
 
@@ -24,7 +23,6 @@ interface FormValue {
   nit?: string;
   tarjetaProf?: string;
   municipioOperacion?: string;
-  docSoporte?: string;
   aceptaDatos?: boolean;
 }
 
@@ -39,7 +37,7 @@ interface RegistroRequest {
   nit?: string;
   documentoLegal?: string;
   municipioOperacion?: string;
-  documentoSoporte?: string;
+  documentoSoporte?: File;
   aceptoTratamientoDatos: boolean;
 }
 
@@ -61,13 +59,14 @@ function confirmPasswordValidator(control: AbstractControl): ValidationErrors | 
 export class RegistroComponent {
   private fb = inject(FormBuilder);
   private router = inject(Router);
-  private httpClient = inject(HttpClient);
   private authService = inject(AuthService);
 
   step = signal(1);
   tipoCuenta = signal<TipoCuenta>(null);
   isLoading = signal(false);
   errorMessage = signal<string | null>(null);
+  documentoSoporte = signal<File | null>(null);
+  errorDocumento = signal('');
 
   step2Form = this.fb.group({
     nombre: ['', Validators.required],
@@ -80,7 +79,6 @@ export class RegistroComponent {
     nit: [''],
     tarjetaProf: [''],
     municipioOperacion: [''],
-    docSoporte: [''],
     aceptaDatos: [false, Validators.requiredTrue],
   });
 
@@ -118,16 +116,40 @@ export class RegistroComponent {
     this.step.set(1);
   }
 
+  seleccionarDocumento(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const archivo = input.files?.[0] ?? null;
+    this.errorDocumento.set('');
+    if (!archivo) {
+      this.documentoSoporte.set(null);
+      return;
+    }
+    if (archivo.size > 5 * 1024 * 1024) {
+      this.documentoSoporte.set(null);
+      this.errorDocumento.set('El documento no puede superar 5 MB.');
+      input.value = '';
+      return;
+    }
+    if (!/\.(pdf|jpe?g|png)$/i.test(archivo.name)) {
+      this.documentoSoporte.set(null);
+      this.errorDocumento.set('Adjunta un archivo PDF, JPG o PNG.');
+      input.value = '';
+      return;
+    }
+    this.documentoSoporte.set(archivo);
+  }
+
   private buildInstitutionalFields(formValue: FormValue): Partial<RegistroRequest> {
     if (!this.isInstitutional()) {
       return {};
     }
+    const documentoSoporte = this.documentoSoporte();
     return {
       ...(formValue.nombreEntidad && { nombreEntidad: formValue.nombreEntidad }),
       ...(formValue.nit && { nit: formValue.nit }),
       ...(formValue.tarjetaProf && { documentoLegal: formValue.tarjetaProf }),
       ...(formValue.municipioOperacion && { municipioOperacion: formValue.municipioOperacion }),
-      ...(formValue.docSoporte && { documentoSoporte: formValue.docSoporte }),
+      ...(documentoSoporte && { documentoSoporte }),
     };
   }
 
@@ -150,7 +172,7 @@ export class RegistroComponent {
 
   onSubmit(): void {
     this.step2Form.markAllAsTouched();
-    if (this.step2Form.invalid) {
+    if (this.step2Form.invalid || this.errorDocumento()) {
       return;
     }
 
