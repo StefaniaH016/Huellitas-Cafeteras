@@ -13,7 +13,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/v1/usuarios")
+@RequestMapping({"/v1/usuarios", "/api/v1/usuarios"})
 @RequiredArgsConstructor
 public class UsuarioController {
 

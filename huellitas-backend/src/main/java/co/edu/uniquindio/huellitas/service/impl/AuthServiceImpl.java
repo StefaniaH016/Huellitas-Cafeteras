@@ -6,7 +6,11 @@ import co.edu.uniquindio.huellitas.dto.auth.RegistroResponseDTO;
 import co.edu.uniquindio.huellitas.dto.auth.RegistroUsuarioDTO;
 import co.edu.uniquindio.huellitas.dto.auth.UsuarioDTO;
 import co.edu.uniquindio.huellitas.entity.Barrio;
+import co.edu.uniquindio.huellitas.entity.Fundacion;
+import co.edu.uniquindio.huellitas.entity.Organizacion;
 import co.edu.uniquindio.huellitas.entity.Usuario;
+import co.edu.uniquindio.huellitas.entity.Veterinaria;
+import co.edu.uniquindio.huellitas.entity.enums.EstadoVerificacion;
 import co.edu.uniquindio.huellitas.entity.enums.Rol;
 import co.edu.uniquindio.huellitas.exception.ConflictException;
 import co.edu.uniquindio.huellitas.exception.ResourceNotFoundException;
@@ -25,6 +29,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -53,6 +58,25 @@ public class AuthServiceImpl implements AuthService {
                     .orElseThrow(() -> new ResourceNotFoundException("Barrio", dto.barrioId()));
         }
 
+        Organizacion organizacion = null;
+        if (rol == Rol.FUNDACION_REFUGIO) {
+            organizacion = Fundacion.builder()
+                    .nombre(dto.nombre().trim())
+                    .nit("NIT-" + UUID.randomUUID().toString().replace("-", "").substring(0, 14))
+                    .estadoVerificacion(EstadoVerificacion.PENDIENTE)
+                    .aceptaCustodia(true)
+                    .capacidadAlbergue(50)
+                    .municipio(barrio != null ? barrio.getMunicipio() : null)
+                    .build();
+        } else if (rol == Rol.VETERINARIA) {
+            organizacion = Veterinaria.builder()
+                    .nombre(dto.nombre().trim())
+                    .nit("NIT-" + UUID.randomUUID().toString().replace("-", "").substring(0, 14))
+                    .estadoVerificacion(EstadoVerificacion.PENDIENTE)
+                    .municipio(barrio != null ? barrio.getMunicipio() : null)
+                    .build();
+        }
+
         Usuario usuario = Usuario.builder()
                 .nombre(dto.nombre().trim())
                 .correo(dto.correo().trim().toLowerCase())
@@ -61,6 +85,7 @@ public class AuthServiceImpl implements AuthService {
                 .rol(rol)
                 .barrio(barrio)
                 .municipioInteres(barrio != null ? barrio.getMunicipio() : null)
+                .organizacion(organizacion)
                 .verificado(false)
                 .activo(true)
                 .aceptoTratamientoDatos(true)

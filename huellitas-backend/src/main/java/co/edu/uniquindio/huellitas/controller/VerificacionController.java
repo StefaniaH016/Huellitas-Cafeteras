@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/v1/verificaciones")
+@RequestMapping({"/v1/verificaciones", "/api/v1/verificaciones"})
 @RequiredArgsConstructor
 public class VerificacionController {
 

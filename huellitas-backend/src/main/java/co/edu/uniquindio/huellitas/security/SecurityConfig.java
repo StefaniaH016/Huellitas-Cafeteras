@@ -56,7 +56,7 @@ public class SecurityConfig {
                         "/api-docs/**",
                         "/v3/api-docs/**").permitAll()
                 // Actuator
-                .requestMatchers("/actuator/**").permitAll()
+                .requestMatchers("/actuator/**", "/api/actuator/**").permitAll()
                 // Todo lo demás requiere autenticación
                 .anyRequest().authenticated())
             .authenticationProvider(authenticationProvider())

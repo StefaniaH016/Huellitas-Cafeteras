@@ -3,8 +3,10 @@ package co.edu.uniquindio.huellitas.service.impl;
 import co.edu.uniquindio.huellitas.dto.verificacion.DecisionVerificacionDTO;
 import co.edu.uniquindio.huellitas.dto.verificacion.VerificacionPendienteDTO;
 import co.edu.uniquindio.huellitas.dto.verificacion.VerificacionResponseDTO;
+import co.edu.uniquindio.huellitas.entity.Fundacion;
 import co.edu.uniquindio.huellitas.entity.Organizacion;
 import co.edu.uniquindio.huellitas.entity.Usuario;
+import co.edu.uniquindio.huellitas.entity.Veterinaria;
 import co.edu.uniquindio.huellitas.entity.enums.EstadoVerificacion;
 import co.edu.uniquindio.huellitas.entity.enums.Rol;
 import co.edu.uniquindio.huellitas.exception.ResourceNotFoundException;
@@ -17,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -51,7 +54,31 @@ public class VerificacionServiceImpl implements VerificacionService {
         usuario.setVerificado(aprobada);
 
         Organizacion organizacion = usuario.getOrganizacion();
-        if (organizacion != null) {
+        if (organizacion == null) {
+            if (usuario.getRol() == Rol.FUNDACION_REFUGIO) {
+                organizacion = Fundacion.builder()
+                        .nombre(usuario.getNombre())
+                        .nit("NIT-" + UUID.randomUUID().toString().replace("-", "").substring(0, 14))
+                        .estadoVerificacion(aprobada ? EstadoVerificacion.VERIFICADA : EstadoVerificacion.RECHAZADA)
+                        .aceptaCustodia(true)
+                        .capacidadAlbergue(50)
+                        .fechaVerificacion(Instant.now())
+                        .verificador(admin)
+                        .municipio(usuario.getMunicipioInteres())
+                        .build();
+                usuario.setOrganizacion(organizacion);
+            } else if (usuario.getRol() == Rol.VETERINARIA) {
+                organizacion = Veterinaria.builder()
+                        .nombre(usuario.getNombre())
+                        .nit("NIT-" + UUID.randomUUID().toString().replace("-", "").substring(0, 14))
+                        .estadoVerificacion(aprobada ? EstadoVerificacion.VERIFICADA : EstadoVerificacion.RECHAZADA)
+                        .fechaVerificacion(Instant.now())
+                        .verificador(admin)
+                        .municipio(usuario.getMunicipioInteres())
+                        .build();
+                usuario.setOrganizacion(organizacion);
+            }
+        } else {
             organizacion.setEstadoVerificacion(aprobada ? EstadoVerificacion.VERIFICADA : EstadoVerificacion.RECHAZADA);
             organizacion.setFechaVerificacion(Instant.now());
             organizacion.setVerificador(admin);

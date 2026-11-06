@@ -74,9 +74,13 @@ public class BitacoraController {
     }
 
     @GetMapping({"/v1/casos/{id}/bitacora/pdf", "/api/v1/casos/{id}/bitacora/pdf"})
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Descargar resumen médico en PDF", description = "Genera y descarga el resumen clínico en PDF de la bitácora.")
-    public ResponseEntity<byte[]> descargarPdf(@PathVariable Long id) {
-        byte[] pdf = bitacoraService.generarPdfResumen(id);
+    public ResponseEntity<byte[]> descargarPdf(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        String correo = userDetails != null ? userDetails.getUsername() : null;
+        byte[] pdf = bitacoraService.generarPdfResumen(id, correo);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_PDF);

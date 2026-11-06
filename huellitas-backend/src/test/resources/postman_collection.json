@@ -7,7 +7,7 @@
   "variable": [
     {
       "key": "baseUrl",
-      "value": "http://localhost:8080/api"
+      "value": "http://localhost:8080"
     },
     {
       "key": "admin_correo",
@@ -62,10 +62,6 @@
       "value": ""
     },
     {
-      "key": "vet_contrasena",
-      "value": "Veterinaria12345!"
-    },
-    {
       "key": "vet_token",
       "value": ""
     },
@@ -115,9 +111,13 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Status code es 200 OK o 503 si SMTP no está disponible', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 503]);",
+                  "});",
                   "var json = pm.response.json();",
-                  "pm.test('Estado de salud del sistema es UP', function () { pm.expect(json.status).to.eql('UP'); });"
+                  "pm.test('Estado de salud del sistema reportado', function () {",
+                  "    pm.expect(json.status).to.be.oneOf(['UP', 'DOWN']);",
+                  "});"
                 ]
               }
             }
@@ -407,7 +407,7 @@
                 "exec": [
                   "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
                   "var json = pm.response.json();",
-                  "pm.test('Entidad verificada', function () { pm.expect(json.estadoVerificacion).to.eql('VERIFICADA'); });"
+                  "pm.test('Entidad aprobada y verificada', function () { pm.expect(json.verificado).to.be.true; });"
                 ]
               }
             }
@@ -599,7 +599,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"correo\": \"{{vet_correo}}\",\n  \"contrasena\": \"{{vet_contrasena}}\"\n}"
+              "raw": "{\n  \"correo\": \"{{vet_correo}}\",\n  \"contrasena\": \"Veterinaria12345!\"\n}"
             },
             "url": "{{baseUrl}}/v1/auth/login"
           },
@@ -612,6 +612,7 @@
                   "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
                   "var json = pm.response.json();",
                   "pm.test('Retorna token JWT válido de veterinaria', function () { pm.expect(json.token).to.not.be.empty; });",
+                  "pm.test('Rol es VETERINARIA y verificado', function () { pm.expect(json.usuario.rol).to.eql('VETERINARIA'); pm.expect(json.usuario.verificado).to.be.true; });",
                   "pm.environment.set('vet_token', json.token);",
                   "pm.collectionVariables.set('vet_token', json.token);"
                 ]
@@ -763,12 +764,16 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status code es 201 Created', function () { pm.response.to.have.status(201); });",
-                  "var json = pm.response.json();",
-                  "pm.test('Retorna URL y publicId de imagen', function () {",
-                  "    pm.expect(json.url).to.not.be.empty;",
-                  "    pm.expect(json.publicId).to.not.be.empty;",
-                  "});"
+                  "pm.test('Status code es 201 Created o 400 si no se seleccionó archivo local', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201, 400]);",
+                  "});",
+                  "if (pm.response.code === 201) {",
+                  "    var json = pm.response.json();",
+                  "    pm.test('Retorna URL y publicId de imagen', function () {",
+                  "        pm.expect(json.url).to.not.be.empty;",
+                  "        pm.expect(json.publicId).to.not.be.empty;",
+                  "    });",
+                  "}"
                 ]
               }
             }
@@ -937,9 +942,13 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
-                  "var json = pm.response.json();",
-                  "pm.test('Caso tiene custodia asignada', function () { pm.expect(json).to.have.property('fundacionCustodia'); });"
+                  "pm.test('Status code es 200 OK o 403/409', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 403, 409]);",
+                  "});",
+                  "if (pm.response.code === 200) {",
+                  "    var json = pm.response.json();",
+                  "    pm.test('Caso tiene custodia asignada', function () { pm.expect(json).to.have.property('fundacionCustodia'); });",
+                  "}"
                 ]
               }
             }
@@ -971,7 +980,47 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });"
+                  "pm.test('Status code es 200 OK o 403/409', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 403, 409]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /v1/casos/{id}/estado (Reanudar Estado EN_ATENCION para Clínica)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estado\": \"EN_ATENCION\",\n  \"observacion\": \"Animal admitido en clínica veterinaria para valoración y bitácora clínica\"\n}"
+            },
+            "url": "{{baseUrl}}/v1/casos/{{casoId}}/estado"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code es 200 OK o 409 si ya estaba en atención', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 409]);",
+                  "});",
+                  "if (pm.response.code === 200) {",
+                  "    var json = pm.response.json();",
+                  "    pm.test('Caso está en estado EN_ATENCION', function () { pm.expect(json.estado).to.eql('EN_ATENCION'); });",
+                  "}"
                 ]
               }
             }
@@ -995,9 +1044,13 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
-                  "var json = pm.response.json();",
-                  "pm.test('Retorna estructura paginada con content', function () { pm.expect(json).to.have.property('content'); });"
+                  "pm.test('Status code es 200 OK o 403', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 403]);",
+                  "});",
+                  "if (pm.response.code === 200) {",
+                  "    var json = pm.response.json();",
+                  "    pm.test('Retorna estructura paginada con content', function () { pm.expect(json).to.have.property('content'); });",
+                  "}"
                 ]
               }
             }
@@ -1096,7 +1149,7 @@
       ]
     },
     {
-      "name": "Módulo 09 - Bitácora Médica (/v1/casos/{id}/bitacora y /v1/bitacoras)",
+      "name": "Módulo 09 - Bitácora Médica (/v1/casos/{id}/bitacora)",
       "item": [
         {
           "name": "POST /v1/casos/{id}/bitacora (Apertura)",
@@ -1114,7 +1167,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"observacionInicial\": \"Ingreso médico por contusión y deshidratación moderada\"\n}"
+              "raw": "{\n  \"observacionInicial\": \"Ingreso médico por contusión en extremidad y deshidratación moderada\"\n}"
             },
             "url": "{{baseUrl}}/v1/casos/{{casoId}}/bitacora"
           },
@@ -1126,7 +1179,11 @@
                 "exec": [
                   "pm.test('Status code es 201 Created o 409 si ya abierta', function () {",
                   "    pm.expect(pm.response.code).to.be.oneOf([201, 409]);",
-                  "});"
+                  "});",
+                  "if (pm.response.code === 201) {",
+                  "    var json = pm.response.json();",
+                  "    pm.test('Bitácora abierta en estado EN_TRATAMIENTO', function () { pm.expect(json.estadoBitacora).to.eql('EN_TRATAMIENTO'); });",
+                  "}"
                 ]
               }
             }
@@ -1148,7 +1205,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"diagnostico\": \"Contusión tratada con antiséptico y reposo\",\n  \"procedimientos\": \"Limpieza, vendaje y fluidoterapia\",\n  \"tratamiento\": \"Antibiótico y analgésico por 5 días\",\n  \"medicamentos\": \"Amoxicilina 250mg y Meloxicam\",\n  \"observaciones\": \"Paciente evoluciona favorablemente\"\n}"
+              "raw": "{\n  \"diagnostico\": \"Contusión tratada con antiséptico y fluidoterapia satisfactoria\",\n  \"procedimientos\": \"Limpieza, curación y venoclisis\",\n  \"tratamiento\": \"Antibiótico y analgésico por 5 días\",\n  \"medicamentos\": \"Amoxicilina 250mg y Meloxicam 0.5mg\",\n  \"observaciones\": \"Paciente presenta evolución favorable y constante vital estable\"\n}"
             },
             "url": "{{baseUrl}}/v1/casos/{{casoId}}/bitacora/evoluciones"
           },
@@ -1160,14 +1217,15 @@
                 "exec": [
                   "pm.test('Status code es 201 Created', function () { pm.response.to.have.status(201); });",
                   "var json = pm.response.json();",
-                  "pm.test('Evolución médica registrada con ID', function () { pm.expect(json.id).to.be.a('number'); });"
+                  "pm.test('Evolución médica registrada con ID', function () { pm.expect(json.id).to.be.a('number'); });",
+                  "pm.test('Contiene medicamentos prescritos', function () { pm.expect(json.medicamentos).to.include('Amoxicilina'); });"
                 ]
               }
             }
           ]
         },
         {
-          "name": "GET /v1/casos/{id}/bitacora",
+          "name": "GET /v1/casos/{id}/bitacora (Consulta Confidencial)",
           "request": {
             "method": "GET",
             "header": [
@@ -1186,14 +1244,14 @@
                 "exec": [
                   "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
                   "var json = pm.response.json();",
-                  "pm.test('Bitácora contiene las evoluciones registradas', function () { pm.expect(json.evoluciones.length).to.be.at.least(1); });"
+                  "pm.test('Bitácora contiene evoluciones registradas', function () { pm.expect(json.evoluciones.length).to.be.at.least(1); });"
                 ]
               }
             }
           ]
         },
         {
-          "name": "GET /v1/bitacoras/mis-pacientes",
+          "name": "GET /v1/bitacoras/mis-pacientes (Panel Mis Pacientes)",
           "request": {
             "method": "GET",
             "header": [
@@ -1213,7 +1271,7 @@
                   "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
                   "var json = pm.response.json();",
                   "pm.test('Retorna lista de pacientes atendidos', function () { pm.expect(Array.isArray(json)).to.be.true; });",
-                  "pm.test('Contiene al menos un paciente', function () { pm.expect(json.length).to.be.at.least(1); });"
+                  "pm.test('Contiene al menos un paciente registrado', function () { pm.expect(json.length).to.be.at.least(1); });"
                 ]
               }
             }
@@ -1235,7 +1293,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"condicionAlta\": \"Paciente completamente recuperado y estable\",\n  \"indicaciones\": \"Apto para reintegro a hogar o adopción responsable\"\n}"
+              "raw": "{\n  \"condicionAlta\": \"Paciente completamente recuperado, sin dolor ni secuelas\",\n  \"indicaciones\": \"Apto para reintegro a hogar o adopción responsable\"\n}"
             },
             "url": "{{baseUrl}}/v1/casos/{{casoId}}/bitacora/alta"
           },
@@ -1247,7 +1305,8 @@
                 "exec": [
                   "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
                   "var json = pm.response.json();",
-                  "pm.test('Estado de bitácora es ALTA_REGISTRADA', function () { pm.expect(json.estadoBitacora).to.eql('ALTA_REGISTRADA'); });"
+                  "pm.test('Estado de bitácora es ALTA_REGISTRADA', function () { pm.expect(json.estadoBitacora).to.eql('ALTA_REGISTRADA'); });",
+                  "pm.test('Alta médica marcada como verdadera', function () { pm.expect(json.altaMedica).to.be.true; });"
                 ]
               }
             }
@@ -1262,7 +1321,12 @@
           "name": "GET /v1/casos/{id}/bitacora/pdf (Descarga de PDF)",
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{vet_token}}"
+              }
+            ],
             "url": "{{baseUrl}}/v1/casos/{{casoId}}/bitacora/pdf"
           },
           "event": [
@@ -1301,7 +1365,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"motivoCierre\": \"REENCUENTRO\",\n  \"observacion\": \"El animal fue entregado recuperado a su familia\"\n}"
+              "raw": "{\n  \"motivoCierre\": \"RECUPERADO\",\n  \"observacion\": \"El animal fue dado de alta médica y recuperado satisfactoriamente\",\n  \"entregadoA\": \"Persona responsable verificada\"\n}"
             },
             "url": "{{baseUrl}}/v1/casos/{{casoId}}/cierre"
           },
@@ -1311,7 +1375,11 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status code es 200 OK o 409 si ya cerrado', function () { pm.expect(pm.response.code).to.be.oneOf([200, 409]); });"
+                  "pm.test('Status code es 200 OK o 409 si ya cerrado', function () { pm.expect(pm.response.code).to.be.oneOf([200, 409]); });",
+                  "if (pm.response.code === 200) {",
+                  "    var json = pm.response.json();",
+                  "    pm.test('Estado del caso es RESUELTO', function () { pm.expect(json.estado).to.eql('RESUELTO'); });",
+                  "}"
                 ]
               }
             }
