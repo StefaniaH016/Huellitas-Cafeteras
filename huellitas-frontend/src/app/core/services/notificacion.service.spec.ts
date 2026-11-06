@@ -22,8 +22,18 @@ it('lists all notifications or only the unread ones', () => {
   service.listar().subscribe();
   service.listar(true, 1, 5).subscribe();
 
-  http.expectOne(`${baseUrl}?page=0&size=30`).flush({ content: [] });
-  http.expectOne(`${baseUrl}?leidas=false&page=1&size=5`).flush({ content: [] });
+  const allRequest = http.expectOne(`${baseUrl}?page=0&size=30`);
+  expect(allRequest.request.method).toBe('GET');
+  expect(allRequest.request.params.get('page')).toBe('0');
+  expect(allRequest.request.params.get('size')).toBe('30');
+  allRequest.flush({ content: [] });
+
+  const unreadRequest = http.expectOne(`${baseUrl}?leidas=false&page=1&size=5`);
+  expect(unreadRequest.request.method).toBe('GET');
+  expect(unreadRequest.request.params.get('leidas')).toBe('false');
+  expect(unreadRequest.request.params.get('page')).toBe('1');
+  expect(unreadRequest.request.params.get('size')).toBe('5');
+  unreadRequest.flush({ content: [] });
 });
 
 it('updates the unread counter from the dedicated count endpoint', () => {

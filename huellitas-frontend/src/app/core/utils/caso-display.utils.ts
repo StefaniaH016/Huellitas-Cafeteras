@@ -122,7 +122,7 @@ export function formatFecha(fecha?: string): string {
   }
   try {
     const date = new Date(fecha);
-    if (isNaN(date.getTime())) {
+    if (Number.isNaN(date.getTime())) {
       return '';
     }
     return date.toLocaleDateString('es-CO', {
@@ -141,7 +141,7 @@ export function formatFechaHora(fecha?: string): string {
   }
   try {
     const date = new Date(fecha);
-    if (isNaN(date.getTime())) {
+    if (Number.isNaN(date.getTime())) {
       return '';
     }
     return date.toLocaleString('es-CO', {
@@ -162,7 +162,7 @@ export function haceCuanto(fecha?: string): string {
   }
   try {
     const date = new Date(fecha);
-    if (isNaN(date.getTime())) {
+    if (Number.isNaN(date.getTime())) {
       return '';
     }
     const now = new Date();

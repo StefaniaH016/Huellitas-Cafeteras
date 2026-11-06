@@ -169,16 +169,18 @@ describe('CasoService: listarCasosEnCustodia', () => {
     const req = httpMock.expectOne(
       (r) => r.url === `${apiUrl}/en-custodia` && r.params.get('page') === '1',
     );
+    expect(req.request.method).toBe('GET');
+    expect(req.request.params.get('page')).toBe('1');
+    expect(req.request.params.get('size')).toBe('10');
     req.flush([]);
   });
   it('should return array', () => {
-    return new Promise<void>((resolve) => {
-      service.listarCasosEnCustodia().subscribe((result) => {
-        expect(Array.isArray(result)).toBe(true);
-        resolve();
-      });
-      httpMock.expectOne(`${apiUrl}/en-custodia`).flush([{ id: 5, titulo: 'Caso A' }]);
-    });
+    const next = vi.fn();
+    service.listarCasosEnCustodia().subscribe(next);
+    const req = httpMock.expectOne(`${apiUrl}/en-custodia`);
+    expect(req.request.method).toBe('GET');
+    req.flush([{ id: 5, titulo: 'Caso A' }]);
+    expect(next).toHaveBeenCalledWith([{ id: 5, titulo: 'Caso A' }]);
   });
   it('should not include params when not provided', () => {
     service.listarCasosEnCustodia().subscribe();
@@ -208,7 +210,12 @@ describe('CasoService: listarCasosSinCustodia filters', () => {
   });
   it('should include pageable params', () => {
     service.listarCasosSinCustodia(20, { page: 2, size: 15 }).subscribe();
-    expectSinCustodiaRequest(httpMock, 20, { page: 2, size: 15 }).flush([]);
+    const req = expectSinCustodiaRequest(httpMock, 20, { page: 2, size: 15 });
+    expect(req.request.method).toBe('GET');
+    expect(req.request.params.get('municipioId')).toBe('20');
+    expect(req.request.params.get('page')).toBe('2');
+    expect(req.request.params.get('size')).toBe('15');
+    req.flush([]);
   });
 });
 
@@ -225,13 +232,12 @@ describe('CasoService: listarCasosSinCustodia results', () => {
     vi.restoreAllMocks();
   });
   it('should return array', () => {
-    return new Promise<void>((resolve) => {
-      service.listarCasosSinCustodia(10).subscribe((result) => {
-        expect(Array.isArray(result)).toBe(true);
-        resolve();
-      });
-      expectSinCustodiaRequest(httpMock, 10).flush([{ id: 100, titulo: 'Caso 1' }]);
-    });
+    const next = vi.fn();
+    service.listarCasosSinCustodia(10).subscribe(next);
+    const req = expectSinCustodiaRequest(httpMock, 10);
+    expect(req.request.method).toBe('GET');
+    req.flush([{ id: 100, titulo: 'Caso 1' }]);
+    expect(next).toHaveBeenCalledWith([{ id: 100, titulo: 'Caso 1' }]);
   });
   it('should combine municipioId with pageable', () => {
     service.listarCasosSinCustodia(25, { page: 0, size: 20 }).subscribe();

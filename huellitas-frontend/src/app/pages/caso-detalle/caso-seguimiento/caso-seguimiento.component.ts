@@ -197,7 +197,7 @@ export class CasoSeguimientoComponent {
   }
 
   private publicarSinFotos(casoId: number | string): void {
-    const numCasoId = typeof casoId === 'string' ? parseInt(casoId, 10) : casoId;
+    const numCasoId = typeof casoId === 'string' ? Number.parseInt(casoId, 10) : casoId;
     this.aporteService
       .crear(numCasoId, {
         descripcion: this.descripcion.trim(),
@@ -244,7 +244,7 @@ export class CasoSeguimientoComponent {
   }
 
   private crearAporteConFotos(casoId: number | string, fotografias: string[]): void {
-    const numCasoId = typeof casoId === 'string' ? parseInt(casoId, 10) : casoId;
+    const numCasoId = typeof casoId === 'string' ? Number.parseInt(casoId, 10) : casoId;
     this.aporteService
       .crear(numCasoId, {
         descripcion: this.descripcion.trim(),
