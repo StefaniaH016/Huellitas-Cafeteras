@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:16-alpine
@@ -16,8 +14,9 @@ services:
       - huellitas-network
 
   backend:
-    image: ${DOCKER_HUB_USERNAME:?Define DOCKER_HUB_USERNAME in .env}/huellitas-backend:latest
-    pull_policy: always
+    build:
+      context: .
+      dockerfile: ./huellitas-backend/Dockerfile
     container_name: huellitas-api
     environment:
       SPRING_PROFILES_ACTIVE: prod
@@ -41,8 +40,9 @@ services:
       - huellitas-network
 
   frontend:
-    image: ${DOCKER_HUB_USERNAME:?Define DOCKER_HUB_USERNAME in .env}/huellitas-frontend:latest
-    pull_policy: always
+    build:
+      context: .
+      dockerfile: ./huellitas-frontend/Dockerfile
     container_name: huellitas-web
     ports:
       - '4200:80'

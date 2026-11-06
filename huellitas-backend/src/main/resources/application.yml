@@ -70,6 +70,25 @@ spring:
       max-file-size: 5MB
       max-request-size: 8MB
 
+  # ── Email SMTP ─────────────────────────────────────────────────
+  # Configuración del servidor SMTP para envío de correos
+  # Las credenciales se cargan desde variables de entorno
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:noreply@huellitas.org}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+          connectiontimeout: 5000
+          timeout: 3000
+          writetimeout: 5000
+    default-encoding: UTF-8
+
 # ── Servidor ───────────────────────────────────────────────────
 server:
   port: ${SERVER_PORT:8080}
