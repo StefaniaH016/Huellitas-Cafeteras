@@ -22,5 +22,7 @@ public record CasoDetalleDTO(
         ResumenMedicoDTO resumenMedico,
         String fechaCreacion,
         Long autorId,
-        String autorNombre
+        String autorNombre,
+        Long fundacionCustodioId,
+        String fundacionCustodioNombre
 ) {}

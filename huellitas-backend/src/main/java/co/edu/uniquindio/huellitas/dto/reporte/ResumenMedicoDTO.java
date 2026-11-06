@@ -8,5 +8,6 @@ public record ResumenMedicoDTO(
         String fechaApertura,
         boolean altaMedica,
         String fechaAlta,
-        String veterinariaNombre
+        String veterinariaNombre,
+        Long responsableId
 ) {}

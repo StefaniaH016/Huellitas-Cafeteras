@@ -7,5 +7,6 @@ public enum TipoNotificacion {
     RECORDATORIO,
     CUSTODIA,
     EVOLUCION_MEDICA,
-    ALTA_MEDICA
+    ALTA_MEDICA,
+    VERIFICACION
 }

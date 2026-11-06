@@ -11,5 +11,5 @@ public interface BitacoraService {
     RegistroMedicoResponseDTO agregarEvolucion(Long casoId, EvolucionDTO dto, String correoVeterinaria);
     AltaMedicaResponseDTO registrarAlta(Long casoId, AltaMedicaDTO dto, String correoVeterinaria);
     List<PacienteResponseDTO> listarMisPacientes(String correoVeterinaria);
-    byte[] generarPdfResumen(Long casoId);
+    byte[] generarPdfResumen(Long casoId, String correoUsuario);
 }

@@ -39,6 +39,18 @@ public class Organizacion {
     @Column(length = 500)
     private String documentoCredencialUrl;
 
+    @Column(length = 255)
+    private String documentoSoporteNombre;
+
+    @Column(length = 100)
+    private String documentoSoporteContentType;
+
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "documento_soporte_id", unique = true)
+    private DocumentoSoporte documentoSoporte;
+
     private Instant fechaVerificacion;
 
     @ManyToOne(fetch = FetchType.LAZY)

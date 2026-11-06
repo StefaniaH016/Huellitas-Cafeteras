@@ -3,12 +3,15 @@ package co.edu.uniquindio.huellitas.service;
 import co.edu.uniquindio.huellitas.dto.reporte.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
 public interface CasoService {
 
     CasoResponseDTO crearCaso(CrearReporteDTO dto, String correoUsuario);
+
+    CasoResponseDTO crearCasoConImagen(CrearReporteDTO dto, List<MultipartFile> archivos, String correoUsuario);
 
     CasoResponseDTO actualizarReporte(Long id, CrearReporteDTO dto, String correoUsuario);
 

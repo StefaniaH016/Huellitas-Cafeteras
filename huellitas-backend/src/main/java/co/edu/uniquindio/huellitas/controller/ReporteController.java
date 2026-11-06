@@ -10,11 +10,13 @@ import org.springframework.data.domain.Pageable;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -36,6 +38,19 @@ public class ReporteController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
         CasoResponseDTO response = casoService.crearCaso(dto, userDetails.getUsername());
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PostMapping(value = "/con-imagenes", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('CIUDADANO_VOLUNTARIO')")
+    public ResponseEntity<CasoResponseDTO> crearReporteConImagen(
+            @RequestPart("reporte") @Valid CrearReporteDTO dto,
+            @RequestPart("archivos") List<MultipartFile> archivos,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        if (userDetails == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        CasoResponseDTO response = casoService.crearCasoConImagen(dto, archivos, userDetails.getUsername());
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 

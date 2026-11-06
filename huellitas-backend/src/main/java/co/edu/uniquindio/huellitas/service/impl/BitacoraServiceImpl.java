@@ -4,6 +4,7 @@ import co.edu.uniquindio.huellitas.dto.bitacora.*;
 import co.edu.uniquindio.huellitas.entity.*;
 import co.edu.uniquindio.huellitas.entity.enums.EstadoCaso;
 import co.edu.uniquindio.huellitas.entity.enums.Rol;
+import co.edu.uniquindio.huellitas.entity.enums.TipoAporte;
 import co.edu.uniquindio.huellitas.exception.ConflictException;
 import co.edu.uniquindio.huellitas.exception.ResourceNotFoundException;
 import co.edu.uniquindio.huellitas.mapper.BitacoraMapper;
@@ -19,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -29,6 +31,8 @@ public class BitacoraServiceImpl implements BitacoraService {
     private final BitacoraMedicaRepository bitacoraMedicaRepository;
     private final RegistroMedicoRepository registroMedicoRepository;
     private final CasoRepository casoRepository;
+    private final HistorialEstadoRepository historialEstadoRepository;
+    private final SeguimientoRepository seguimientoRepository;
     private final UsuarioRepository usuarioRepository;
     private final BitacoraMapper bitacoraMapper;
     private final PdfWorker pdfWorker;
@@ -44,9 +48,11 @@ public class BitacoraServiceImpl implements BitacoraService {
         Caso caso = casoRepository.findById(casoId)
                 .orElseThrow(() -> new ResourceNotFoundException("Caso", casoId));
 
-        // 14.1: Solo con el caso EN_ATENCION
-        if (caso.getEstado() != EstadoCaso.EN_ATENCION) {
-            throw new ConflictException("Solo se puede abrir la bitácora médica para casos en estado EN_ATENCION (estado actual: " + caso.getEstado() + ")");
+        if (caso.getEstado() != EstadoCaso.REGISTRADO
+                && caso.getEstado() != EstadoCaso.EN_ATENCION) {
+            throw new ConflictException(
+                    "Solo se puede tomar atención médica para casos activos (estado actual: "
+                            + caso.getEstado() + ")");
         }
 
         Usuario veterinaria = usuarioRepository.findByCorreo(correoVeterinaria.trim().toLowerCase())
@@ -81,8 +87,31 @@ public class BitacoraServiceImpl implements BitacoraService {
             registroMedicoRepository.save(registroInicial);
         }
 
-        caso.setFechaUltimaActividad(Instant.now());
+        Instant ahora = Instant.now();
+        EstadoCaso estadoAnterior = caso.getEstado();
+        String nombreResponsable = nombreVeterinariaResponsable(veterinaria);
+        caso.setFechaUltimaActividad(ahora);
+        caso.setEstado(EstadoCaso.EN_ATENCION);
         casoRepository.save(caso);
+
+        if (estadoAnterior != EstadoCaso.EN_ATENCION) {
+            historialEstadoRepository.save(HistorialEstado.builder()
+                    .estadoAnterior(estadoAnterior)
+                    .estadoNuevo(EstadoCaso.EN_ATENCION)
+                    .observacion("Atención médica iniciada por " + nombreResponsable)
+                    .fecha(ahora)
+                    .caso(caso)
+                    .usuario(veterinaria)
+                    .build());
+        }
+        seguimientoRepository.save(Seguimiento.builder()
+                .tipo(TipoAporte.ACTUALIZACION)
+                .comentario("Atención médica iniciada por " + nombreResponsable)
+                .fecha(ahora)
+                .caso(caso)
+                .autor(veterinaria)
+                .visible(true)
+                .build());
 
         return bitacoraMapper.toResponseDTO(guardada, caso.getId(), veterinaria.getId(), "ABIERTA");
     }
@@ -96,11 +125,9 @@ public class BitacoraServiceImpl implements BitacoraService {
     @Override
     @Transactional(readOnly = true)
     public BitacoraDetalleDTO obtenerBitacora(Long casoId, String correoUsuario) {
+        validarAccesoBitacora(correoUsuario);
         BitacoraMedica bitacora = bitacoraMedicaRepository.findByCasoId(casoId)
                 .orElseThrow(() -> new ResourceNotFoundException("Bitácora médica no encontrada para el caso con id: " + casoId));
-
-        // 14.4: Restringir lectura a la Veterinaria, la Fundación custodia y el reportante (Ley 1581 y Ley 576)
-        validarAccesoBitacora(bitacora, correoUsuario);
 
         List<RegistroMedico> registros = registroMedicoRepository.findByBitacoraMedicaIdOrderByFechaAsc(bitacora.getId());
         List<EvolucionDetalleDTO> evoluciones = bitacoraMapper.toEvolucionDetalleDTOList(registros);
@@ -129,6 +156,7 @@ public class BitacoraServiceImpl implements BitacoraService {
         if (veterinaria.getRol() != Rol.VETERINARIA || !veterinaria.isVerificado()) {
             throw new AccessDeniedException("Solo una veterinaria verificada puede registrar evoluciones médicas");
         }
+        validarVeterinariaResponsable(bitacora, veterinaria);
 
         // 14.2: Guardar firmante, fecha, fechaFirma y alinear campos con el modelo entidad-relación
         String evolucionTexto = (dto.observaciones() != null && !dto.observaciones().isBlank())
@@ -185,6 +213,7 @@ public class BitacoraServiceImpl implements BitacoraService {
         if (veterinaria.getRol() != Rol.VETERINARIA || !veterinaria.isVerificado()) {
             throw new AccessDeniedException("Solo una veterinaria verificada puede registrar el alta médica");
         }
+        validarVeterinariaResponsable(bitacora, veterinaria);
 
         // 14.3: Guardar altaMedica y fechaAlta
         bitacora.setAltaMedica(true);
@@ -238,14 +267,15 @@ public class BitacoraServiceImpl implements BitacoraService {
 
     @Override
     @Transactional(readOnly = true)
-    public byte[] generarPdfResumen(Long casoId) {
-        // W-03: delegar la generación del PDF al PdfWorker
+    public byte[] generarPdfResumen(Long casoId, String correoUsuario) {
+        validarAccesoBitacora(correoUsuario);
+        bitacoraMedicaRepository.findByCasoId(casoId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Bitácora médica no encontrada para el caso con id: " + casoId));
         return pdfWorker.generarResumenClinico(casoId);
     }
 
-    // ── Helper de Autorización 14.4 ──────────────────────────────
-
-    private void validarAccesoBitacora(BitacoraMedica bitacora, String correoUsuario) {
+    private void validarAccesoBitacora(String correoUsuario) {
         if (correoUsuario == null || correoUsuario.isBlank()) {
             throw new AccessDeniedException("Debe autenticarse para consultar la bitácora médica.");
         }
@@ -253,29 +283,22 @@ public class BitacoraServiceImpl implements BitacoraService {
         Usuario usuario = usuarioRepository.findByCorreo(correoUsuario.trim().toLowerCase())
                 .orElseThrow(() -> new AccessDeniedException("Usuario no autorizado"));
 
-        // 1. Administrador (supervisión)
-        if (usuario.getRol() == Rol.ADMINISTRADOR) {
-            return;
+        if (usuario.getRol() != Rol.VETERINARIA || !usuario.isVerificado()) {
+            throw new AccessDeniedException(
+                    "Solo una veterinaria verificada puede consultar las entradas clínicas.");
         }
+    }
 
-        Caso caso = bitacora.getCaso();
-
-        // 2. Reportante del caso
-        if (caso.getReportante() != null && caso.getReportante().getId().equals(usuario.getId())) {
-            return;
+    private void validarVeterinariaResponsable(BitacoraMedica bitacora, Usuario usuario) {
+        if (bitacora.getVeterinario() == null
+                || !Objects.equals(bitacora.getVeterinario().getId(), usuario.getId())) {
+            throw new AccessDeniedException("Solo la veterinaria responsable puede modificar la bitácora médica.");
         }
+    }
 
-        // 3. Fundación con custodia del caso
-        if (caso.getFundacionCustodio() != null && usuario.getOrganizacion() != null
-                && caso.getFundacionCustodio().getId().equals(usuario.getOrganizacion().getId())) {
-            return;
-        }
-
-        // 4. Veterinaria verificada o tratante
-        if (usuario.getRol() == Rol.VETERINARIA && usuario.isVerificado()) {
-            return;
-        }
-
-        throw new AccessDeniedException("No tiene permisos para consultar la bitácora clínica confidencial (Ley 1581 y Ley 576).");
+    private String nombreVeterinariaResponsable(Usuario veterinaria) {
+        return veterinaria.getOrganizacion() instanceof Veterinaria organizacion
+                ? organizacion.getNombre()
+                : veterinaria.getNombre();
     }
 }

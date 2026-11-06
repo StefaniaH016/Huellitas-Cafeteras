@@ -18,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
@@ -48,6 +49,7 @@ public class NotificacionWorker {
      * Notifica al reportante cuando registra un caso urgente (ALTA o CRÍTICA).
      */
     @Async
+    @Transactional
     public void notificarCasoUrgente(Caso caso) {
         if (caso.getUrgencia() != Urgencia.ALTA && caso.getUrgencia() != Urgencia.CRITICA) {
             return;
@@ -136,6 +138,18 @@ public class NotificacionWorker {
         }
     }
 
+    @Async
+    @Transactional
+    public void notificarVerificacionOrganizacion(Usuario usuario, boolean aprobada) {
+        if (usuario == null) {
+            return;
+        }
+        String mensaje = aprobada
+                ? "Tu organización fue verificada. La fundación ya puede asumir casos hasta su capacidad habilitada."
+                : "La verificación de tu organización fue rechazada. Comunícate con soporte para conocer los pasos a seguir.";
+        guardar(usuario, null, TipoNotificacion.VERIFICACION, mensaje);
+    }
+
     /**
      * 13.5: Notifica a los involucrados (excepto el autor) cuando se crea un aporte.
      * Incluye al reportante y a la fundación si tiene custodia.
@@ -180,6 +194,7 @@ public class NotificacionWorker {
      * 13.7: También envía correo electrónico a los usuarios encontrados.
      */
     @Async
+    @Transactional
     public void notificarEmergenciaARescuatistas(Caso caso) {
         if (caso.getUrgencia() != Urgencia.ALTA && caso.getUrgencia() != Urgencia.CRITICA) {
             return;
@@ -211,15 +226,6 @@ public class NotificacionWorker {
             }
         }
 
-        // 13.6: También notificar al reportante de caso urgente
-        if (caso.getReportante() != null) {
-            String mensaje = String.format(
-                    "⚠️ Tu reporte #%d fue marcado como urgencia %s y notificado a rescuistas de la zona.",
-                    caso.getId(),
-                    caso.getUrgencia()
-            );
-            guardar(caso.getReportante(), caso, TipoNotificacion.EMERGENCIA, mensaje);
-        }
     }
 
     /**
@@ -305,7 +311,7 @@ public class NotificacionWorker {
                     .build();
             notificacionRepository.save(notificacion);
             log.info("Notificación [{}] enviada al usuario {} para el caso {}",
-                    tipo, destinatario.getCorreo(), caso.getId());
+                    tipo, destinatario.getCorreo(), caso != null ? caso.getId() : "sin caso");
         } catch (Exception e) {
             log.error("Error al guardar notificación [{}] para el usuario {}: {}",
                     tipo, destinatario.getCorreo(), e.getMessage());

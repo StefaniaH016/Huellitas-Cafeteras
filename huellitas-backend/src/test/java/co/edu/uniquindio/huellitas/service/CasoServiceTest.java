@@ -6,6 +6,7 @@ import co.edu.uniquindio.huellitas.dto.reporte.ArchivarCasoDTO;
 import co.edu.uniquindio.huellitas.dto.reporte.CierreCasoRequestDTO;
 import co.edu.uniquindio.huellitas.dto.reporte.CasoResponseDTO;
 import co.edu.uniquindio.huellitas.dto.reporte.CrearReporteDTO;
+import co.edu.uniquindio.huellitas.dto.imagen.ImagenResponseDTO;
 import co.edu.uniquindio.huellitas.entity.*;
 import co.edu.uniquindio.huellitas.entity.enums.*;
 import co.edu.uniquindio.huellitas.exception.ConflictException;
@@ -25,6 +26,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mock.web.MockMultipartFile;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -99,6 +101,7 @@ class CasoServiceTest {
                 usuarioRepository,
                 barrioRepository,
                 animalRepository,
+                fotoRepository,
                 historialEstadoRepository,
                 seguimientoRepository,
                 cierreCasoRepository,
@@ -184,9 +187,64 @@ class CasoServiceTest {
         assertEquals(TipoCaso.EXTRAVIADO, resultado.tipoCaso());
         assertEquals(EstadoCaso.REGISTRADO, resultado.estado());
         assertEquals(Urgencia.MEDIA, resultado.urgencia());
+        ArgumentCaptor<Caso> casoCaptor = ArgumentCaptor.forClass(Caso.class);
         verify(animalRepository, times(1)).save(any(Animal.class));
-        verify(casoRepository, times(1)).save(any(Caso.class));
+        verify(casoRepository, times(1)).save(casoCaptor.capture());
+        assertTrue(casoCaptor.getValue().isVisible());
         verify(historialEstadoRepository, times(1)).save(any(HistorialEstado.class));
+    }
+
+    @Test
+    @DisplayName("Sube las imágenes antes de crear y notificar el caso")
+    void creaCasoConImagenesSoloDespuesDeSubirlas() {
+        MockMultipartFile archivo = new MockMultipartFile(
+                "archivos", "animal.jpg", "image/jpeg", new byte[] {1, 2, 3});
+        when(cloudinaryService.subirImagen(archivo, null))
+                .thenReturn(new ImagenResponseDTO("https://example.test/animal.jpg", "animal-public-id"));
+        when(usuarioRepository.findByCorreo("usuario@test.com")).thenReturn(Optional.of(usuarioMock));
+        when(barrioRepository.findById(1L)).thenReturn(Optional.of(barrioMock));
+        when(animalRepository.save(any(Animal.class))).thenAnswer(invocation -> {
+            Animal animal = invocation.getArgument(0);
+            animal.setId(10L);
+            return animal;
+        });
+        when(casoRepository.save(any(Caso.class))).thenAnswer(invocation -> {
+            Caso caso = invocation.getArgument(0);
+            caso.setId(100L);
+            return caso;
+        });
+        when(historialEstadoRepository.save(any(HistorialEstado.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        when(fotoRepository.save(any(Foto.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        var result = casoService.crearCasoConImagen(dtoValido, List.of(archivo), "usuario@test.com");
+
+        assertEquals(100L, result.id());
+        ArgumentCaptor<Foto> fotoCaptor = ArgumentCaptor.forClass(Foto.class);
+        verify(fotoRepository).save(fotoCaptor.capture());
+        assertEquals("animal-public-id", fotoCaptor.getValue().getPublicId());
+        assertTrue(fotoCaptor.getValue().isPrincipal());
+        verify(notificacionWorker).notificarCasoUrgente(any(Caso.class));
+        verify(notificacionWorker).notificarEmergenciaARescuatistas(any(Caso.class));
+        org.mockito.InOrder order = inOrder(cloudinaryService, casoRepository, fotoRepository);
+        order.verify(cloudinaryService).subirImagen(archivo, null);
+        order.verify(casoRepository).save(any(Caso.class));
+        order.verify(fotoRepository).save(any(Foto.class));
+    }
+
+    @Test
+    @DisplayName("No crea el caso ni notifica cuando falla la carga de imágenes")
+    void noCreaCasoSiFallaLaCargaDeImagen() {
+        MockMultipartFile archivo = new MockMultipartFile(
+                "archivos", "animal.jpg", "image/jpeg", new byte[] {1, 2, 3});
+        when(cloudinaryService.subirImagen(archivo, null))
+                .thenThrow(new RuntimeException("upload failed"));
+
+        assertThrows(
+                RuntimeException.class,
+                () -> casoService.crearCasoConImagen(dtoValido, List.of(archivo), "usuario@test.com"));
+
+        verifyNoInteractions(animalRepository, casoRepository, notificacionWorker);
     }
 
     @Test
@@ -712,5 +770,7 @@ class CasoServiceTest {
         // Assert
         assertEquals(Urgencia.ALTA, resultado.urgencia());
         assertEquals(TipoCaso.VULNERABLE, resultado.tipoCaso());
+        verify(notificacionWorker).notificarCasoUrgente(any(Caso.class));
+        verify(notificacionWorker).notificarEmergenciaARescuatistas(any(Caso.class));
     }
 }
