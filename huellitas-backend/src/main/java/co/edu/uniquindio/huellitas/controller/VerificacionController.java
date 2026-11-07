@@ -21,7 +21,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 @RestController
-@RequestMapping("/v1/verificaciones")
+@RequestMapping({"/v1/verificaciones", "/api/v1/verificaciones"})
 @RequiredArgsConstructor
 public class VerificacionController {
 

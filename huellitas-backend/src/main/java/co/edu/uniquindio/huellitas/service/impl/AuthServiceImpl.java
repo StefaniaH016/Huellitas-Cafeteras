@@ -32,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Instant;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -67,14 +68,28 @@ public class AuthServiceImpl implements AuthService {
                     .orElseThrow(() -> new ResourceNotFoundException("Barrio", dto.barrioId()));
         }
 
-        Organizacion organizacion = crearOrganizacionInstitucional(dto, rol);
+        boolean cuentaInstitucional = rol == Rol.FUNDACION_REFUGIO || rol == Rol.VETERINARIA;
+        boolean datosEntidadInstitucionales = dto.nombreEntidad() != null
+                && !dto.nombreEntidad().isBlank()
+                && dto.nit() != null
+                && !dto.nit().isBlank()
+                && dto.municipioOperacion() != null
+                && !dto.municipioOperacion().isBlank();
+        if (cuentaInstitucional && !datosEntidadInstitucionales) {
+            throw new IllegalArgumentException(
+                    "Nombre de entidad, NIT y municipio de operación son obligatorios para cuentas institucionales.");
+        }
+        Organizacion organizacion = datosEntidadInstitucionales
+                ? crearOrganizacionInstitucional(dto, rol)
+                : null;
         if (documentoSoporte != null) {
             if (organizacion == null) {
-                throw new IllegalArgumentException("El documento de soporte solo aplica a cuentas institucionales.");
+                throw new ConflictException("El documento de soporte requiere una cuenta institucional.");
             }
             DocumentoSoporteUtils.adjuntar(organizacion, documentoSoporte);
             organizacionRepository.save(organizacion);
         }
+
         Usuario usuario = Usuario.builder()
                 .nombre(dto.nombre().trim())
                 .correo(dto.correo().trim().toLowerCase())
@@ -82,8 +97,7 @@ public class AuthServiceImpl implements AuthService {
                 .telefono(dto.telefono())
                 .rol(rol)
                 .barrio(barrio)
-                .municipioInteres(barrio != null
-                        ? barrio.getMunicipio()
+                .municipioInteres(barrio != null ? barrio.getMunicipio()
                         : organizacion != null ? organizacion.getMunicipio() : null)
                 .organizacion(organizacion)
                 .verificado(false)

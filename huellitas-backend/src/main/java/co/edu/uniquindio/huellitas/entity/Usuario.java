@@ -54,7 +54,7 @@ public class Usuario {
     private Instant fechaAceptacionDatos;
 
     /** Organización a la que pertenece (null si es ciudadano independiente). */
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @JoinColumn(name = "organizacion_id")
     private Organizacion organizacion;
 

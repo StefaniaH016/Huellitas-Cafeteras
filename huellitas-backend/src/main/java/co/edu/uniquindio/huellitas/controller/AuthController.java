@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 @RestController
-@RequestMapping("/v1/auth")
+@RequestMapping({"/v1/auth", "/api/v1/auth"})
 @RequiredArgsConstructor
 public class AuthController {
 
@@ -33,8 +33,8 @@ public class AuthController {
 
     @PostMapping(value = "/registro/institucional", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<RegistroResponseDTO> registroInstitucional(
-            @Valid @RequestPart("datos") RegistroUsuarioDTO dto,
-            @RequestPart(value = "documentoSoporte", required = false) MultipartFile documentoSoporte) {
+            @RequestPart("datos") @Valid RegistroUsuarioDTO dto,
+            @RequestPart("documentoSoporte") MultipartFile documentoSoporte) {
         RegistroResponseDTO response = authService.registro(dto, documentoSoporte);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }

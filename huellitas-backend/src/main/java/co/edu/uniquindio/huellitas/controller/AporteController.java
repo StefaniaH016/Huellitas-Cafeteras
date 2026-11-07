@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/v1/casos/{id}/aportes")
+@RequestMapping({"/v1/casos/{id}/aportes", "/api/v1/casos/{id}/aportes"})
 @RequiredArgsConstructor
 public class AporteController {
 

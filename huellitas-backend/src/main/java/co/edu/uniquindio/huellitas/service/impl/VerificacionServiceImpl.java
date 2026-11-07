@@ -1,14 +1,14 @@
 package co.edu.uniquindio.huellitas.service.impl;
 
 import co.edu.uniquindio.huellitas.dto.verificacion.DecisionVerificacionDTO;
+import co.edu.uniquindio.huellitas.dto.verificacion.DocumentoSoporteDTO;
 import co.edu.uniquindio.huellitas.dto.verificacion.VerificacionPendienteDTO;
 import co.edu.uniquindio.huellitas.dto.verificacion.VerificacionResponseDTO;
-import co.edu.uniquindio.huellitas.dto.verificacion.DocumentoSoporteDTO;
 import co.edu.uniquindio.huellitas.entity.Fundacion;
+import co.edu.uniquindio.huellitas.entity.DocumentoSoporte;
 import co.edu.uniquindio.huellitas.entity.Organizacion;
 import co.edu.uniquindio.huellitas.entity.Usuario;
 import co.edu.uniquindio.huellitas.entity.Veterinaria;
-import co.edu.uniquindio.huellitas.entity.DocumentoSoporte;
 import co.edu.uniquindio.huellitas.entity.enums.EstadoVerificacion;
 import co.edu.uniquindio.huellitas.entity.enums.Rol;
 import co.edu.uniquindio.huellitas.exception.ResourceNotFoundException;
@@ -30,6 +30,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor

@@ -21,7 +21,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 
 @RestController
-@RequestMapping("/v1/casos")
+@RequestMapping({"/v1/casos", "/api/v1/casos"})
 @RequiredArgsConstructor
 @Tag(name = "Casos", description = "API para gestión de casos de animales")
 public class ReporteController {
@@ -125,7 +125,7 @@ public class ReporteController {
     }
 
     @PatchMapping("/{id}/estado")
-    @PreAuthorize("hasRole('FUNDACION_REFUGIO')")
+    @PreAuthorize("hasAnyRole('FUNDACION_REFUGIO', 'ADMINISTRADOR')")
     public ResponseEntity<CasoResponseDTO> actualizarEstado(
             @PathVariable Long id,
             @Valid @RequestBody ActualizarEstadoDTO dto,
@@ -144,7 +144,7 @@ public class ReporteController {
     }
 
     @PostMapping("/{id}/cierre")
-    @PreAuthorize("hasAnyRole('CIUDADANO_VOLUNTARIO', 'FUNDACION_REFUGIO')")
+    @PreAuthorize("hasAnyRole('CIUDADANO_VOLUNTARIO', 'FUNDACION_REFUGIO', 'ADMINISTRADOR')")
     public ResponseEntity<CasoResponseDTO> cerrarCaso(
             @PathVariable Long id,
             @Valid @RequestBody CierreCasoRequestDTO dto,

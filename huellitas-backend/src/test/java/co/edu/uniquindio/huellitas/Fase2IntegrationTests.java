@@ -404,9 +404,9 @@ class Fase2IntegrationTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.estadoBitacora").value("ALTA_REGISTRADA"));
 
-        // 5. Descargar PDF clínico
+        // 5. Descargar PDF clínico (autenticado)
         MvcResult pdfResult = mockMvc.perform(get("/v1/casos/" + casoCreadoId + "/bitacora/pdf")
-                        .header("Authorization", "Bearer " + veterinariaToken))
+                        .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
                 .andExpect(header().string("Content-Type", MediaType.APPLICATION_PDF_VALUE))
                 .andReturn();

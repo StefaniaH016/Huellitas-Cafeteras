@@ -101,7 +101,7 @@ management:
         include: health,info,metrics
   endpoint:
     health:
-      show-details: when-authorized
+      show-details: always
       livenessState:
         enabled: true
       readinessState:
@@ -109,6 +109,8 @@ management:
   health:
     db:
       enabled: true
+    mail:
+      enabled: false
 
 # ── Logging (debug para HTTP requests) ──────────────────────────
 logging:

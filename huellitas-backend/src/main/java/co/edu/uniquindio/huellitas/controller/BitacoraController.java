@@ -26,7 +26,7 @@ public class BitacoraController {
 
     @PostMapping({"/v1/casos/{id}/bitacora", "/api/v1/casos/{id}/bitacora"})
     @PreAuthorize("hasRole('VETERINARIA')")
-    @Operation(summary = "Abrir bitácora médica", description = "Una veterinaria verificada puede tomar la atención de un caso REGISTRADO o EN_ATENCION.")
+    @Operation(summary = "Abrir bitácora médica", description = "Abre la bitácora médica de un caso. Exclusivo para veterinarias verificadas y casos en estado EN_ATENCION.")
     public ResponseEntity<BitacoraResponseDTO> abrirBitacora(
             @PathVariable Long id,
             @RequestBody(required = false) AbrirBitacoraDTO dto,
@@ -36,8 +36,7 @@ public class BitacoraController {
     }
 
     @GetMapping({"/v1/casos/{id}/bitacora", "/api/v1/casos/{id}/bitacora"})
-    @PreAuthorize("hasRole('VETERINARIA')")
-    @Operation(summary = "Consultar bitácora médica", description = "Consulta las entradas clínicas. Solo veterinarias verificadas pueden acceder.")
+    @Operation(summary = "Consultar bitácora médica", description = "Consulta la bitácora médica completa. Restringido a Veterinaria, Fundación custodia y Reportante (Ley 1581 y Ley 576).")
     public ResponseEntity<BitacoraDetalleDTO> obtenerBitacora(
             @PathVariable Long id,
             @AuthenticationPrincipal UserDetails userDetails) {
@@ -75,12 +74,13 @@ public class BitacoraController {
     }
 
     @GetMapping({"/v1/casos/{id}/bitacora/pdf", "/api/v1/casos/{id}/bitacora/pdf"})
-    @PreAuthorize("hasRole('VETERINARIA')")
-    @Operation(summary = "Descargar resumen médico en PDF", description = "Genera y descarga la historia clínica. Solo veterinarias verificadas pueden acceder.")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Descargar resumen médico en PDF", description = "Genera y descarga el resumen clínico en PDF de la bitácora.")
     public ResponseEntity<byte[]> descargarPdf(
             @PathVariable Long id,
             @AuthenticationPrincipal UserDetails userDetails) {
-        byte[] pdf = bitacoraService.generarPdfResumen(id, userDetails.getUsername());
+        String correo = userDetails != null ? userDetails.getUsername() : null;
+        byte[] pdf = bitacoraService.generarPdfResumen(id, correo);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_PDF);
