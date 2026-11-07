@@ -7,6 +7,7 @@ import co.edu.uniquindio.huellitas.entity.enums.Rol;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class UsuarioMapperTest {
 
@@ -27,5 +28,16 @@ class UsuarioMapperTest {
 
         assertEquals(12L, perfil.organizacionId());
         assertEquals("Huellitas", perfil.organizacionNombre());
+    }
+
+    @Test
+    void toPerfilDTOIncludesRescueAvailability() {
+        Usuario usuario = Usuario.builder()
+                .disponibleRescate(true)
+                .build();
+
+        UsuarioPerfilDTO perfil = mapper.toPerfilDTO(usuario);
+
+        assertTrue(perfil.disponibleRescate());
     }
 }

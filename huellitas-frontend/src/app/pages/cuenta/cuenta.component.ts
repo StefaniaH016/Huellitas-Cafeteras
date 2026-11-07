@@ -47,6 +47,7 @@ export class CuentaComponent implements OnInit {
   nombreEntidad = '';
   nitEntidad = '';
   municipioOperacion = '';
+  disponibleRescate = false;
   zona = {
     departamentoId: null as number | null,
     municipioId: null as number | null,
@@ -66,6 +67,7 @@ export class CuentaComponent implements OnInit {
         nombre: this.nombre.trim(),
         telefono: this.telefono.trim() || undefined,
         barrioId: this.zona.barrioId,
+        disponibleRescate: this.disponibleRescate,
       }),
       'Tus datos quedaron guardados.',
       (perfil) => this.aplicar(perfil),
@@ -197,6 +199,7 @@ export class CuentaComponent implements OnInit {
     this.nombre = perfil.nombre;
     this.correo = perfil.correo;
     this.telefono = perfil.telefono ?? '';
+    this.disponibleRescate = perfil.disponibleRescate;
     this.zona = {
       departamentoId: perfil.departamentoId ?? null,
       municipioId: perfil.municipioId ?? null,

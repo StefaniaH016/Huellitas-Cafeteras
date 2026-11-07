@@ -18,5 +18,6 @@ public record UsuarioPerfilDTO(
         String organizacionNombre,
         String estadoVerificacionOrganizacion,
         Boolean aceptaCustodia,
-        Integer capacidadAlbergue
+        Integer capacidadAlbergue,
+        boolean disponibleRescate
 ) {}

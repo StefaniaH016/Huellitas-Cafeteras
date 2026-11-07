@@ -163,14 +163,30 @@
             <div class="pref-row">
               <div>
                 <p class="list-title">Disponible para rescate</p>
-                <p class="list-meta">Recibe las emergencias que se reporten en tu zona</p>
+                <p class="list-meta">
+                  Recibe emergencias de urgencia alta o crítica en tu municipio de interés.
+                </p>
               </div>
-              <label class="toggle"
-                ><input type="checkbox" checked aria-label="Disponible para rescate" /><span
-                  class="track"
-                ></span
-              ></label>
+              <label class="toggle">
+                <input
+                  type="checkbox"
+                  aria-label="Disponible para rescate"
+                  [checked]="disponibleRescate()"
+                  [disabled]="perfilCarga.cargando() || guardandoPreferencia() || !perfil()"
+                  (change)="cambiarDisponibilidadRescate($event)"
+                />
+                <span class="track"></span>
+              </label>
             </div>
+            @if (perfilCarga.error()) {
+              <p class="feedback-error" role="alert">{{ perfilCarga.error() }}</p>
+            }
+            @if (errorPreferencia()) {
+              <p class="feedback-error" role="alert">{{ errorPreferencia() }}</p>
+            }
+            @if (mensajePreferencia()) {
+              <p class="feedback-success" role="status">{{ mensajePreferencia() }}</p>
+            }
             <p class="note">
               De tus casos siempre te avisamos: aportes, custodia, atención médica, cierre y
               recordatorios. Llegan aquí y a tu correo electrónico.

@@ -90,6 +90,7 @@ public class UsuarioMapper {
                 .capacidadAlbergue(organizacion instanceof Fundacion fundacion
                         ? fundacion.getCapacidadAlbergue()
                         : null)
+                .disponibleRescate(usuario.isDisponibleRescate())
                 .build();
     }
 }

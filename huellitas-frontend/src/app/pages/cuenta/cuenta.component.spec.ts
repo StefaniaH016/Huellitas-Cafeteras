@@ -13,6 +13,7 @@ const perfil: UsuarioPerfil = {
   rol: 'CIUDADANO_VOLUNTARIO',
   verificado: true,
   barrioId: 3,
+  disponibleRescate: false,
 };
 
 function configureCuentaTest(usuario: unknown, verificacion: unknown): void {
@@ -30,7 +31,9 @@ function configureCuentaTest(usuario: unknown, verificacion: unknown): void {
 it('loads the profile and saves the changes', () => {
   const usuario = {
     getMiPerfil: vi.fn().mockReturnValue(of(perfil)),
-    actualizarPerfil: vi.fn().mockReturnValue(of({ ...perfil, nombre: 'Juli' })),
+    actualizarPerfil: vi
+      .fn()
+      .mockReturnValue(of({ ...perfil, nombre: 'Juli', disponibleRescate: true })),
   };
   TestBed.configureTestingModule({
     imports: [CuentaComponent],
@@ -51,14 +54,17 @@ it('loads the profile and saves the changes', () => {
   expect(component.zona.barrioId).toBe(3);
 
   component.nombre = ' Juli ';
+  component.disponibleRescate = true;
   component.guardar();
 
   expect(usuario.actualizarPerfil).toHaveBeenCalledWith({
     nombre: 'Juli',
     telefono: undefined,
     barrioId: 3,
+    disponibleRescate: true,
   });
   expect(component.perfil()?.nombre).toBe('Juli');
+  expect(component.perfil()?.disponibleRescate).toBe(true);
   expect(component.guardado.exito()).toContain('guardados');
 });
 

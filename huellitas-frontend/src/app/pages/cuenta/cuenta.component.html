@@ -135,6 +135,24 @@
           (barrioChange)="zona.barrioId = $event"
         />
         <p class="note">es la zona con la que filtramos tus alertas.</p>
+        <div class="pref-row">
+          <div>
+            <p class="list-title">Disponible para rescate</p>
+            <p class="list-meta">
+              Recibe emergencias de urgencia alta o crítica en tu municipio de interés.
+            </p>
+          </div>
+          <label class="toggle">
+            <input
+              type="checkbox"
+              name="disponibleRescate"
+              aria-label="Disponible para rescate"
+              [disabled]="guardado.cargando()"
+              [(ngModel)]="disponibleRescate"
+            />
+            <span class="track"></span>
+          </label>
+        </div>
         @if (guardado.exito()) {
           <p class="feedback-success" role="status">{{ guardado.exito() }}</p>
         }
@@ -149,23 +167,6 @@
           {{ guardado.cargando() ? 'Guardando...' : 'Guardar cambios' }}
         </button>
       </form>
-
-      <div class="panel">
-        <div class="panel-head"><h3>Preferencias</h3></div>
-        <div class="pref-row">
-          <div>
-            <p class="list-title">Disponible para rescate</p>
-            <p class="list-meta">Recibe las emergencias que se reporten en tu zona de interés</p>
-          </div>
-          <label class="toggle">
-            <input type="checkbox" checked aria-label="Disponible para rescate" />
-            <span class="track"></span>
-          </label>
-        </div>
-        <p class="note">
-          De tus casos siempre te avisamos dentro de la plataforma y por correo electrónico.
-        </p>
-      </div>
 
       <div class="row-gap-md">
         <button class="btn btn-secondary" type="button">Cambiar contraseña</button>

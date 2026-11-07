@@ -60,6 +60,7 @@ spring:
     port: ${MAIL_PORT:587}
     username: ${MAIL_USERNAME:noreply@huellitas.org}
     password: ${MAIL_PASSWORD:}
+    from: ${MAIL_FROM:${MAIL_USERNAME:noreply@huellitas.org}}
     properties:
       mail:
         smtp:
