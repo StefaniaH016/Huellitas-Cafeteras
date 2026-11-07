@@ -43,6 +43,14 @@ export interface UsuarioPerfil {
   estadoVerificacionOrganizacion?: string | null;
   aceptaCustodia?: boolean | null;
   capacidadAlbergue?: number | null;
+  disponibleRescate: boolean;
+}
+
+export interface ActualizarPerfilRequest {
+  nombre: string;
+  telefono?: string;
+  barrioId: number | null;
+  disponibleRescate: boolean;
 }
 
 @Injectable({
