@@ -1280,7 +1280,8 @@
             "exec": [
               "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
               "var json = pm.response.json();",
-              "pm.test('Estado de bitácora es ALTA_REGISTRADA', function () { pm.expect(json.estadoBitacora).to.eql('ALTA_REGISTRADA'); });"
+              "pm.test('Estado de bitácora es ALTA_REGISTRADA', function () { pm.expect(json.estadoBitacora).to.eql('ALTA_REGISTRADA'); });",
+              "pm.test('Alta médica marcada como verdadera', function () { pm.expect(json.altaMedica).to.be.true; });"
             ]
           }
         }

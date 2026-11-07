@@ -4,7 +4,6 @@ import co.edu.uniquindio.huellitas.dto.moderacion.CasoModeracionDTO;
 import co.edu.uniquindio.huellitas.dto.moderacion.DecisionModeracionDTO;
 import co.edu.uniquindio.huellitas.dto.moderacion.ModeracionResponseDTO;
 import co.edu.uniquindio.huellitas.dto.moderacion.OcultarAporteDTO;
-import co.edu.uniquindio.huellitas.dto.moderacion.ReportarCasoDTO;
 import co.edu.uniquindio.huellitas.service.ModeracionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -27,15 +26,6 @@ public class ModeracionController {
     @PreAuthorize("hasRole('ADMINISTRADOR')")
     public ResponseEntity<List<CasoModeracionDTO>> listarCasosReportados() {
         return ResponseEntity.ok(moderacionService.listarCasosReportados());
-    }
-
-    @PostMapping("/casos/{id}/reportar")
-    @PreAuthorize("hasRole('CIUDADANO_VOLUNTARIO')")
-    public ResponseEntity<ModeracionResponseDTO> reportarCaso(
-            @PathVariable Long id,
-            @Valid @RequestBody ReportarCasoDTO dto,
-            @AuthenticationPrincipal UserDetails userDetails) {
-        return ResponseEntity.ok(moderacionService.reportarCaso(id, dto, userDetails.getUsername()));
     }
 
     @PatchMapping("/casos/{id}")

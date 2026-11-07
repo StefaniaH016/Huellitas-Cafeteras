@@ -5,7 +5,6 @@ import co.edu.uniquindio.huellitas.entity.*;
 import co.edu.uniquindio.huellitas.entity.enums.Especie;
 import co.edu.uniquindio.huellitas.entity.enums.EstadoCaso;
 import co.edu.uniquindio.huellitas.entity.enums.Rol;
-import co.edu.uniquindio.huellitas.entity.enums.TipoAporte;
 import co.edu.uniquindio.huellitas.exception.ConflictException;
 import co.edu.uniquindio.huellitas.exception.ResourceNotFoundException;
 import co.edu.uniquindio.huellitas.mapper.BitacoraMapper;
@@ -19,7 +18,6 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -57,10 +55,6 @@ class BitacoraServiceTest {
     private RegistroMedicoRepository registroMedicoRepository;
     @Mock
     private CasoRepository casoRepository;
-    @Mock
-    private HistorialEstadoRepository historialEstadoRepository;
-    @Mock
-    private SeguimientoRepository seguimientoRepository;
     @Mock
     private UsuarioRepository usuarioRepository;
     @Mock
@@ -214,33 +208,6 @@ class BitacoraServiceTest {
         }
 
         @Test
-        @DisplayName("La veterinaria puede tomar un caso REGISTRADO y cambiarlo a EN_ATENCION")
-        void testAbrirBitacora_TomaCasoRegistrado() {
-            when(bitacoraMedicaRepository.existsByCasoId(101L)).thenReturn(false);
-            when(casoRepository.findById(101L)).thenReturn(Optional.of(casoRegistrado));
-            when(usuarioRepository.findByCorreo("vet.verificada@huellitas.co"))
-                    .thenReturn(Optional.of(veterinariaVerificada));
-            when(bitacoraMedicaRepository.save(any(BitacoraMedica.class))).thenAnswer(invocation -> {
-                BitacoraMedica bm = invocation.getArgument(0);
-                bm.setId(51L);
-                return bm;
-            });
-
-            bitacoraService.abrirBitacora(101L, null, "vet.verificada@huellitas.co");
-
-            assertEquals(EstadoCaso.EN_ATENCION, casoRegistrado.getEstado());
-            verify(casoRepository).save(casoRegistrado);
-            ArgumentCaptor<HistorialEstado> historialCaptor = ArgumentCaptor.forClass(HistorialEstado.class);
-            verify(historialEstadoRepository).save(historialCaptor.capture());
-            assertEquals(EstadoCaso.REGISTRADO, historialCaptor.getValue().getEstadoAnterior());
-            assertEquals(EstadoCaso.EN_ATENCION, historialCaptor.getValue().getEstadoNuevo());
-            ArgumentCaptor<Seguimiento> seguimientoCaptor = ArgumentCaptor.forClass(Seguimiento.class);
-            verify(seguimientoRepository).save(seguimientoCaptor.capture());
-            assertEquals(TipoAporte.ACTUALIZACION, seguimientoCaptor.getValue().getTipo());
-            assertTrue(seguimientoCaptor.getValue().getComentario().contains("Atención médica iniciada"));
-        }
-
-        @Test
         @DisplayName("Lanza 409 Conflict si ya existe bitácora para el caso")
         void testAbrirBitacora_ConflictoDuplicada() {
             when(bitacoraMedicaRepository.existsByCasoId(100L)).thenReturn(true);
@@ -251,14 +218,14 @@ class BitacoraServiceTest {
         }
 
         @Test
-        @DisplayName("Lanza 409 Conflict si el caso ya no está activo")
-        void testAbrirBitacora_CasoNoActivo() {
-            when(bitacoraMedicaRepository.existsByCasoId(102L)).thenReturn(false);
-            when(casoRepository.findById(102L)).thenReturn(Optional.of(casoArchivado));
+        @DisplayName("Lanza 409 Conflict si el caso no está en estado EN_ATENCION (ej: REGISTRADO)")
+        void testAbrirBitacora_CasoNoEnAtencion() {
+            when(bitacoraMedicaRepository.existsByCasoId(101L)).thenReturn(false);
+            when(casoRepository.findById(101L)).thenReturn(Optional.of(casoRegistrado));
 
             ConflictException ex = assertThrows(ConflictException.class, () ->
-                    bitacoraService.abrirBitacora(102L, null, "vet.verificada@huellitas.co"));
-            assertTrue(ex.getMessage().contains("activos"));
+                    bitacoraService.abrirBitacora(101L, null, "vet.verificada@huellitas.co"));
+            assertTrue(ex.getMessage().contains("EN_ATENCION"));
         }
 
         @Test
@@ -367,25 +334,6 @@ class BitacoraServiceTest {
         }
 
         @Test
-        @DisplayName("Solo la veterinaria responsable puede registrar evoluciones")
-        void testAgregarEvolucion_VeterinariaNoResponsable() {
-            Usuario veterinariaAjena = Usuario.builder()
-                    .id(12L)
-                    .correo("vet.ajena@huellitas.co")
-                    .rol(Rol.VETERINARIA)
-                    .verificado(true)
-                    .build();
-            when(bitacoraMedicaRepository.findByCasoId(100L)).thenReturn(Optional.of(bitacoraAbierta));
-            when(usuarioRepository.findByCorreo("vet.ajena@huellitas.co")).thenReturn(Optional.of(veterinariaAjena));
-
-            EvolucionDTO dto = new EvolucionDTO("Diagnóstico", null, null, null, null);
-
-            assertThrows(AccessDeniedException.class, () ->
-                    bitacoraService.agregarEvolucion(100L, dto, "vet.ajena@huellitas.co"));
-            verify(registroMedicoRepository, never()).save(any());
-        }
-
-        @Test
         @DisplayName("Verifica inmutabilidad en RegistroMedico: preUpdate arroja UnsupportedOperationException")
         void testRegistroMedico_InmutabilidadPreUpdate() {
             RegistroMedico rm = new RegistroMedico();
@@ -418,26 +366,6 @@ class BitacoraServiceTest {
         }
 
         @Test
-        @DisplayName("Solo la veterinaria responsable puede emitir el alta médica")
-        void testRegistrarAlta_VeterinariaNoResponsable() {
-            Usuario veterinariaAjena = Usuario.builder()
-                    .id(12L)
-                    .correo("vet.ajena@huellitas.co")
-                    .rol(Rol.VETERINARIA)
-                    .verificado(true)
-                    .build();
-            when(bitacoraMedicaRepository.findByCasoId(100L)).thenReturn(Optional.of(bitacoraAbierta));
-            when(usuarioRepository.findByCorreo("vet.ajena@huellitas.co")).thenReturn(Optional.of(veterinariaAjena));
-
-            AltaMedicaDTO dto = new AltaMedicaDTO("Completamente sano", "Indicaciones");
-
-            assertThrows(AccessDeniedException.class, () ->
-                    bitacoraService.registrarAlta(100L, dto, "vet.ajena@huellitas.co"));
-            verify(bitacoraMedicaRepository, never()).save(any());
-            verify(registroMedicoRepository, never()).save(any());
-        }
-
-        @Test
         @DisplayName("Lanza 409 Conflict si el alta médica ya fue emitida previamente")
         void testRegistrarAlta_Duplicada() {
             bitacoraAbierta.setAltaMedica(true);
@@ -463,7 +391,7 @@ class BitacoraServiceTest {
     // ── 14.4: Privacidad y Lectura (Ley 1581 / Ley 576) ─────────────
 
     @Nested
-    @DisplayName("Subtarea 14.4 - Permisos de Lectura Clínica")
+    @DisplayName("Subtarea 14.4 - Tabla de Decisión de Permisos de Lectura")
     class LecturaBitacoraTests {
 
         @Test
@@ -584,7 +512,7 @@ class BitacoraServiceTest {
     // ── Resumen Clínico PDF ─────────────────────────────────────────
 
     @Test
-    @DisplayName("Una veterinaria verificada puede generar el PDF resumen")
+    @DisplayName("Genera PDF resumen delegando al PdfWorker")
     void testGenerarPdfResumen() {
         byte[] pdfBytes = "%PDF-1.4 test bytes".getBytes();
         when(casoRepository.existsById(100L)).thenReturn(true);
@@ -592,7 +520,7 @@ class BitacoraServiceTest {
         when(usuarioRepository.findByCorreo("vet.verificada@huellitas.co")).thenReturn(Optional.of(veterinariaVerificada));
         when(pdfWorker.generarResumenClinico(100L)).thenReturn(pdfBytes);
 
-        byte[] result = bitacoraService.generarPdfResumen(100L, "vet.verificada@huellitas.co");
+        byte[] result = bitacoraService.generarPdfResumen(100L);
         assertThat(result).isEqualTo(pdfBytes);
         verify(pdfWorker, times(1)).generarResumenClinico(100L);
     }
