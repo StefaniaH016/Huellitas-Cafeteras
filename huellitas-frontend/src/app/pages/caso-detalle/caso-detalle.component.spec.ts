@@ -74,7 +74,16 @@ beforeEach(() => {
   };
   authService = { tieneRol: vi.fn().mockReturnValue(false) };
   usuarioService = {
-    getMiPerfil: vi.fn().mockReturnValue(of({ id: 21, rol: 'CIUDADANO_VOLUNTARIO' })),
+    getMiPerfil: vi.fn().mockReturnValue(
+      of({
+        id: 21,
+        nombre: 'Usuario',
+        correo: 'user@test.com',
+        rol: 'CIUDADANO_VOLUNTARIO',
+        verificado: true,
+        disponibleRescate: false,
+      }),
+    ),
   };
   bitacoraService = {
     getBitacora: vi.fn().mockReturnValue(throwError(() => new HttpErrorResponse({ status: 404 }))),
@@ -184,6 +193,7 @@ it('allows a citizen to report another citizen case for moderation', () => {
       correo: 'otro@test.com',
       rol: 'CIUDADANO_VOLUNTARIO',
       verificado: true,
+      disponibleRescate: false,
     }),
   );
   vi.mocked(casoService.getDetalle).mockReturnValue(
@@ -215,6 +225,7 @@ it('does not allow a citizen to report their own case', () => {
       correo: 'yo@test.com',
       rol: 'CIUDADANO_VOLUNTARIO',
       verificado: true,
+      disponibleRescate: false,
     }),
   );
   vi.mocked(casoService.getDetalle).mockReturnValue(
@@ -260,6 +271,7 @@ it('places the veterinarian take-attention action in the Actions panel', () => {
       rol: 'VETERINARIA',
       verificado: true,
       organizacionId: 3,
+      disponibleRescate: false,
     }),
   );
   vi.mocked(casoService.getDetalle).mockReturnValue(
@@ -347,6 +359,7 @@ it('does not show case closure to another citizen or when a foundation has custo
       correo: 'otro@test.com',
       rol: 'CIUDADANO_VOLUNTARIO',
       verificado: true,
+      disponibleRescate: false,
     }),
   );
   vi.mocked(casoService.getDetalle).mockReturnValue(
@@ -377,6 +390,7 @@ it('allows citizens outside the case to contribute when a foundation has custody
       correo: 'otro@test.com',
       rol: 'CIUDADANO_VOLUNTARIO',
       verificado: true,
+      disponibleRescate: false,
     }),
   );
   vi.mocked(casoService.getDetalle).mockReturnValue(
@@ -404,6 +418,7 @@ it('does not let a different veterinarian edit an existing medical log', () => {
       correo: 'vet@test.com',
       rol: 'VETERINARIA',
       verificado: true,
+      disponibleRescate: false,
     }),
   );
   vi.mocked(casoService.getDetalle).mockReturnValue(
