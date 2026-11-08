@@ -71,21 +71,90 @@ it('uses the role alias and falls back to the token claim', () => {
   expect(localStorage.getItem('hc_rol')).toBe('VETERINARIA');
 });
 
+it('reads the role from the nested user in the login response', () => {
+  let result: string | undefined;
+  service.login('user@example.test', 'secret').subscribe((role) => (result = role));
+
+  http.expectOne(`${environment.apiUrl}/auth/login`).flush({
+    token: 'jwt',
+    tipo: 'Bearer',
+    usuario: {
+      id: 7,
+      nombre: 'Raul Tomas',
+      correo: 'user@example.test',
+      rol: 'FUNDACION_REFUGIO',
+      verificado: false,
+    },
+  });
+
+  expect(tokenService.setToken).toHaveBeenCalledWith('jwt');
+  expect(localStorage.getItem('hc_rol')).toBe('FUNDACION_REFUGIO');
+  expect(result).toBe('FUNDACION_REFUGIO');
+});
+
 it('registers a user with the expected request body', () => {
   const expected = { id: '1', correo: 'user@example.test', nombre: 'Luna' };
   let result: unknown;
-  service.registro('user@example.test', 'secret', 'Luna').subscribe((response) => {
-    result = response;
-  });
+  service
+    .registro({
+      nombre: 'Luna',
+      correo: 'user@example.test',
+      contrasena: 'secret',
+      telefono: '1234567890',
+      rol: 'CIUDADANO_VOLUNTARIO',
+      aceptoTratamientoDatos: true,
+    })
+    .subscribe((response) => {
+      result = response;
+    });
 
   const request = http.expectOne(`${environment.apiUrl}/auth/registro`);
   expect(request.request.body).toEqual({
     correo: 'user@example.test',
     contrasena: 'secret',
     nombre: 'Luna',
+    rol: 'CIUDADANO_VOLUNTARIO',
+    telefono: '1234567890',
+    aceptoTratamientoDatos: true,
   });
   request.flush(expected);
   expect(result).toEqual(expected);
+});
+
+it('registers an institutional account as multipart when support is attached', async () => {
+  const documento = new File(['%PDF-1.7'], 'soporte.pdf', { type: 'application/pdf' });
+  service
+    .registro({
+      nombre: 'Patitas',
+      correo: 'fundacion@example.test',
+      contrasena: 'secret',
+      telefono: '1234567890',
+      rol: 'FUNDACION_REFUGIO',
+      nombreEntidad: 'Fundación Patitas',
+      nit: '900123',
+      municipioOperacion: 'Armenia',
+      documentoSoporte: documento,
+      aceptoTratamientoDatos: true,
+    })
+    .subscribe();
+
+  const request = http.expectOne(`${environment.apiUrl}/auth/registro/institucional`);
+  expect(request.request.method).toBe('POST');
+  expect(request.request.body).toBeInstanceOf(FormData);
+  const formData = request.request.body as FormData;
+  expect(formData.get('documentoSoporte')).toMatchObject({
+    name: 'soporte.pdf',
+    type: 'application/pdf',
+  });
+  const datos = formData.get('datos');
+  expect(datos).toBeInstanceOf(Blob);
+  if (datos instanceof Blob) {
+    expect(JSON.parse(await datos.text())).toMatchObject({
+      rol: 'FUNDACION_REFUGIO',
+      nit: '900123',
+    });
+  }
+  request.flush({});
 });
 
 it('clears credentials and redirects on logout', () => {

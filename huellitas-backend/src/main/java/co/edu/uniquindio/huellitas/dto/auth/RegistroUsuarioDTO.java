@@ -21,5 +21,23 @@ public record RegistroUsuarioDTO(
 
         Long barrioId,
 
-        Rol rol
-) {}
+        Rol rol,
+
+        String nombreEntidad,
+
+        String nit,
+
+        String documentoLegal,
+
+        String municipioOperacion
+) {
+    public RegistroUsuarioDTO(
+            String nombre,
+            String correo,
+            String contrasena,
+            String telefono,
+            Long barrioId,
+            Rol rol) {
+        this(nombre, correo, contrasena, telefono, barrioId, rol, null, null, null, null);
+    }
+}

@@ -5,9 +5,12 @@ import co.edu.uniquindio.huellitas.dto.aporte.CrearAporteDTO;
 import co.edu.uniquindio.huellitas.entity.Barrio;
 import co.edu.uniquindio.huellitas.entity.Caso;
 import co.edu.uniquindio.huellitas.entity.Foto;
+import co.edu.uniquindio.huellitas.entity.Fundacion;
 import co.edu.uniquindio.huellitas.entity.Seguimiento;
 import co.edu.uniquindio.huellitas.entity.Usuario;
 import co.edu.uniquindio.huellitas.entity.enums.EstadoCaso;
+import co.edu.uniquindio.huellitas.entity.enums.EstadoVerificacion;
+import co.edu.uniquindio.huellitas.entity.enums.Rol;
 import co.edu.uniquindio.huellitas.entity.enums.TipoAporte;
 import co.edu.uniquindio.huellitas.exception.ConflictException;
 import co.edu.uniquindio.huellitas.exception.ResourceNotFoundException;
@@ -19,6 +22,7 @@ import co.edu.uniquindio.huellitas.repository.SeguimientoRepository;
 import co.edu.uniquindio.huellitas.repository.UsuarioRepository;
 import co.edu.uniquindio.huellitas.service.AporteService;
 import co.edu.uniquindio.huellitas.worker.NotificacionWorker;
+import org.springframework.security.access.AccessDeniedException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -27,6 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -63,10 +68,13 @@ public class AporteServiceImpl implements AporteService {
         Caso caso = casoRepository.findById(casoId)
                 .orElseThrow(() -> new ResourceNotFoundException("Caso", casoId));
 
-        // 13.1: Validar que el caso no esté ARCHIVADO
-        if (caso.getEstado() == EstadoCaso.ARCHIVADO) {
-            throw new ConflictException("No se pueden agregar aportes a un caso archivado");
+        if (caso.getEstado() != EstadoCaso.REGISTRADO && caso.getEstado() != EstadoCaso.EN_ATENCION) {
+            throw new ConflictException("No se pueden agregar aportes a un caso cerrado o archivado");
         }
+
+        Usuario autor = usuarioRepository.findByCorreo(correoUsuario.trim().toLowerCase())
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con correo: " + correoUsuario));
+        validarPermisoAporte(caso, autor);
 
         // 13.1: Validar longitud de la descripción
         String descripcion = dto.descripcion();
@@ -87,9 +95,6 @@ public class AporteServiceImpl implements AporteService {
                     .orElseThrow(() -> new ResourceNotFoundException("Barrio", dto.barrioId()));
         }
 
-        Usuario autor = usuarioRepository.findByCorreo(correoUsuario.trim().toLowerCase())
-                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con correo: " + correoUsuario));
-
         TipoAporte tipo = (dto.ubicacionTexto() != null && !dto.ubicacionTexto().isBlank())
                 ? TipoAporte.AVISTAMIENTO
                 : TipoAporte.COMENTARIO;
@@ -99,6 +104,7 @@ public class AporteServiceImpl implements AporteService {
                 .autor(autor)
                 .tipo(tipo)
                 .comentario(descripcion.trim())
+                .ubicacionTexto(tipo == TipoAporte.AVISTAMIENTO ? dto.ubicacionTexto().trim() : null)
                 .fecha(Instant.now())
                 .visible(true)
                 .barrio(barrio)
@@ -110,12 +116,16 @@ public class AporteServiceImpl implements AporteService {
         if (dto.fotografias() != null && !dto.fotografias().isEmpty()) {
             for (String url : dto.fotografias()) {
                 if (url != null && !url.isBlank()) {
-                    Foto foto = Foto.builder()
-                            .caso(caso)
-                            .url(url)
-                            .principal(false)
-                            .build();
+                    Foto foto = fotoRepository.findFirstByCasoIdAndUrlAndSeguimientoIsNull(casoId, url)
+                            .orElseGet(() -> Foto.builder()
+                                    .caso(caso)
+                                    .url(url)
+                                    .principal(false)
+                                    .build());
+                    foto.setSeguimiento(guardado);
+                    foto.setPrincipal(false);
                     fotoRepository.save(foto);
+                    guardado.getFotografias().add(foto);
                     fotosGuardadas.add(url);
                 }
             }
@@ -132,5 +142,23 @@ public class AporteServiceImpl implements AporteService {
         }
 
         return aporteMapper.toResponseDTO(guardado, caso.getId(), autor.getId(), dto.ubicacionTexto(), fotosGuardadas);
+    }
+
+    private void validarPermisoAporte(Caso caso, Usuario autor) {
+        if (autor.getRol() == Rol.CIUDADANO_VOLUNTARIO) {
+            boolean esReportante = caso.getReportante() != null
+                    && Objects.equals(caso.getReportante().getId(), autor.getId());
+            if (!esReportante || caso.getFundacionCustodio() == null) {
+                return;
+            }
+        } else if (autor.getRol() == Rol.FUNDACION_REFUGIO
+                && autor.getOrganizacion() instanceof Fundacion fundacion
+                && fundacion.getEstadoVerificacion() == EstadoVerificacion.VERIFICADA
+                && caso.getFundacionCustodio() != null
+                && Objects.equals(caso.getFundacionCustodio().getId(), fundacion.getId())) {
+            return;
+        }
+
+        throw new AccessDeniedException("El usuario no tiene permiso para agregar aportes a este caso.");
     }
 }

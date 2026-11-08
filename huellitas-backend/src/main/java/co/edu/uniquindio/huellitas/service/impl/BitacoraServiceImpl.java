@@ -243,6 +243,23 @@ public class BitacoraServiceImpl implements BitacoraService {
         return pdfWorker.generarResumenClinico(casoId);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public byte[] generarPdfResumen(Long casoId, String correoUsuario) {
+        if (!casoRepository.existsById(casoId)) {
+            throw new ResourceNotFoundException("Caso", casoId);
+        }
+
+        BitacoraMedica bitacora = bitacoraMedicaRepository.findByCasoId(casoId)
+                .orElseThrow(() -> new ResourceNotFoundException("Bitácora médica no encontrada para el caso: " + casoId));
+
+        // Subtarea 16.5: Validar permisos (403 si no tiene acceso autorizado)
+        validarAccesoBitacora(bitacora, correoUsuario);
+
+        // W-03: generar el resumen clínico en PDF
+        return pdfWorker.generarResumenClinico(casoId);
+    }
+
     // ── Helper de Autorización 14.4 ──────────────────────────────
 
     private void validarAccesoBitacora(BitacoraMedica bitacora, String correoUsuario) {

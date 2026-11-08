@@ -1,0 +1,13 @@
+@if (urgencia(); as valor) {
+  <span [class]="'badge ' + urgenciaBadge(valor)">
+    <span class="badge-dot"></span>{{ urgenciaLabel(valor) }}
+  </span>
+}
+@if (tipo(); as valor) {
+  <span class="badge badge-tipo">{{ tipoLabel(valor) }}</span>
+}
+@if (estado(); as valor) {
+  <span [class]="'badge ' + estadoBadge(valor)">
+    <span class="badge-dot"></span>{{ estadoLabel(valor) }}
+  </span>
+}

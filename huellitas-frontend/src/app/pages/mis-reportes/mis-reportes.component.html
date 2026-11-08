@@ -13,50 +13,98 @@
 
   @if (cargando()) {
     <p class="message">Cargando tus reportes...</p>
-  } @else if (reportes().length === 0) {
-    <section class="empty-state">
-      <h2>Aún no tienes reportes</h2>
-      <p>Cuando reportes un caso, podrás consultarlo y administrarlo desde aquí.</p>
-    </section>
   } @else {
-    <section class="report-list" aria-label="Lista de mis reportes">
-      @for (caso of reportes(); track caso.id) {
-        <article class="report-card">
-          @if (caso.fotoPrincipal) {
-            <img class="report-photo" [src]="caso.fotoPrincipal" alt="Foto del caso" />
+    <div class="report-tabs" role="tablist" aria-label="Filtrar mis reportes">
+      <button
+        id="tab-activos"
+        class="report-tab"
+        type="button"
+        role="tab"
+        aria-controls="panel-reportes"
+        [attr.aria-selected]="pestanaActiva() === 'activos'"
+        [class.active]="pestanaActiva() === 'activos'"
+        (click)="seleccionarPestana('activos')"
+      >
+        Activos <span class="tab-count">{{ reportesActivos().length }}</span>
+      </button>
+      <button
+        id="tab-historial"
+        class="report-tab"
+        type="button"
+        role="tab"
+        aria-controls="panel-reportes"
+        [attr.aria-selected]="pestanaActiva() === 'historial'"
+        [class.active]="pestanaActiva() === 'historial'"
+        (click)="seleccionarPestana('historial')"
+      >
+        Historial <span class="tab-count">{{ reportesHistorial().length }}</span>
+      </button>
+    </div>
+
+    <div
+      id="panel-reportes"
+      role="tabpanel"
+      [attr.aria-labelledby]="pestanaActiva() === 'activos' ? 'tab-activos' : 'tab-historial'"
+    >
+      @if (reportesVisibles().length === 0) {
+        <section class="empty-state">
+          @if (pestanaActiva() === 'activos' && reportes().length === 0) {
+            <h2>Aún no tienes reportes</h2>
+            <p>Cuando reportes un caso, podrás consultarlo y administrarlo desde aquí.</p>
+          } @else if (pestanaActiva() === 'activos') {
+            <h2>No tienes casos activos</h2>
+            <p>Los casos que siguen en atención aparecerán en esta pestaña.</p>
           } @else {
-            <div class="report-photo placeholder" aria-hidden="true">🐾</div>
+            <h2>Tu historial está vacío</h2>
+            <p>Los casos resueltos o archivados aparecerán aquí.</p>
           }
-          <div class="report-content">
-            <p class="report-status">Estado: {{ caso.estado }}</p>
-            <h2>{{ caso.descripcion }}</h2>
-            <p class="report-location">
-              {{ caso.municipio }}
-              @if (caso.barrio) {
-                · {{ caso.barrio }}
+        </section>
+      } @else {
+        <section class="report-list" aria-label="Lista de mis reportes">
+          @for (caso of reportesVisibles(); track caso.id) {
+            <article class="report-card">
+              @if (caso.fotoPrincipal) {
+                <img class="report-photo" [src]="caso.fotoPrincipal" alt="Foto del caso" />
+              } @else {
+                <div class="report-photo placeholder" aria-hidden="true">🐾</div>
               }
-            </p>
-            <div class="report-actions">
-              <a class="btn btn-secondary btn-sm" [routerLink]="['/caso-detalle', caso.id]">
-                Ver caso
-              </a>
-              @if (caso.estado === 'REGISTRADO') {
-                <a class="btn btn-secondary btn-sm" [routerLink]="['/casos', caso.id, 'editar']">
-                  Editar
-                </a>
-                <button
-                  class="btn btn-danger btn-sm"
-                  type="button"
-                  [disabled]="eliminandoId() === caso.id"
-                  (click)="eliminar(caso)"
-                >
-                  {{ eliminandoId() === caso.id ? 'Eliminando...' : 'Eliminar' }}
-                </button>
-              }
-            </div>
-          </div>
-        </article>
+              <div class="report-content">
+                <p class="report-status">
+                  Estado: {{ etiquetasEstado[caso.estado] || caso.estado }}
+                </p>
+                <h2>{{ caso.descripcion }}</h2>
+                <p class="report-location">
+                  {{ caso.municipio }}
+                  @if (caso.barrio) {
+                    · {{ caso.barrio }}
+                  }
+                </p>
+                <div class="report-actions">
+                  <a class="btn btn-secondary btn-sm" [routerLink]="['/caso-detalle', caso.id]">
+                    Ver caso
+                  </a>
+                  @if (caso.estado === 'REGISTRADO') {
+                    <a
+                      class="btn btn-secondary btn-sm"
+                      [routerLink]="['/casos', caso.id, 'editar']"
+                    >
+                      Editar
+                    </a>
+                    <button
+                      class="btn btn-danger btn-sm"
+                      type="button"
+                      [disabled]="eliminandoId() === caso.id"
+                      (click)="eliminar(caso)"
+                    >
+                      {{ eliminandoId() === caso.id ? 'Eliminando...' : 'Eliminar' }}
+                    </button>
+                  }
+                </div>
+              </div>
+            </article>
+          }
+        </section>
       }
-    </section>
+    </div>
   }
 </main>

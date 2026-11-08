@@ -1,3 +1,15 @@
+:host {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+
+.zone-fields {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
 .zone-fields {
   border: 1px solid var(--line);
   border-radius: 16px;
@@ -14,8 +26,19 @@
 
 .grid-3 {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.75rem;
+  min-width: 0;
+}
+
+.stacked .grid-3 {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 700px) {
+  .stacked .grid-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 .form-field {
@@ -31,6 +54,7 @@
 }
 
 select {
+  min-width: 0;
   font-family: inherit;
   font-size: 0.9rem;
   padding: 0.6rem 0.8rem;

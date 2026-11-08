@@ -1,0 +1,16 @@
+<ol class="steps" [attr.aria-label]="etiqueta()">
+  @for (paso of pasos(); track paso; let i = $index; let ultimo = $last) {
+    <li
+      class="step"
+      [class.current]="actual() === i + 1"
+      [class.done]="actual() > i + 1"
+      [attr.aria-current]="actual() === i + 1 ? 'step' : null"
+    >
+      <span class="step-num">{{ i + 1 }}</span
+      ><span class="step-label">{{ paso }}</span>
+    </li>
+    @if (!ultimo) {
+      <li class="step-line" [class.active]="actual() > i + 1" aria-hidden="true"></li>
+    }
+  }
+</ol>

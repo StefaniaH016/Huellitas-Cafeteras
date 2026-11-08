@@ -1,12 +1,17 @@
 <main>
-  <!-- CIUDADANO -->
+  <!-- CIUDADANO DASHBOARD -->
   @if (isCiudadano()) {
     <div class="dash">
       <section class="dash-hello">
         <div>
           <h1>Hola, {{ authService.getNombre() }}</h1>
           <p class="dash-summary">
-            Revisa el estado de tus reportes y mantente informado sobre los casos de tu zona.
+            @if (primerCasoActivo(); as casoActivo) {
+              Tu caso #{{ casoActivo.id }} está activo. Consulta su seguimiento para ver las
+              actualizaciones.
+            } @else {
+              Revisa el estado de tus reportes y mantente informado sobre los casos de tu zona.
+            }
           </p>
         </div>
         <div class="dash-ctas">
@@ -16,15 +21,23 @@
       </section>
       <section class="dash-figures" aria-label="Resumen de tu actividad">
         <a class="figure" routerLink="/mis-reportes"
-          ><span class="figure-num">{{ misReportesActivos().length }}</span
-          ><span class="figure-label">Reporte activo</span></a
+          ><span class="figure-num">{{
+            cargandoMisReportes() ? '—' : misReportesActivos().length
+          }}</span
+          ><span class="figure-label">{{
+            misReportesActivos().length === 1 ? 'Reporte activo' : 'Reportes activos'
+          }}</span></a
         >
         <a class="figure" routerLink="/mis-reportes"
-          ><span class="figure-num">{{ misReportesResueltos().length }}</span
-          ><span class="figure-label">Caso resuelto</span></a
+          ><span class="figure-num">{{
+            cargandoMisReportes() ? '—' : misReportesResueltos().length
+          }}</span
+          ><span class="figure-label">{{
+            misReportesResueltos().length === 1 ? 'Caso resuelto' : 'Casos resueltos'
+          }}</span></a
         >
         <a class="figure" routerLink="/notificaciones"
-          ><span class="figure-num">0</span
+          ><span class="figure-num">{{ notificacionesSinLeer() }}</span
           ><span class="figure-label">Notificaciones sin leer</span></a
         >
       </section>
@@ -35,10 +48,12 @@
         </div>
         @if (cargandoMisReportes()) {
           <p class="list-empty">Cargando tus reportes...</p>
+        } @else if (errorMisReportes()) {
+          <p class="feedback-error" role="alert">{{ errorMisReportes() }}</p>
         } @else if (misReportesActivos().length === 0) {
           <p class="list-empty">No tienes reportes en curso actualmente.</p>
         } @else {
-          @for (caso of misReportesActivos(); track caso.id) {
+          @for (caso of misReportesActivos().slice(0, 1); track caso.id) {
             <div class="list-row" [routerLink]="['/caso-detalle', caso.id]" style="cursor: pointer">
               <div class="list-thumb">
                 @if (caso.foto) {
@@ -55,7 +70,7 @@
               <div class="list-info">
                 <p class="list-title">{{ caso.titulo || caso.descripcion }}</p>
                 @if (caso.municipio) {
-                  <p class="list-meta">{{ caso.municipio }} · {{ caso.barrio }}</p>
+                  <p class="list-meta">{{ caso.municipio }} · {{ getEstadoLabel(caso.estado) }}</p>
                 }
               </div>
               <span class="badge" [ngClass]="getBadgeClass(caso.urgencia)">
@@ -73,72 +88,111 @@
       </section>
     </div>
   }
-  <!-- FUNDACION -->
+
+  <!-- FUNDACION DASHBOARD -->
   @if (isFundacion()) {
     <div class="dash">
       <section class="dash-hello">
         <div>
           <h1>Hola, {{ authService.getNombre() }}</h1>
           <p class="dash-summary">
-            Revisa los casos de tu zona y gestiona los animales bajo tu custodia.
+            Consulta los casos de tu zona y gestiona la custodia desde el panel de tu organización.
           </p>
         </div>
         <div class="dash-ctas">
-          <button class="btn btn-primary" routerLink="/casos">Ver casos de mi zona</button>
-          <a class="btn btn-secondary" routerLink="/fundacion">Ir a mi panel</a>
+          <a class="btn btn-primary" routerLink="/fundacion">Abrir mi panel</a>
+          <a class="btn btn-secondary" routerLink="/casos">Ver casos de mi zona</a>
         </div>
       </section>
-      <section class="dash-figures" aria-label="Resumen de tu fundación">
-        <a class="figure" routerLink="/fundacion"
-          ><span class="figure-num">{{ casosEnCustodia().length }}</span
-          ><span class="figure-label">En custodia, de 20 cupos</span
-          ><progress
-            [value]="casosEnCustodia().length"
-            max="20"
-            aria-label="Cupos de albergue usados"
-          ></progress
-        ></a>
-        <a class="figure" routerLink="/fundacion"
-          ><span class="figure-num">{{ esperandoAtencionMedica().length }}</span
-          ><span class="figure-label">Esperando atención médica</span></a
-        >
-        <a class="figure is-urgent" routerLink="/casos"
-          ><span class="figure-num">{{ emergenciasZona().length }}</span
-          ><span class="figure-label">Emergencias en tu municipio</span></a
-        >
+    </div>
+  }
+
+  <!-- VETERINARIA DASHBOARD -->
+  @if (isVeterinaria()) {
+    <div class="dash">
+      <section class="dash-hello">
+        <div>
+          <h1>Hola, {{ authService.getNombre() }}</h1>
+          <p class="dash-summary">
+            Consulta tus pacientes y los casos disponibles para atención desde tu panel veterinario.
+          </p>
+        </div>
+        <div class="dash-ctas">
+          <a class="btn btn-primary" routerLink="/veterinaria">Abrir mi panel</a>
+          <a class="btn btn-secondary" routerLink="/casos">Ver casos activos</a>
+        </div>
+      </section>
+    </div>
+  }
+
+  <!-- ADMIN DASHBOARD -->
+  @if (isAdmin()) {
+    <div class="dash">
+      <section class="dash-hello">
+        <div>
+          <h1>Hola, administrador</h1>
+          <p class="dash-summary">
+            {{ resumenAdmin().cuentasPendientes }} cuentas esperan validación y
+            {{ resumenAdmin().casosReportados }} contenidos están marcados para moderación.
+          </p>
+        </div>
+        <div class="dash-ctas">
+          <a class="btn btn-primary" routerLink="/admin" fragment="validar">Validar cuentas</a>
+          <a class="btn btn-secondary" routerLink="/admin" fragment="moderacion"
+            >Moderar contenido</a
+          >
+        </div>
+      </section>
+      @if (errorResumenAdmin()) {
+        <div class="feedback-error" role="alert">
+          <span>{{ errorResumenAdmin() }}</span>
+          <button class="btn btn-secondary btn-sm" type="button" (click)="cargarResumenAdmin()">
+            Reintentar
+          </button>
+        </div>
+      }
+      <section class="dash-figures" aria-label="Resumen de la plataforma">
+        <a class="figure" routerLink="/admin" fragment="validar">
+          <span class="figure-num">{{
+            cargandoResumenAdmin() ? '—' : resumenAdmin().cuentasPendientes
+          }}</span>
+          <span class="figure-label">Cuentas por validar</span>
+        </a>
+        <a class="figure is-urgent" routerLink="/admin" fragment="moderacion">
+          <span class="figure-num">{{
+            cargandoResumenAdmin() ? '—' : resumenAdmin().casosReportados
+          }}</span>
+          <span class="figure-label">Contenidos por moderar</span>
+        </a>
+        <a class="figure" routerLink="/casos">
+          <span class="figure-num">{{ cargando() ? '—' : totalCasosFeed() }}</span>
+          <span class="figure-label">Casos en el feed</span>
+        </a>
       </section>
       <div class="dash-grid">
         <section class="panel">
           <div class="panel-head">
-            <h3>Emergencias sin custodia en tu zona</h3>
-            <a class="panel-link" routerLink="/casos">Ver casos de mi zona</a>
+            <h3>Cuentas por validar</h3>
+            <a class="panel-link" routerLink="/admin" fragment="validar">Ver todas</a>
           </div>
-          @if (emergenciasZona().length === 0) {
-            <p class="list-empty">No hay emergencias sin custodia en tu zona.</p>
+          @if (cargandoResumenAdmin()) {
+            <p class="list-empty">Cargando solicitudes...</p>
+          } @else if (cuentasPendientesAdmin().length === 0) {
+            <p class="list-empty">No hay cuentas pendientes de validación.</p>
           } @else {
-            @for (alerta of emergenciasZona(); track alerta.id) {
-              <div
-                class="list-row"
-                [routerLink]="['/caso-detalle', alerta.id]"
-                style="cursor: pointer"
-              >
-                <div class="list-thumb">🐾</div>
+            @for (cuenta of cuentasPendientesAdmin(); track cuenta.usuarioId) {
+              <div class="list-row">
+                <div class="list-thumb" aria-hidden="true">🏠</div>
                 <div class="list-info">
-                  <p class="list-title">{{ alerta.titulo || alerta.descripcion }}</p>
+                  <p class="list-title">{{ cuenta.nombreEntidad }}</p>
                   <p class="list-meta">
-                    {{ alerta.municipio }} · {{ alerta.barrio }} · sin custodia
+                    Documento soporte adjunto · {{ cuenta.municipio || 'Municipio sin informar' }} ·
+                    {{ cuenta.rolSolicitado }}
                   </p>
                 </div>
-                <span class="badge" [ngClass]="getBadgeClass(alerta.urgencia)">
-                  <span class="badge-dot"></span>
-                  {{ getBadgeLabel(alerta.urgencia) }}
-                </span>
                 <div class="list-actions">
-                  <button
-                    class="btn btn-primary btn-sm"
-                    [routerLink]="['/caso-detalle', alerta.id]"
-                  >
-                    Ver caso
+                  <button class="btn btn-secondary btn-sm" routerLink="/admin" fragment="validar">
+                    Revisar
                   </button>
                 </div>
               </div>
@@ -147,29 +201,28 @@
         </section>
         <section class="panel">
           <div class="panel-head">
-            <h3>En custodia ahora</h3>
-            <a class="panel-link" routerLink="/fundacion">Ver mi panel</a>
+            <h3>Contenido por moderar</h3>
+            <a class="panel-link" routerLink="/admin" fragment="moderacion">Ver todo</a>
           </div>
-          @if (casosEnCustodia().length === 0) {
-            <p class="list-empty">No hay animales en custodia actualmente.</p>
+          @if (cargandoResumenAdmin()) {
+            <p class="list-empty">Cargando reportes...</p>
+          } @else if (casosReportadosAdmin().length === 0) {
+            <p class="list-empty">No hay casos pendientes o revisados.</p>
           } @else {
-            @for (animal of casosEnCustodia(); track animal.id) {
-              <div
-                class="list-row"
-                [routerLink]="['/caso-detalle', animal.id]"
-                style="cursor: pointer"
-              >
-                <div class="list-thumb">🐾</div>
+            @for (caso of casosReportadosAdmin(); track caso.casoId) {
+              <div class="list-row">
+                <div class="list-thumb" aria-hidden="true">⚑</div>
                 <div class="list-info">
-                  <p class="list-title">{{ animal.titulo || animal.descripcion }}</p>
-                  <p class="list-meta">{{ animal.municipio }} · {{ animal.barrio }}</p>
+                  <p class="list-title">Caso #{{ caso.casoId }} · marcado para moderación</p>
+                  <p class="list-meta">Motivo: {{ caso.motivo }}</p>
                 </div>
                 <div class="list-actions">
                   <button
                     class="btn btn-secondary btn-sm"
-                    [routerLink]="['/caso-detalle', animal.id]"
+                    routerLink="/admin"
+                    fragment="moderacion"
                   >
-                    Ver caso
+                    Revisar
                   </button>
                 </div>
               </div>
@@ -180,52 +233,8 @@
     </div>
   }
 
-  <!-- VETERINARIA -->
-  @if (isVeterinaria()) {
-    <div class="dash">
-      <section class="dash-hello">
-        <div>
-          <h1>Hola, {{ authService.getNombre() }}</h1>
-          <p class="dash-summary">
-            Revisa las solicitudes de atención y gestiona tus pacientes activos.
-          </p>
-        </div>
-        <div class="dash-ctas">
-          <a class="btn btn-primary" routerLink="/veterinaria">Ir a mi panel</a>
-          <button class="btn btn-secondary" routerLink="/casos">Ver casos activos</button>
-        </div>
-      </section>
-      <section class="dash-figures" aria-label="Resumen de tu consulta">
-        <a class="figure is-urgent" routerLink="/veterinaria"
-          ><span class="figure-num">0</span
-          ><span class="figure-label">Solicitud por responder</span></a
-        >
-        <a class="figure" routerLink="/veterinaria"
-          ><span class="figure-num">0</span><span class="figure-label">Pacientes activos</span></a
-        >
-        <a class="figure" routerLink="/veterinaria"
-          ><span class="figure-num">0</span><span class="figure-label">Control programado</span></a
-        >
-      </section>
-      <div class="dash-grid">
-        <section class="panel">
-          <div class="panel-head">
-            <h3>Solicitudes de atención</h3>
-            <a class="panel-link" routerLink="/veterinaria">Ver mi panel</a>
-          </div>
-          <p class="list-empty">No hay solicitudes de atención pendientes.</p>
-        </section>
-        <section class="panel">
-          <div class="panel-head">
-            <h3>Pacientes activos</h3>
-            <a class="panel-link" routerLink="/veterinaria">Ver mi panel</a>
-          </div>
-          <p class="list-empty">No hay pacientes activos actualmente.</p>
-        </section>
-      </div>
-    </div>
-  }
-  @if (isCiudadano() || isFundacion() || isVeterinaria()) {
+  <!-- ZONE FILTER & URGENT CASES FEED -->
+  @if (isCiudadano() || isFundacion() || isVeterinaria() || isAdmin()) {
     <div class="zone-block">
       <form class="search-bar" (ngSubmit)="onSearch()">
         <div class="field">
@@ -236,9 +245,11 @@
             name="departamentoId"
             (change)="onDepartamentoChange()"
           >
-            <option value="">Seleccionar departamento</option>
+            <option value="">Quindío</option>
             @for (dep of departamentos(); track dep.id) {
-              <option [value]="dep.id">{{ dep.nombre }}</option>
+              @if (dep.nombre !== 'Quindío') {
+                <option [value]="dep.id">{{ dep.nombre }}</option>
+              }
             }
           </select>
         </div>
@@ -288,7 +299,7 @@
 
       <section class="block">
         <div class="block-head">
-          <h2>Casos urgentes cerca de ti</h2>
+          <h2>{{ isAdmin() ? 'Feed de casos' : 'Casos urgentes cerca de ti' }}</h2>
           <a routerLink="/casos">Ver todos</a>
         </div>
         <div class="case-grid">
@@ -302,7 +313,7 @@
               {{ errorMensaje() }}
             </p>
           }
-          @for (caso of casos(); track caso.id) {
+          @for (caso of casos().slice(0, 3); track caso.id) {
             <article
               class="case-card"
               [routerLink]="['/caso-detalle', caso.id]"
@@ -316,48 +327,10 @@
                 }
               </div>
               <div class="case-body">
-                <div
-                  style="
-                    display: flex;
-                    gap: 0.4rem;
-                    align-items: center;
-                    margin-bottom: 0.4rem;
-                    flex-wrap: wrap;
-                  "
-                >
-                  <span class="badge" [ngClass]="getBadgeClass(caso.urgencia)">
-                    <span class="badge-dot"></span>
-                    {{ getBadgeLabel(caso.urgencia) }}
-                  </span>
-                  @if (caso.tipoCaso && getTipoLabel(caso.tipoCaso)) {
-                    <span
-                      class="badge"
-                      style="
-                        background: var(--lav-100, #f0ebfd);
-                        color: var(--lav-700, #5c35b8);
-                        font-size: 0.75rem;
-                        padding: 0.2rem 0.5rem;
-                        border-radius: 99px;
-                      "
-                    >
-                      {{ getTipoLabel(caso.tipoCaso) }}
-                    </span>
-                  }
-                  @if (caso.estado) {
-                    <span
-                      class="badge"
-                      style="
-                        background: var(--pine-100, #e6f6f0);
-                        color: var(--pine-700, #147253);
-                        font-size: 0.75rem;
-                        padding: 0.2rem 0.5rem;
-                        border-radius: 99px;
-                      "
-                    >
-                      {{ getEstadoLabel(caso.estado) }}
-                    </span>
-                  }
-                </div>
+                <span class="badge" [ngClass]="getBadgeClass(caso.urgencia)">
+                  <span class="badge-dot"></span>
+                  {{ getBadgeLabel(caso.urgencia) }}
+                </span>
                 <p class="case-title">{{ caso.titulo || caso.descripcion }}</p>
                 <p class="case-meta">{{ caso.municipio }} · {{ caso.barrio }}</p>
               </div>
@@ -372,75 +345,21 @@
     </div>
   }
 
+  <!-- CIUDADANO TRUST STRIP -->
   @if (isCiudadano()) {
     <div class="trust-strip">
       <div class="trust-item">
-        <div class="trust-num">—</div>
-        <div class="trust-label">Casos registrados este mes</div>
+        <div class="trust-num">{{ misReportes().length }}</div>
+        <div class="trust-label">Tus reportes</div>
       </div>
       <div class="trust-item">
-        <div class="trust-num">—</div>
-        <div class="trust-label">Casos resueltos</div>
+        <div class="trust-num">{{ misReportesActivos().length }}</div>
+        <div class="trust-label">En seguimiento</div>
       </div>
       <div class="trust-item">
-        <div class="trust-num">—</div>
-        <div class="trust-label">Fundaciones y veterinarias verificadas</div>
+        <div class="trust-num">{{ misReportesResueltos().length }}</div>
+        <div class="trust-label">Resueltos</div>
       </div>
-    </div>
-  }
-
-  <!-- ADMIN -->
-  @if (isAdmin()) {
-    <div class="dash">
-      <section class="dash-hello">
-        <div>
-          <h1>Hola, administrador</h1>
-          <p class="dash-summary">
-            Gestiona las solicitudes de verificación y modera el contenido de la plataforma.
-          </p>
-        </div>
-        <div class="dash-ctas">
-          <a class="btn btn-primary" routerLink="/admin">Validar cuentas</a>
-          <a class="btn btn-secondary" routerLink="/admin">Moderar contenido</a>
-        </div>
-      </section>
-      <section class="dash-figures" aria-label="Resumen de la plataforma">
-        <a class="figure" routerLink="/admin"
-          ><span class="figure-num">0</span><span class="figure-label">Cuentas por validar</span></a
-        >
-        <a class="figure is-urgent" routerLink="/admin"
-          ><span class="figure-num">0</span
-          ><span class="figure-label">Contenidos denunciados</span></a
-        >
-        <a class="figure" routerLink="/casos"
-          ><span class="figure-num">{{ casos().length }}</span
-          ><span class="figure-label">Casos activos</span></a
-        >
-      </section>
-      <div class="dash-grid">
-        <section class="panel">
-          <div class="panel-head">
-            <h3>Cuentas por validar</h3>
-            <a class="panel-link" routerLink="/admin">Ver todas</a>
-          </div>
-          <p class="list-empty">No hay cuentas pendientes de validación.</p>
-        </section>
-        <section class="panel">
-          <div class="panel-head">
-            <h3>Contenido denunciado</h3>
-            <a class="panel-link" routerLink="/admin">Ver todo</a>
-          </div>
-          <p class="list-empty">No hay contenido denunciado pendiente.</p>
-        </section>
-      </div>
-      <section class="panel">
-        <div class="panel-head">
-          <h3>Casos resueltos este mes</h3>
-          <a class="panel-link" routerLink="/casos">Ver casos</a>
-        </div>
-        <p class="goal-value"><strong>Datos no disponibles aún</strong></p>
-        <p class="goal-note">La línea marca la meta del proyecto: 70 % de los casos resueltos.</p>
-      </section>
     </div>
   }
 </main>

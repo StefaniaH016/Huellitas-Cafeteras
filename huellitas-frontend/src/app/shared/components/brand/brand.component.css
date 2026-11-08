@@ -1,0 +1,49 @@
+:host {
+  --brand-mark: 38px;
+  --brand-font: 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--brand-mark) / 4);
+  color: var(--brown-900);
+}
+
+:host(.brand-sm) {
+  --brand-mark: 34px;
+  --brand-font: 0.82rem;
+}
+
+:host(.brand-lg) {
+  --brand-mark: 58px;
+  --brand-font: 1.45rem;
+}
+
+.brand-mark {
+  width: var(--brand-mark);
+  height: var(--brand-mark);
+  flex-shrink: 0;
+  border-radius: calc(var(--brand-mark) * 0.3);
+  overflow: hidden;
+}
+
+.brand-mark img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.brand-name {
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-brand);
+  font-weight: 800;
+  font-size: var(--brand-font);
+  line-height: 0.9;
+}
+
+@media (max-width: 600px) {
+  :host(.brand-lg) {
+    --brand-mark: 48px;
+    --brand-font: 1.15rem;
+  }
+}

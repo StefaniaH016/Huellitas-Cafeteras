@@ -54,10 +54,16 @@ main {
   flex-direction: column;
   gap: 0.2rem;
   padding: 1.1rem 1.4rem;
+  width: 100%;
   color: inherit;
+  font: inherit;
+  text-align: left;
   text-decoration: none;
+  background: transparent;
+  border: 0;
   border-right: 1px solid var(--line);
   transition: background 0.12s ease;
+  cursor: pointer;
 }
 
 .figure:last-child {
@@ -165,6 +171,50 @@ progress::-moz-progress-bar {
   align-items: start;
 }
 
+/* Tabs */
+.tabs-block {
+  background: var(--card-bg);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 1.3rem 1.4rem;
+  margin-bottom: 1.2rem;
+  box-shadow: var(--shadow);
+}
+
+.tabs {
+  display: flex;
+  gap: 1.4rem;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 1.3rem;
+}
+
+.tab {
+  padding: 0.6rem 0;
+  font-size: 0.87rem;
+  font-weight: 700;
+  color: var(--ink-soft);
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  background: none;
+  border-left: none;
+  border-right: none;
+  border-top: none;
+  font-family: inherit;
+}
+
+.tab.active {
+  color: var(--pine-700);
+  border-bottom-color: var(--pine-700);
+}
+
+.tab-panel {
+  display: none;
+}
+
+.tab-panel.active {
+  display: block;
+}
+
 /* Panel styles */
 .panel {
   background: var(--card-bg);
@@ -248,6 +298,34 @@ progress::-moz-progress-bar {
   display: flex;
   gap: 0.5rem;
   flex-shrink: 0;
+}
+
+.moderation-row {
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.moderation-info {
+  flex-basis: calc(100% - 8rem);
+}
+
+.moderation-form {
+  flex: 1 1 100%;
+}
+
+.moderation-form textarea {
+  width: 100%;
+  min-height: 5rem;
+  padding: 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font: inherit;
+  resize: vertical;
+}
+
+.moderation-form .list-actions {
+  flex-wrap: wrap;
+  margin-top: 0.6rem;
 }
 
 .badge {
@@ -337,7 +415,7 @@ progress::-moz-progress-bar {
 }
 
 .btn-secondary {
-  background: var(--paper-2);
+  background: var(--sky-100);
   color: var(--brown-900);
   border-color: transparent;
 }

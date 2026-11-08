@@ -9,14 +9,16 @@ import co.edu.uniquindio.huellitas.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
-@RequestMapping("/v1/auth")
+@RequestMapping({"/v1/auth", "/api/v1/auth"})
 @RequiredArgsConstructor
 public class AuthController {
 
@@ -26,6 +28,14 @@ public class AuthController {
     public ResponseEntity<RegistroResponseDTO> registro(
             @Valid @RequestBody RegistroUsuarioDTO dto) {
         RegistroResponseDTO response = authService.registro(dto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PostMapping(value = "/registro/institucional", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<RegistroResponseDTO> registroInstitucional(
+            @RequestPart("datos") @Valid RegistroUsuarioDTO dto,
+            @RequestPart("documentoSoporte") MultipartFile documentoSoporte) {
+        RegistroResponseDTO response = authService.registro(dto, documentoSoporte);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 

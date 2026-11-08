@@ -87,7 +87,7 @@ public class CloudinaryServiceImpl implements CloudinaryService {
                 url = (String) uploadResult.get("secure_url");
                 publicId = (String) uploadResult.get("public_id");
             } catch (IOException | RuntimeException e) {
-                log.error("Fallo al subir imagen a Cloudinary: {}", e.getMessage());
+                log.error("Fallo al subir imagen a Cloudinary ({})", e.getClass().getSimpleName());
                 throw new CloudinaryIntegrationException("No fue posible procesar y optimizar la imagen con Cloudinary", e);
             }
         }

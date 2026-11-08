@@ -1,0 +1,9 @@
+<div>
+  <h1>{{ titulo() }}</h1>
+  @if (resumen()) {
+    <p class="dash-summary">{{ resumen() }}</p>
+  }
+</div>
+<div class="dash-ctas">
+  <ng-content />
+</div>

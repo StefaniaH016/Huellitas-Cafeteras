@@ -4,6 +4,9 @@ import co.edu.uniquindio.huellitas.dto.auth.RegistroResponseDTO;
 import co.edu.uniquindio.huellitas.dto.auth.UsuarioDTO;
 import co.edu.uniquindio.huellitas.dto.usuario.UsuarioPerfilDTO;
 import co.edu.uniquindio.huellitas.entity.Usuario;
+import co.edu.uniquindio.huellitas.entity.Fundacion;
+import co.edu.uniquindio.huellitas.entity.Organizacion;
+import org.hibernate.Hibernate;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -42,6 +45,9 @@ public class UsuarioMapper {
         Long barrioId = null;
         Long municipioId = null;
         Long departamentoId = null;
+        Organizacion organizacion = usuario.getOrganizacion() != null
+                ? (Organizacion) Hibernate.unproxy(usuario.getOrganizacion())
+                : null;
 
         if (usuario.getBarrio() != null) {
             barrioId = usuario.getBarrio().getId();
@@ -56,6 +62,11 @@ public class UsuarioMapper {
             if (usuario.getMunicipioInteres().getDepartamento() != null) {
                 departamentoId = usuario.getMunicipioInteres().getDepartamento().getId();
             }
+        } else if (organizacion != null && organizacion.getMunicipio() != null) {
+            municipioId = organizacion.getMunicipio().getId();
+            if (organizacion.getMunicipio().getDepartamento() != null) {
+                departamentoId = organizacion.getMunicipio().getDepartamento().getId();
+            }
         }
 
         return UsuarioPerfilDTO.builder()
@@ -68,7 +79,18 @@ public class UsuarioMapper {
                 .departamentoId(departamentoId)
                 .municipioId(municipioId)
                 .barrioId(barrioId)
+                .organizacionId(organizacion != null ? organizacion.getId() : null)
+                .organizacionNombre(organizacion != null ? organizacion.getNombre() : null)
+                .estadoVerificacionOrganizacion(organizacion != null
+                        ? organizacion.getEstadoVerificacion().name()
+                        : null)
+                .aceptaCustodia(organizacion instanceof Fundacion fundacion
+                        ? fundacion.isAceptaCustodia()
+                        : null)
+                .capacidadAlbergue(organizacion instanceof Fundacion fundacion
+                        ? fundacion.getCapacidadAlbergue()
+                        : null)
+                .disponibleRescate(usuario.isDisponibleRescate())
                 .build();
     }
 }
-

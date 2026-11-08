@@ -1,0 +1,283 @@
+<div>
+  <div class="panel card-flat">
+    <div class="panel-head">
+      <h3>Resumen médico</h3>
+      @if (puedeDescargarPdf() && caso().resumenMedico) {
+        <button class="btn btn-secondary btn-sm" type="button" (click)="descargarPdf()">
+          Descargar historia clínica (PDF)
+        </button>
+      }
+    </div>
+    @if (caso().resumenMedico; as resumen) {
+      <div class="list-row">
+        <div class="avatar-dot" aria-hidden="true">🩺</div>
+        <div class="list-info">
+          <p class="list-title">
+            {{ resumen.veterinariaNombre || 'Veterinaria' }} · responsable de la bitácora
+          </p>
+          <p class="list-meta">
+            Abierta el {{ formatFecha(resumen.fechaApertura ?? undefined) }}
+            @if (resumen.altaMedica) {
+              · alta médica el {{ formatFecha(resumen.fechaAlta ?? undefined) }}
+            }
+          </p>
+        </div>
+        <span
+          class="badge"
+          [class.badge-resuelto]="resumen.altaMedica"
+          [class.badge-atencion]="!resumen.altaMedica"
+        >
+          <span class="badge-dot"></span>{{ resumen.altaMedica ? 'Alta médica' : 'En tratamiento' }}
+        </span>
+      </div>
+    } @else {
+      <p class="text-soft-md m-0">Este caso todavía no tiene atención médica.</p>
+    }
+    @if (!puedeConsultar() && puedeDescargarPdf() && caso().resumenMedico) {
+      <p class="note">
+        Las entradas no se muestran en esta vista; puedes descargarlas en la historia clínica PDF.
+      </p>
+    }
+    @if (!puedeConsultar() && !puedeDescargarPdf()) {
+      <div class="banner">
+        <span class="banner-ico" aria-hidden="true">🔒</span>
+        <p>
+          <strong>Solo ves el resumen médico.</strong>
+          Las entradas clínicas se muestran a la veterinaria verificada, el reportante, la fundación
+          custodio y administración.
+        </p>
+      </div>
+    }
+  </div>
+
+  @if (carga.cargando()) {
+    <p class="note" role="status">Cargando bitácora médica...</p>
+  }
+  @if (errorPdf()) {
+    <p class="feedback-error" role="alert">{{ errorPdf() }}</p>
+  }
+  @if (accion.exito()) {
+    <p class="feedback-success" role="status">{{ accion.exito() }}</p>
+  }
+  @if (accion.error() || carga.error()) {
+    <p class="feedback-error" role="alert">{{ accion.error() || carga.error() }}</p>
+  }
+
+  @if (puedeConsultar()) {
+    @if (sinBitacora()) {
+      <div class="panel card-flat">
+        <div class="panel-head"><h3>Este caso aún no tiene atención médica</h3></div>
+        <p class="text-soft-md">
+          Cuando una veterinaria tome el caso, aquí verás quién lo atiende y el registro de su
+          evolución.
+        </p>
+      </div>
+    }
+
+    @if (bitacora(); as bitacora) {
+      @if (bitacora.alta; as alta) {
+        <div class="banner banner-ok">
+          <span class="banner-ico" aria-hidden="true">✅</span>
+          <p>
+            <strong>Alta médica emitida el {{ formatFecha(alta.fechaAlta) }}</strong> La bitácora ya
+            no admite nuevas entradas. El caso puede cerrarse.
+          </p>
+        </div>
+      }
+
+      <div class="panel-head mt-sm"><h3>Entradas</h3></div>
+      @for (entrada of entradasOrdenadas(); track entrada.id) {
+        <article class="entry" [class.entry-alta]="esEntradaAlta(entrada)">
+          <div class="entry-head">
+            <p>
+              <strong>{{ esEntradaAlta(entrada) ? 'Alta médica' : 'Evolución clínica' }}</strong>
+            </p>
+            @if (esEntradaAlta(entrada)) {
+              <span class="badge badge-resuelto"><span class="badge-dot"></span>Alta</span>
+            } @else {
+              <span class="badge badge-atencion"><span class="badge-dot"></span>Evolución</span>
+            }
+          </div>
+          <dl class="entry-grid">
+            @if (esEntradaAlta(entrada)) {
+              <div>
+                <dt>Condición al alta</dt>
+                <dd>{{ condicionAlta(entrada) }}</dd>
+              </div>
+              @if (indicacionesAlta(entrada)) {
+                <div>
+                  <dt>Indicaciones y destino</dt>
+                  <dd>{{ indicacionesAlta(entrada) }}</dd>
+                </div>
+              }
+            } @else {
+              @if (entrada.diagnostico) {
+                <div>
+                  <dt>Diagnóstico</dt>
+                  <dd>{{ entrada.diagnostico }}</dd>
+                </div>
+              }
+              @if (entrada.procedimiento) {
+                <div>
+                  <dt>Procedimiento</dt>
+                  <dd>{{ entrada.procedimiento }}</dd>
+                </div>
+              }
+              @if (entrada.tratamiento || entrada.medicamentos) {
+                <div>
+                  <dt>Tratamiento y medicamentos</dt>
+                  <dd>
+                    {{ entrada.tratamiento }}
+                    @if (entrada.tratamiento && entrada.medicamentos) {
+                      ·
+                    }
+                    {{ entrada.medicamentos }}
+                  </dd>
+                </div>
+              }
+              @if (entrada.evolucion || entrada.observaciones) {
+                <div>
+                  <dt>Evolución y observaciones</dt>
+                  <dd>{{ entrada.evolucion || entrada.observaciones }}</dd>
+                </div>
+              }
+            }
+          </dl>
+          @if (entrada.firmanteNombre || entrada.fechaFirma || entrada.fecha) {
+            <p class="entry-sign">
+              Firmada por {{ entrada.firmanteNombre || 'Personal veterinario' }}
+              @if (entrada.fechaFirma || entrada.fecha) {
+                · {{ formatFechaHora(entrada.fechaFirma || entrada.fecha) }}
+              }
+            </p>
+          }
+        </article>
+      } @empty {
+        <p class="list-empty">Todavía no hay entradas clínicas.</p>
+      }
+
+      @if (admiteEntradas() && formularioActivo() === 'entrada') {
+        <form class="panel card-flat" (ngSubmit)="registrarEvolucion()">
+          <fieldset>
+            <legend>Nueva entrada de evolución</legend>
+            <div class="grid-2">
+              <div class="form-field">
+                <label for="ev-diagnostico">Diagnóstico <span class="required">*</span></label>
+                <textarea
+                  id="ev-diagnostico"
+                  name="diagnostico"
+                  required
+                  [(ngModel)]="evolucion.diagnostico"
+                  placeholder="Descripción del diagnóstico clínico"
+                ></textarea>
+              </div>
+              <div class="form-field">
+                <label for="ev-procedimientos"
+                  >Procedimiento realizado <span class="optional">(opcional)</span></label
+                >
+                <textarea
+                  id="ev-procedimientos"
+                  name="procedimientos"
+                  [(ngModel)]="evolucion.procedimientos"
+                  placeholder="Procedimientos realizados durante la consulta"
+                ></textarea>
+              </div>
+              <div class="form-field">
+                <label for="ev-tratamiento">Tratamiento <span class="required">*</span></label>
+                <textarea
+                  id="ev-tratamiento"
+                  name="tratamiento"
+                  required
+                  [(ngModel)]="evolucion.tratamiento"
+                  placeholder="Plan de tratamiento y medicamentos"
+                ></textarea>
+              </div>
+              <div class="form-field">
+                <label for="ev-observaciones">Evolución <span class="required">*</span></label>
+                <textarea
+                  id="ev-observaciones"
+                  name="observaciones"
+                  required
+                  [(ngModel)]="evolucion.observaciones"
+                  placeholder="Cómo está respondiendo el animal al tratamiento"
+                ></textarea>
+              </div>
+              <div class="form-field">
+                <label for="ev-medicamentos"
+                  >Medicamentos formulados <span class="optional">(opcional)</span></label
+                >
+                <textarea
+                  id="ev-medicamentos"
+                  name="medicamentos"
+                  [(ngModel)]="evolucion.medicamentos"
+                  placeholder="Nombre, dosis y frecuencia"
+                ></textarea>
+              </div>
+            </div>
+          </fieldset>
+          <button
+            class="btn btn-primary btn-sm"
+            type="submit"
+            [disabled]="accion.cargando() || !evolucion.diagnostico.trim()"
+          >
+            Firmar y guardar entrada
+          </button>
+          <button class="btn btn-secondary btn-sm" type="button" (click)="formularioCerrado.emit()">
+            Cancelar
+          </button>
+          <p class="note">
+            La entrada queda firmada con tu nombre, correo y la fecha/hora, y no se puede modificar.
+            Guárdala solo cuando esté completa.
+          </p>
+        </form>
+      }
+      @if (admiteEntradas() && formularioActivo() === 'alta') {
+        <form class="panel card-flat" (ngSubmit)="emitirAlta()">
+          <div class="form-field">
+            <label for="alta-condicion">Condición del animal al alta</label>
+            <textarea
+              id="alta-condicion"
+              name="condicionAlta"
+              required
+              [(ngModel)]="alta.condicionAlta"
+              placeholder="Estado de salud con el que termina la atención"
+            ></textarea>
+          </div>
+          <div class="form-field">
+            <label for="alta-indicaciones">Indicaciones y destino recomendado</label>
+            <textarea
+              id="alta-indicaciones"
+              name="indicaciones"
+              [(ngModel)]="alta.indicaciones"
+              placeholder="Cuidados en casa y si es apto para regresar a su hogar o para adopción"
+            ></textarea>
+          </div>
+          <label class="checkline mb-sm">
+            <input
+              type="checkbox"
+              id="alta-confirmo"
+              name="confirmoAlta"
+              required
+              [(ngModel)]="confirmoAlta"
+            />
+            Confirmo que el animal ya no requiere atención médica.
+          </label>
+          <button
+            class="btn btn-primary btn-sm"
+            type="submit"
+            [disabled]="accion.cargando() || !alta.condicionAlta.trim() || !confirmoAlta"
+          >
+            Firmar alta médica
+          </button>
+          <button class="btn btn-secondary btn-sm" type="button" (click)="formularioCerrado.emit()">
+            Cancelar
+          </button>
+          <p class="note">
+            Después del alta no se pueden agregar entradas. La fundación o la reportante cierran el
+            caso y registran el destino.
+          </p>
+        </form>
+      }
+    }
+  }
+</div>

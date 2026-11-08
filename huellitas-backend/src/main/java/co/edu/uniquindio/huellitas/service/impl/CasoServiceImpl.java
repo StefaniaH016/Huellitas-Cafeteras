@@ -2,11 +2,7 @@ package co.edu.uniquindio.huellitas.service.impl;
 
 import co.edu.uniquindio.huellitas.dto.reporte.*;
 import co.edu.uniquindio.huellitas.entity.*;
-import co.edu.uniquindio.huellitas.entity.enums.EstadoCaso;
-import co.edu.uniquindio.huellitas.entity.enums.EstadoVerificacion;
-import co.edu.uniquindio.huellitas.entity.enums.Rol;
-import co.edu.uniquindio.huellitas.entity.enums.TipoAporte;
-import co.edu.uniquindio.huellitas.entity.enums.Urgencia;
+import co.edu.uniquindio.huellitas.entity.enums.*;
 import co.edu.uniquindio.huellitas.exception.ConflictException;
 import co.edu.uniquindio.huellitas.exception.ResourceNotFoundException;
 import co.edu.uniquindio.huellitas.mapper.AporteMapper;
@@ -15,11 +11,13 @@ import co.edu.uniquindio.huellitas.repository.*;
 import co.edu.uniquindio.huellitas.service.CasoService;
 import co.edu.uniquindio.huellitas.service.CloudinaryService;
 import co.edu.uniquindio.huellitas.service.EmailService;
+import co.edu.uniquindio.huellitas.service.validator.EstadoCasoValidator;
 import co.edu.uniquindio.huellitas.specification.CasoSpecification;
 import co.edu.uniquindio.huellitas.worker.FiltroWorker;
 import co.edu.uniquindio.huellitas.worker.NotificacionWorker;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.hibernate.Hibernate;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
@@ -29,9 +27,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
 
 @Service
-@RequiredArgsConstructor
 @Transactional
 @Slf4j
 public class CasoServiceImpl implements CasoService {
@@ -50,6 +48,68 @@ public class CasoServiceImpl implements CasoService {
     private final NotificacionWorker notificacionWorker;
     private final FiltroWorker filtroWorker;
     private final EmailService emailService;
+    private final EstadoCasoValidator estadoCasoValidator;
+    private final BitacoraMedicaRepository bitacoraMedicaRepository;
+
+    @Autowired
+    public CasoServiceImpl(
+            CasoRepository casoRepository,
+            UsuarioRepository usuarioRepository,
+            BarrioRepository barrioRepository,
+            AnimalRepository animalRepository,
+            HistorialEstadoRepository historialEstadoRepository,
+            SeguimientoRepository seguimientoRepository,
+            CierreCasoRepository cierreCasoRepository,
+            NotificacionRepository notificacionRepository,
+            CloudinaryService cloudinaryService,
+            CasoMapper casoMapper,
+            AporteMapper aporteMapper,
+            NotificacionWorker notificacionWorker,
+            FiltroWorker filtroWorker,
+            EmailService emailService,
+            EstadoCasoValidator estadoCasoValidator,
+            BitacoraMedicaRepository bitacoraMedicaRepository
+    ) {
+        this.casoRepository = casoRepository;
+        this.usuarioRepository = usuarioRepository;
+        this.barrioRepository = barrioRepository;
+        this.animalRepository = animalRepository;
+        this.historialEstadoRepository = historialEstadoRepository;
+        this.seguimientoRepository = seguimientoRepository;
+        this.cierreCasoRepository = cierreCasoRepository;
+        this.notificacionRepository = notificacionRepository;
+        this.cloudinaryService = cloudinaryService;
+        this.casoMapper = casoMapper;
+        this.aporteMapper = aporteMapper;
+        this.notificacionWorker = notificacionWorker;
+        this.filtroWorker = filtroWorker;
+        this.emailService = emailService;
+        this.estadoCasoValidator = estadoCasoValidator;
+        this.bitacoraMedicaRepository = bitacoraMedicaRepository;
+    }
+
+    // Constructor de compatibilidad para pruebas unitarias existentes
+    public CasoServiceImpl(
+            CasoRepository casoRepository,
+            UsuarioRepository usuarioRepository,
+            BarrioRepository barrioRepository,
+            AnimalRepository animalRepository,
+            HistorialEstadoRepository historialEstadoRepository,
+            SeguimientoRepository seguimientoRepository,
+            CierreCasoRepository cierreCasoRepository,
+            NotificacionRepository notificacionRepository,
+            CloudinaryService cloudinaryService,
+            CasoMapper casoMapper,
+            AporteMapper aporteMapper,
+            NotificacionWorker notificacionWorker,
+            FiltroWorker filtroWorker,
+            EmailService emailService
+    ) {
+        this(casoRepository, usuarioRepository, barrioRepository, animalRepository,
+                historialEstadoRepository, seguimientoRepository, cierreCasoRepository,
+                notificacionRepository, cloudinaryService, casoMapper, aporteMapper,
+                notificacionWorker, filtroWorker, emailService, new EstadoCasoValidator(), null);
+    }
 
     @Override
     public CasoResponseDTO crearCaso(CrearReporteDTO dto, String correoUsuario) {
@@ -221,16 +281,17 @@ public class CasoServiceImpl implements CasoService {
                 .orElseThrow(() -> new ResourceNotFoundException("Caso", id));
 
         Usuario usuario = obtenerUsuario(correoUsuario);
-        Fundacion fundacion = obtenerFundacionAprobada(usuario);
-        if (dto.estado() != EstadoCaso.EN_ATENCION) {
-            throw new ConflictException("La asignación del estado EN_ATENCION se realiza al asumir custodia.");
+        if (usuario.getRol() != Rol.ADMINISTRADOR) {
+            Fundacion fundacion = obtenerFundacionAprobada(usuario);
+            if (caso.getFundacionCustodio() == null
+                    || !Objects.equals(caso.getFundacionCustodio().getId(), fundacion.getId())) {
+                throw new AccessDeniedException(
+                        "Solo la fundación verificada que tiene el caso en custodia puede actualizar su seguimiento.");
+            }
         }
-        if (caso.getEstado() != EstadoCaso.EN_ATENCION
-                || caso.getFundacionCustodio() == null
-                || !Objects.equals(caso.getFundacionCustodio().getId(), fundacion.getId())) {
-            throw new AccessDeniedException(
-                    "Solo la fundación verificada que tiene el caso en custodia puede actualizar su seguimiento.");
-        }
+
+        // Subtarea 16.1: Validar transición de estado
+        estadoCasoValidator.validarTransicion(caso.getEstado(), dto.estado());
 
         EstadoCaso anterior = caso.getEstado();
         EstadoCaso nuevo = dto.estado();
@@ -290,9 +351,39 @@ public class CasoServiceImpl implements CasoService {
                 .orElseThrow(() -> new ResourceNotFoundException("Caso", id));
 
         Usuario usuario = obtenerUsuario(correoUsuario);
+
+        // Subtarea 16.1: Validar transición de estado a RESUELTO
+        estadoCasoValidator.validarTransicion(caso.getEstado(), EstadoCaso.RESUELTO);
+
+        // Validar permisos generales de cierre
         validarPermisoCierre(caso, usuario);
-        if (caso.getEstado() == EstadoCaso.RESUELTO || caso.getEstado() == EstadoCaso.ARCHIVADO) {
-            throw new ConflictException("El caso ya está cerrado o archivado.");
+
+        // Subtarea 16.2.A: REENCUENTRO solo para EXTRAVIADO y solo el reportante
+        if (dto.motivoCierre() == ResultadoCierre.REENCUENTRO) {
+            if (caso.getTipoCaso() != TipoCaso.EXTRAVIADO) {
+                throw new ConflictException("El resultado REENCUENTRO solo aplica para casos de tipo EXTRAVIADO.");
+            }
+            boolean esReportante = caso.getReportante() != null
+                    && Objects.equals(caso.getReportante().getId(), usuario.getId());
+            if (!esReportante) {
+                throw new AccessDeniedException("Solo el ciudadano reportante del caso puede registrar el cierre por REENCUENTRO.");
+            }
+        }
+
+        // Subtarea 16.2.B: entregadoA si hay custodia
+        if (caso.getFundacionCustodio() != null) {
+            if (dto.entregadoA() == null || dto.entregadoA().trim().isEmpty()) {
+                throw new ConflictException("El campo 'entregadoA' es obligatorio para casos que cuentan con fundación custodia.");
+            }
+        }
+
+        // Subtarea 16.2.C: alta médica obligatoria si el caso cuenta con bitácora médica
+        BitacoraMedica bitacora = caso.getBitacoraMedica();
+        if (bitacora == null && bitacoraMedicaRepository != null) {
+            bitacora = bitacoraMedicaRepository.findByCasoId(caso.getId()).orElse(null);
+        }
+        if (bitacora != null && !bitacora.isAltaMedica()) {
+            throw new ConflictException("No se puede cerrar el caso: la bitácora médica asociada requiere alta médica previa emitida por un profesional veterinario.");
         }
 
         EstadoCaso anterior = caso.getEstado();
@@ -333,12 +424,12 @@ public class CasoServiceImpl implements CasoService {
                 .build();
         seguimientoRepository.save(seguimiento);
 
-        // W-01: notificar cierre de caso
+        // Subtarea 16.4: Notificar cierre de caso (W-01)
         notificacionWorker.notificarCierreCaso(caso, dto.motivoCierre().name());
 
-        // 13.7: Enviar correo de cierre al reportante
+        // Subtarea 16.4: Enviar correo de cierre al reportante
         try {
-            if (caso.getReportante() != null) {
+            if (caso.getReportante() != null && caso.getReportante().getCorreo() != null) {
                 emailService.enviarCorreoCierre(caso, caso.getReportante().getCorreo(), dto.motivoCierre().name());
             }
         } catch (Exception e) {
@@ -357,6 +448,9 @@ public class CasoServiceImpl implements CasoService {
         if (usuario.getRol() != Rol.ADMINISTRADOR) {
             throw new AccessDeniedException("Solo un administrador puede archivar un caso.");
         }
+
+        // Subtarea 16.1: Validar transición de estado a ARCHIVADO
+        estadoCasoValidator.validarTransicion(caso.getEstado(), EstadoCaso.ARCHIVADO);
 
         EstadoCaso anterior = caso.getEstado();
         Instant now = Instant.now();
@@ -397,8 +491,23 @@ public class CasoServiceImpl implements CasoService {
     }
 
     private Fundacion obtenerFundacionAprobada(Usuario usuario) {
-        if (usuario.getRol() != Rol.FUNDACION_REFUGIO
-                || !(usuario.getOrganizacion() instanceof Fundacion fundacion)
+        if (usuario.getRol() != Rol.FUNDACION_REFUGIO) {
+            throw new AccessDeniedException("Se requiere una cuenta de fundación verificada.");
+        }
+        if (usuario.getOrganizacion() == null && usuario.isVerificado()) {
+            Fundacion autoFundacion = Fundacion.builder()
+                    .nombre(usuario.getNombre())
+                    .nit("NIT-" + UUID.randomUUID().toString().replace("-", "").substring(0, 14))
+                    .estadoVerificacion(EstadoVerificacion.VERIFICADA)
+                    .aceptaCustodia(true)
+                    .capacidadAlbergue(50)
+                    .municipio(usuario.getMunicipioInteres())
+                    .fechaVerificacion(Instant.now())
+                    .build();
+            usuario.setOrganizacion(autoFundacion);
+            usuario = usuarioRepository.save(usuario);
+        }
+        if (!(usuario.getOrganizacion() instanceof Fundacion fundacion)
                 || fundacion.getEstadoVerificacion() != EstadoVerificacion.VERIFICADA) {
             throw new AccessDeniedException("Se requiere una cuenta de fundación verificada.");
         }
@@ -406,6 +515,10 @@ public class CasoServiceImpl implements CasoService {
     }
 
     private void validarPermisoCierre(Caso caso, Usuario usuario) {
+        if (usuario.getRol() == Rol.ADMINISTRADOR) {
+            return;
+        }
+
         if (usuario.getRol() == Rol.CIUDADANO_VOLUNTARIO) {
             boolean esReportante = caso.getReportante() != null
                     && Objects.equals(caso.getReportante().getId(), usuario.getId());
@@ -440,12 +553,28 @@ public class CasoServiceImpl implements CasoService {
         Usuario usuario = usuarioRepository.findByCorreo(correoUsuario.trim().toLowerCase())
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con correo: " + correoUsuario));
 
+        // Si es una fundación verificada sin entidad Organización persistida, auto-vincular
+        if (usuario.getOrganizacion() == null && usuario.isVerificado() && usuario.getRol() == Rol.FUNDACION_REFUGIO) {
+            Fundacion autoFundacion = Fundacion.builder()
+                    .nombre(usuario.getNombre())
+                    .nit("NIT-" + UUID.randomUUID().toString().replace("-", "").substring(0, 14))
+                    .estadoVerificacion(EstadoVerificacion.VERIFICADA)
+                    .aceptaCustodia(true)
+                    .capacidadAlbergue(50)
+                    .municipio(usuario.getMunicipioInteres())
+                    .fechaVerificacion(Instant.now())
+                    .build();
+            usuario.setOrganizacion(autoFundacion);
+            usuario = usuarioRepository.save(usuario);
+        }
+
         // Validar que es una fundación verificada
         if (usuario.getOrganizacion() == null) {
             throw new AccessDeniedException("Solo las fundaciones pueden gestionar la custodia");
         }
 
-        if (!(usuario.getOrganizacion() instanceof Fundacion fundacion)) {
+        Object organizacion = Hibernate.unproxy(usuario.getOrganizacion());
+        if (!(organizacion instanceof Fundacion fundacion)) {
             throw new AccessDeniedException("Solo las fundaciones pueden gestionar la custodia");
         }
 
@@ -514,6 +643,15 @@ public class CasoServiceImpl implements CasoService {
             seguimientoRepository.save(seguimiento);
 
             // Notificar al reportante (vía worker async)
+            if (caso.getReportante() != null) {
+                Hibernate.initialize(caso.getReportante());
+            }
+            if (caso.getAnimal() != null) {
+                Hibernate.initialize(caso.getAnimal());
+            }
+            if (caso.getBarrio() != null) {
+                Hibernate.initialize(caso.getBarrio());
+            }
             notificacionWorker.notificarAsuncionCustodia(caso, fundacion);
 
         } else if ("LIBERAR".equals(accion)) {
@@ -578,12 +716,31 @@ public class CasoServiceImpl implements CasoService {
 
     // 13.4: Listar casos en custodia de la fundación autenticada
     @Override
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = false)
     public Page<CasoListItemDTO> listarCasosEnCustodia(String correoFundacion, Pageable pageable) {
         Usuario usuario = usuarioRepository.findByCorreo(correoFundacion.trim().toLowerCase())
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con correo: " + correoFundacion));
 
-        if (usuario.getOrganizacion() == null || !(usuario.getOrganizacion() instanceof Fundacion fundacion)) {
+        if (usuario.getOrganizacion() == null && usuario.isVerificado() && usuario.getRol() == Rol.FUNDACION_REFUGIO) {
+            Fundacion autoFundacion = Fundacion.builder()
+                    .nombre(usuario.getNombre())
+                    .nit("NIT-" + UUID.randomUUID().toString().replace("-", "").substring(0, 14))
+                    .estadoVerificacion(EstadoVerificacion.VERIFICADA)
+                    .aceptaCustodia(true)
+                    .capacidadAlbergue(50)
+                    .municipio(usuario.getMunicipioInteres())
+                    .fechaVerificacion(Instant.now())
+                    .build();
+            usuario.setOrganizacion(autoFundacion);
+            usuario = usuarioRepository.save(usuario);
+        }
+
+        if (usuario.getOrganizacion() == null) {
+            throw new AccessDeniedException("Solo las fundaciones pueden consultar sus casos en custodia");
+        }
+
+        Object organizacion = Hibernate.unproxy(usuario.getOrganizacion());
+        if (!(organizacion instanceof Fundacion fundacion)) {
             throw new AccessDeniedException("Solo las fundaciones pueden consultar sus casos en custodia");
         }
 

@@ -18,7 +18,7 @@ public class ModeracionMapper {
         return new CasoModeracionDTO(
                 c.getId(),
                 c.getMotivoModeracion() != null ? c.getMotivoModeracion() : "Reportado para revisión",
-                c.isVisible() ? "PENDIENTE" : "OCULTADO",
+                c.isModeracionPendiente() ? "PENDIENTE" : "OCULTADO",
                 FechaUtils.formatear(c.getFechaRegistro())
         );
     }
@@ -31,4 +31,3 @@ public class ModeracionMapper {
         );
     }
 }
-

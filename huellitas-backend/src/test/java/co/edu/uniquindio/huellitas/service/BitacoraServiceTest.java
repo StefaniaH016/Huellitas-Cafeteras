@@ -40,6 +40,7 @@ import static org.mockito.Mockito.*;
  * Pruebas unitarias para BitacoraServiceImpl - Subtarea 14.7
  * Cubre:
  * - Tabla de decisión de permisos (Rol × Verificado × Relación con el caso)
+ * - Restricción de lectura de entradas clínicas a usuarios autorizados por caso
  * - Pruebas de estado (REGISTRADO, EN_ATENCION, RESUELTO, ARCHIVADO)
  * - Inmutabilidad y bloqueo tras alta médica
  */
@@ -405,36 +406,47 @@ class BitacoraServiceTest {
         }
 
         @Test
-        @DisplayName("Reportante del caso tiene acceso a la bitácora")
+        @DisplayName("Veterinaria no verificada no puede consultar las entradas clínicas")
+        void testObtenerBitacora_DenegadoVeterinariaNoVerificada() {
+            when(bitacoraMedicaRepository.findByCasoId(100L)).thenReturn(Optional.of(bitacoraAbierta));
+            when(usuarioRepository.findByCorreo("vet.noverificada@huellitas.co"))
+                    .thenReturn(Optional.of(veterinariaNoVerificada));
+
+            assertThrows(AccessDeniedException.class, () ->
+                    bitacoraService.obtenerBitacora(100L, "vet.noverificada@huellitas.co"));
+        }
+
+        @Test
+        @DisplayName("El reportante del caso puede consultar las entradas clínicas")
         void testObtenerBitacora_AccesoReportante() {
             when(bitacoraMedicaRepository.findByCasoId(100L)).thenReturn(Optional.of(bitacoraAbierta));
             when(usuarioRepository.findByCorreo("reportante@huellitas.co")).thenReturn(Optional.of(reportante));
-            when(registroMedicoRepository.findByBitacoraMedicaIdOrderByFechaAsc(50L)).thenReturn(Collections.emptyList());
+            when(registroMedicoRepository.findByBitacoraMedicaIdOrderByFechaAsc(50L))
+                    .thenReturn(Collections.emptyList());
 
-            BitacoraDetalleDTO detalle = bitacoraService.obtenerBitacora(100L, "reportante@huellitas.co");
-            assertNotNull(detalle);
+            assertNotNull(bitacoraService.obtenerBitacora(100L, "reportante@huellitas.co"));
         }
 
         @Test
-        @DisplayName("Fundación custodia del caso tiene acceso a la bitácora")
+        @DisplayName("La fundación custodio puede consultar las entradas clínicas")
         void testObtenerBitacora_AccesoFundacionCustodia() {
             when(bitacoraMedicaRepository.findByCasoId(100L)).thenReturn(Optional.of(bitacoraAbierta));
             when(usuarioRepository.findByCorreo("fundacion@huellitas.co")).thenReturn(Optional.of(usuarioFundacion));
-            when(registroMedicoRepository.findByBitacoraMedicaIdOrderByFechaAsc(50L)).thenReturn(Collections.emptyList());
+            when(registroMedicoRepository.findByBitacoraMedicaIdOrderByFechaAsc(50L))
+                    .thenReturn(Collections.emptyList());
 
-            BitacoraDetalleDTO detalle = bitacoraService.obtenerBitacora(100L, "fundacion@huellitas.co");
-            assertNotNull(detalle);
+            assertNotNull(bitacoraService.obtenerBitacora(100L, "fundacion@huellitas.co"));
         }
 
         @Test
-        @DisplayName("Administrador tiene acceso de supervisión a la bitácora")
+        @DisplayName("La administración puede consultar las entradas clínicas")
         void testObtenerBitacora_AccesoAdministrador() {
             when(bitacoraMedicaRepository.findByCasoId(100L)).thenReturn(Optional.of(bitacoraAbierta));
             when(usuarioRepository.findByCorreo("admin@huellitas.co")).thenReturn(Optional.of(admin));
-            when(registroMedicoRepository.findByBitacoraMedicaIdOrderByFechaAsc(50L)).thenReturn(Collections.emptyList());
+            when(registroMedicoRepository.findByBitacoraMedicaIdOrderByFechaAsc(50L))
+                    .thenReturn(Collections.emptyList());
 
-            BitacoraDetalleDTO detalle = bitacoraService.obtenerBitacora(100L, "admin@huellitas.co");
-            assertNotNull(detalle);
+            assertNotNull(bitacoraService.obtenerBitacora(100L, "admin@huellitas.co"));
         }
 
         @Test
@@ -502,10 +514,26 @@ class BitacoraServiceTest {
     @DisplayName("Genera PDF resumen delegando al PdfWorker")
     void testGenerarPdfResumen() {
         byte[] pdfBytes = "%PDF-1.4 test bytes".getBytes();
+        when(casoRepository.existsById(100L)).thenReturn(true);
+        when(bitacoraMedicaRepository.findByCasoId(100L)).thenReturn(Optional.of(bitacoraAbierta));
+        when(usuarioRepository.findByCorreo("vet.verificada@huellitas.co")).thenReturn(Optional.of(veterinariaVerificada));
         when(pdfWorker.generarResumenClinico(100L)).thenReturn(pdfBytes);
 
         byte[] result = bitacoraService.generarPdfResumen(100L);
         assertThat(result).isEqualTo(pdfBytes);
         verify(pdfWorker, times(1)).generarResumenClinico(100L);
+    }
+
+    @Test
+    @DisplayName("La administración autorizada puede generar el PDF clínico")
+    void testGenerarPdfResumen_AccesoAdministrador() {
+        byte[] pdfBytes = "%PDF-1.4 test bytes".getBytes();
+        when(casoRepository.existsById(100L)).thenReturn(true);
+        when(bitacoraMedicaRepository.findByCasoId(100L)).thenReturn(Optional.of(bitacoraAbierta));
+        when(usuarioRepository.findByCorreo("admin@huellitas.co")).thenReturn(Optional.of(admin));
+        when(pdfWorker.generarResumenClinico(100L)).thenReturn(pdfBytes);
+
+        assertThat(bitacoraService.generarPdfResumen(100L, "admin@huellitas.co")).isEqualTo(pdfBytes);
+        verify(pdfWorker).generarResumenClinico(100L);
     }
 }

@@ -56,6 +56,10 @@ public class Caso {
     @Column(columnDefinition = "TEXT")
     private String motivoModeracion;
 
+    @Builder.Default
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private boolean moderacionPendiente = false;
+
     /** Control de concurrencia optimista. */
     @Version
     private Long version;

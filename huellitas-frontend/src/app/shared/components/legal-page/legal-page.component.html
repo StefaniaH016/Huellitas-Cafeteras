@@ -1,0 +1,26 @@
+<article class="policy">
+  <header class="policy-head">
+    <button type="button" class="policy-back" (click)="volver()">← Volver</button>
+    <p class="policy-kicker">Huellitas Cafeteras</p>
+    <h1>{{ titulo() }}</h1>
+    <p class="policy-meta">Versión {{ version }} · Vigente desde el {{ vigenteDesde }}</p>
+    <div class="policy-lead"><ng-content select="[lead]" /></div>
+  </header>
+
+  <nav class="policy-toc" [attr.aria-label]="'Contenido: ' + titulo()">
+    <ol>
+      @for (seccion of secciones(); track seccion.id) {
+        <li>
+          <a [href]="'#' + seccion.id" (click)="irA(seccion.id, $event)">{{ seccion.titulo }}</a>
+        </li>
+      }
+    </ol>
+  </nav>
+
+  <ng-content />
+
+  <footer class="policy-foot">
+    <a [routerLink]="otroDocumento().ruta" class="policy-link">{{ otroDocumento().texto }}</a>
+    <button type="button" class="btn btn-primary" (click)="volver()">Entendido</button>
+  </footer>
+</article>

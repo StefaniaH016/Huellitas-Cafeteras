@@ -1,8 +1,25 @@
+import { Type } from '@angular/core';
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
 import { roleGuard } from './core/guards/role.guard';
 import { PublicLayout } from './layouts/public-layout/public-layout';
 import { PrivateLayout } from './layouts/private-layout/private-layout.component';
+import { AvisoData } from './pages/aviso/aviso.component';
+
+const aviso = (): Promise<Type<unknown>> =>
+  import('./pages/aviso/aviso.component').then((m) => m.AvisoComponent);
+
+const ACCESO_DENEGADO: AvisoData = {
+  icono: '🚫',
+  titulo: 'Acceso denegado',
+  mensaje: 'No tienes permiso para acceder a esta sección.',
+};
+
+const NO_ENCONTRADA: AvisoData = {
+  icono: '🐾',
+  titulo: '404 – Página no encontrada',
+  mensaje: 'La página que buscas no existe o aún no ha sido implementada.',
+};
 
 export const routes: Routes = [
   // Public routes
@@ -23,6 +40,20 @@ export const routes: Routes = [
         path: 'registro',
         loadComponent: () =>
           import('./pages/registro/registro.component').then((m) => m.RegistroComponent),
+      },
+      {
+        path: 'politica-datos',
+        title: 'Política de tratamiento de datos · Huellitas Cafeteras',
+        loadComponent: () =>
+          import('./pages/politica-datos/politica-datos.component').then(
+            (m) => m.PoliticaDatosComponent,
+          ),
+      },
+      {
+        path: 'terminos',
+        title: 'Términos y condiciones · Huellitas Cafeteras',
+        loadComponent: () =>
+          import('./pages/terminos/terminos.component').then((m) => m.TerminosComponent),
       },
     ],
   },
@@ -63,45 +94,49 @@ export const routes: Routes = [
       },
       {
         path: 'mis-reportes',
+        canActivate: [roleGuard],
+        data: { roles: ['CIUDADANO_VOLUNTARIO'] },
         loadComponent: () =>
           import('./pages/mis-reportes/mis-reportes.component').then((m) => m.MisReportesComponent),
       },
       {
-        path: 'mensajes',
-        loadComponent: () =>
-          import('./pages/placeholder/placeholder.component').then((m) => m.PlaceholderComponent),
-        data: { title: 'Mensajes' },
-      },
-      {
         path: 'notificaciones',
         loadComponent: () =>
-          import('./pages/placeholder/placeholder.component').then((m) => m.PlaceholderComponent),
-        data: { title: 'Notificaciones' },
-      },
-      {
-        path: 'acceso-denegado',
-        loadComponent: () =>
-          import('./pages/acceso-denegado/acceso-denegado.component').then(
-            (m) => m.AccesoDenegadoComponent,
+          import('./pages/notificaciones/notificaciones.component').then(
+            (m) => m.NotificacionesComponent,
           ),
       },
       {
-        path: '404',
+        path: 'cuenta',
         loadComponent: () =>
-          import('./pages/not-found/not-found.component').then((m) => m.NotFoundComponent),
+          import('./pages/cuenta/cuenta.component').then((m) => m.CuentaComponent),
+      },
+      {
+        path: 'acceso-denegado',
+        loadComponent: aviso,
+        data: ACCESO_DENEGADO,
+      },
+      {
+        path: '404',
+        loadComponent: aviso,
+        data: NO_ENCONTRADA,
       },
       // Feature routes
-      {
-        path: 'casos/:id/editar',
-        loadComponent: () =>
-          import('./pages/reportar/reportar.component').then((m) => m.ReportarComponent),
-      },
       {
         path: 'casos',
         loadComponent: () => import('./pages/casos/casos.component').then((m) => m.CasosComponent),
       },
       {
         path: 'reportar',
+        canActivate: [roleGuard],
+        data: { roles: ['CIUDADANO_VOLUNTARIO'] },
+        loadComponent: () =>
+          import('./pages/reportar/reportar.component').then((m) => m.ReportarComponent),
+      },
+      {
+        path: 'casos/:id/editar',
+        canActivate: [roleGuard],
+        data: { roles: ['CIUDADANO_VOLUNTARIO'] },
         loadComponent: () =>
           import('./pages/reportar/reportar.component').then((m) => m.ReportarComponent),
       },

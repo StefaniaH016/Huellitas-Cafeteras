@@ -111,6 +111,19 @@ class NotificacionWorkerTest {
                 .build();
     }
 
+    @Test
+    @DisplayName("Notifica a la organización cuando se aprueba o rechaza su verificación")
+    void debeNotificarResultadoDeVerificacionAOrganizacion() {
+        notificacionWorker.notificarVerificacionOrganizacion(reportante, true);
+
+        org.mockito.ArgumentCaptor<Notificacion> captor = org.mockito.ArgumentCaptor.forClass(Notificacion.class);
+        verify(notificacionRepository).save(captor.capture());
+        assertEquals(reportante, captor.getValue().getUsuario());
+        assertEquals(TipoNotificacion.VERIFICACION, captor.getValue().getTipo());
+        assertNull(captor.getValue().getCaso());
+        assertTrue(captor.getValue().getMensaje().contains("fue verificada"));
+    }
+
     // === Pruebas 13.5: Notificaciones de aportes ===
 
     @Test
@@ -189,7 +202,7 @@ class NotificacionWorkerTest {
         notificacionWorker.notificarEmergenciaARescuatistas(casoUrgente);
 
         // Assert
-        verify(notificacionRepository, times(2)).save(any(Notificacion.class)); // Rescuista + reportante
+        verify(notificacionRepository, times(1)).save(any(Notificacion.class));
         verify(emailService, times(1)).enviarCorreoEmergencia(any(Caso.class), eq("rescuista@huellitas.com"));
     }
 
@@ -208,8 +221,8 @@ class NotificacionWorkerTest {
     }
 
     @Test
-    @DisplayName("13.6: Debe notificar al reportante de caso urgente")
-    void debeNotificarReportanteEmergencia() {
+    @DisplayName("13.6: No duplica la notificación del reportante en el aviso a rescuistas")
+    void noDuplicaNotificacionReportanteEmergencia() {
         // Arrange
         when(usuarioRepository.findByMunicipioInteresIdAndDisponibleRescateTrue(1L))
                 .thenReturn(List.of(rescuista));
@@ -217,8 +230,8 @@ class NotificacionWorkerTest {
         // Act
         notificacionWorker.notificarEmergenciaARescuatistas(casoUrgente);
 
-        // Assert - Debe notificar tanto al rescuista como al reportante
-        verify(notificacionRepository, atLeast(1)).save(any(Notificacion.class));
+        // El reportante recibe su aviso desde notificarCasoUrgente.
+        verify(notificacionRepository, times(1)).save(any(Notificacion.class));
     }
 
     // === Pruebas de fallos ===

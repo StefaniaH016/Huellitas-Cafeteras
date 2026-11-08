@@ -1,0 +1,220 @@
+/* Contenedores de página, encabezado de bienvenida, cifras resumen y rejillas. */
+
+.page {
+  max-width: 1080px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0.4rem 0 0.6rem;
+}
+
+.page-narrow {
+  max-width: 760px;
+}
+
+.dash-hello {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1.4rem 2rem;
+  margin-bottom: 1.6rem;
+}
+
+.dash-hello h1 {
+  margin: 0 0 0.45rem;
+  font-size: 2rem;
+  line-height: 1.15;
+  color: var(--brown-900);
+}
+
+.dash-summary {
+  margin: 0;
+  max-width: 620px;
+  font-size: 1.08rem;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.dash-ctas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+}
+
+.dash-figures {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 1.6rem;
+  background: var(--card-bg);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.figure {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 1.1rem 1.4rem;
+  color: inherit;
+  border-right: 1px solid var(--line);
+  transition: background 0.12s ease;
+}
+
+.figure:last-child {
+  border-right: none;
+}
+
+.figure:hover {
+  background: var(--paper-2);
+  text-decoration: none;
+}
+
+.figure:focus-visible {
+  outline: 2px solid var(--pine-700);
+  outline-offset: -2px;
+}
+
+.figure.is-urgent {
+  box-shadow: inset 4px 0 0 var(--coral-600);
+}
+
+.figure-num {
+  font-family: var(--font-heading);
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--pine-700);
+}
+
+.figure-label {
+  font-size: 0.86rem;
+  color: var(--ink-soft);
+}
+
+progress {
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 10px;
+  margin-top: 0.5rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--pine-100);
+  overflow: hidden;
+}
+
+progress::-webkit-progress-bar {
+  background: var(--pine-100);
+  border-radius: 999px;
+}
+
+progress::-webkit-progress-value {
+  background: var(--pine-700);
+  border-radius: 999px;
+}
+
+progress::-moz-progress-bar {
+  background: var(--pine-700);
+  border-radius: 999px;
+}
+
+.dash-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.2rem;
+  align-items: start;
+}
+
+.two-col {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.back-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.back-row h1 {
+  margin: 0;
+  line-height: 1.2;
+}
+
+.lead {
+  color: var(--ink-soft);
+  margin: 0.25rem 0 0;
+}
+
+.data-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem 1.5rem;
+  margin: 1rem 0;
+}
+
+.data-grid .k {
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+  font-weight: 600;
+  margin: 0 0 0.2rem;
+}
+
+.data-grid .v {
+  font-weight: 600;
+  color: var(--ink);
+  margin: 0;
+}
+
+@media (max-width: 900px) {
+  .two-col,
+  .dash-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .dash-hello h1 {
+    font-size: 1.7rem;
+  }
+
+  .dash-figures {
+    grid-template-columns: 1fr;
+  }
+
+  .figure {
+    border-right: none;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .figure:last-child {
+    border-bottom: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .back-row {
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  /* El título ocupa la fila junto al botón y las etiquetas bajan a la siguiente. */
+  .back-row > .flex-1 {
+    flex-basis: calc(100% - 3.5rem);
+  }
+
+  .dash-hello h1,
+  .back-row h1 {
+    font-size: 1.5rem;
+  }
+
+  .data-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -98,20 +98,25 @@ header.site.with-actions {
   width: 36px;
   height: 36px;
   border-radius: 12px;
-  background: var(--pine-700);
-  border: 2px solid var(--paper);
-  outline: 2px solid var(--pine-500);
-  outline-offset: 1px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   flex-shrink: 0;
-  box-shadow: 0 6px 14px rgba(var(--pine-700-rgb), 0.25);
+  overflow: hidden;
+}
+
+.brand-mark img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
 }
 
 .brand-name {
-  font-weight: 600;
-  font-size: 1.05rem;
+  display: flex;
+  flex-direction: column;
+  font-family: 'Roboto Slab', Georgia, serif;
+  font-weight: 800;
+  font-size: 0.95rem;
+  line-height: 0.9;
   color: var(--brown-900);
 }
 

@@ -61,9 +61,6 @@ class CasoServiceTest {
     private SeguimientoRepository seguimientoRepository;
 
     @Mock
-    private FotoRepository fotoRepository;
-
-    @Mock
     private NotificacionRepository notificacionRepository;
 
     @Mock
@@ -184,8 +181,10 @@ class CasoServiceTest {
         assertEquals(TipoCaso.EXTRAVIADO, resultado.tipoCaso());
         assertEquals(EstadoCaso.REGISTRADO, resultado.estado());
         assertEquals(Urgencia.MEDIA, resultado.urgencia());
+        ArgumentCaptor<Caso> casoCaptor = ArgumentCaptor.forClass(Caso.class);
         verify(animalRepository, times(1)).save(any(Animal.class));
-        verify(casoRepository, times(1)).save(any(Caso.class));
+        verify(casoRepository, times(1)).save(casoCaptor.capture());
+        assertTrue(casoCaptor.getValue().isVisible());
         verify(historialEstadoRepository, times(1)).save(any(HistorialEstado.class));
     }
 
@@ -712,5 +711,7 @@ class CasoServiceTest {
         // Assert
         assertEquals(Urgencia.ALTA, resultado.urgencia());
         assertEquals(TipoCaso.VULNERABLE, resultado.tipoCaso());
+        verify(notificacionWorker).notificarCasoUrgente(any(Caso.class));
+        verify(notificacionWorker).notificarEmergenciaARescuatistas(any(Caso.class));
     }
 }

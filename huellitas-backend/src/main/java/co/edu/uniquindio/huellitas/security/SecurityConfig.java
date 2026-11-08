@@ -42,7 +42,7 @@ public class SecurityConfig {
                     session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 // Auth pública (registro y login)
-                .requestMatchers(HttpMethod.POST, "/v1/auth/registro", "/v1/auth/login", "/api/v1/auth/registro", "/api/v1/auth/login").permitAll()
+                .requestMatchers(HttpMethod.POST, "/v1/auth/registro", "/v1/auth/registro/institucional", "/v1/auth/login", "/api/v1/auth/registro", "/api/v1/auth/registro/institucional", "/api/v1/auth/login").permitAll()
                 // Ubicaciones: lectura pública
                 .requestMatchers(HttpMethod.GET, "/v1/ubicaciones/**", "/api/v1/ubicaciones/**").permitAll()
                 // Casos: mis-reportes requiere autenticación explícita
@@ -56,7 +56,7 @@ public class SecurityConfig {
                         "/api-docs/**",
                         "/v3/api-docs/**").permitAll()
                 // Actuator
-                .requestMatchers("/actuator/**").permitAll()
+                .requestMatchers("/actuator/**", "/api/actuator/**").permitAll()
                 // Todo lo demás requiere autenticación
                 .anyRequest().authenticated())
             .authenticationProvider(authenticationProvider())

@@ -66,3 +66,13 @@ export function normalizeRole(rawRole: string | null | undefined): NormalizedRol
 export function isPanelRole(role: NormalizedRole): boolean {
   return role !== null && role !== 'CIUDADANO_VOLUNTARIO';
 }
+
+/**
+ * Map of role display labels
+ */
+export const ROLE_LABELS: Record<string, string> = {
+  ADMINISTRADOR: 'Administrador',
+  FUNDACION_REFUGIO: 'Fundación',
+  VETERINARIA: 'Veterinaria',
+  CIUDADANO_VOLUNTARIO: 'Ciudadano',
+};

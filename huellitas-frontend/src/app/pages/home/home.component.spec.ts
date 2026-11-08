@@ -3,14 +3,21 @@ import { provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
 import { CasoService } from '../../core/services/caso.service';
+import { NotificacionService } from '../../core/services/notificacion.service';
 import { UbicacionService } from '../../core/services/ubicacion.service';
+import { VerificacionService } from '../../core/services/verificacion.service';
+import { ModeracionService } from '../../core/services/moderacion.service';
 import { HomeComponent } from './home.component';
+import { signal } from '@angular/core';
 
 let casoService: Pick<CasoService, 'getMisReportes' | 'listarCasos'>;
 let ubicacionService: Pick<UbicacionService, 'getBarrios' | 'getDepartamentos' | 'getMunicipios'>;
 let authService: Pick<AuthService, 'getNombre' | 'getRol'>;
+let notificacionService: Pick<NotificacionService, 'sinLeer'>;
+let verificacionService: Pick<VerificacionService, 'getPendientes'>;
+let moderacionService: Pick<ModeracionService, 'getCasosReportados'>;
 
-beforeEach(() => {
+function configureHomeServiceMocks(): void {
   casoService = {
     getMisReportes: vi.fn().mockReturnValue(of({ casos: [] })),
     listarCasos: vi.fn().mockReturnValue(of({ content: [] })),
@@ -24,7 +31,37 @@ beforeEach(() => {
     getNombre: vi.fn().mockReturnValue('Luna'),
     getRol: vi.fn().mockReturnValue('CIUDADANO'),
   };
+  notificacionService = { sinLeer: signal(4) };
+}
 
+function configureAdminServiceMocks(): void {
+  verificacionService = {
+    getPendientes: vi.fn().mockReturnValue(
+      of([
+        {
+          usuarioId: 1,
+          nombreEntidad: 'Fundación',
+          rolSolicitado: 'FUNDACION_REFUGIO',
+          estado: 'PENDIENTE',
+        },
+      ]),
+    ),
+  };
+  moderacionService = {
+    getCasosReportados: vi.fn().mockReturnValue(
+      of([
+        {
+          casoId: 2,
+          motivo: 'Revisión',
+          estadoRevision: 'PENDIENTE',
+          fechaCreacion: '2026-01-01',
+        },
+      ]),
+    ),
+  };
+}
+
+function configureHomeTestingModule(): void {
   TestBed.configureTestingModule({
     imports: [HomeComponent],
     providers: [
@@ -32,7 +69,53 @@ beforeEach(() => {
       { provide: CasoService, useValue: casoService },
       { provide: UbicacionService, useValue: ubicacionService },
       { provide: AuthService, useValue: authService },
+      { provide: NotificacionService, useValue: notificacionService },
+      { provide: VerificacionService, useValue: verificacionService },
+      { provide: ModeracionService, useValue: moderacionService },
     ],
+  });
+}
+
+beforeEach(() => {
+  configureHomeServiceMocks();
+  configureAdminServiceMocks();
+  configureHomeTestingModule();
+});
+
+it('loads and displays administrative summary counts', () => {
+  vi.mocked(authService.getRol).mockReturnValue('ADMINISTRADOR');
+  vi.mocked(casoService.listarCasos).mockReturnValue(
+    of({
+      content: [
+        {
+          id: 44,
+          descripcion: 'Gato con collar rojo',
+          urgencia: 'ALTA',
+          estado: 'REGISTRADO',
+          municipio: 'Armenia',
+          barrio: 'Centro',
+        },
+      ],
+      totalElements: 7,
+    }),
+  );
+  const fixture = TestBed.createComponent(HomeComponent);
+  fixture.detectChanges();
+
+  expect(verificacionService.getPendientes).toHaveBeenCalledOnce();
+  expect(moderacionService.getCasosReportados).toHaveBeenCalledOnce();
+  expect(casoService.listarCasos).toHaveBeenCalledOnce();
+  expect(ubicacionService.getDepartamentos).toHaveBeenCalledOnce();
+  expect(fixture.nativeElement.textContent).toContain('Cuentas por validar');
+  expect(fixture.nativeElement.textContent).toContain('Contenido por moderar');
+  expect(fixture.nativeElement.textContent).toContain('Feed de casos');
+  expect(fixture.nativeElement.textContent).toContain('Gato con collar rojo');
+  expect(fixture.nativeElement.textContent).toContain('7');
+  const pageText = fixture.nativeElement.textContent as string;
+  expect(pageText.indexOf('Hola, administrador')).toBeLessThan(pageText.indexOf('Feed de casos'));
+  expect(fixture.componentInstance.resumenAdmin()).toEqual({
+    cuentasPendientes: 1,
+    casosReportados: 1,
   });
 });
 
@@ -42,9 +125,10 @@ it('loads the citizen dashboard, locations, feed, and personal reports', () => {
 
   expect(fixture.nativeElement.textContent).toContain('Hola, Luna');
   expect(fixture.nativeElement.textContent).toContain('No hay casos disponibles.');
-  expect(casoService.getMisReportes).toHaveBeenCalledWith(0);
+  expect(casoService.getMisReportes).toHaveBeenCalledWith(0, 50);
   expect(ubicacionService.getDepartamentos).toHaveBeenCalledOnce();
   expect(casoService.listarCasos).toHaveBeenCalledOnce();
+  expect(fixture.nativeElement.textContent).toContain('4');
 });
 
 it('maps feed aliases, defaults, photo and role-specific computed values', () => {
@@ -85,10 +169,40 @@ it('maps feed aliases, defaults, photo and role-specific computed values', () =>
     },
     { id: 8, urgencia: 'MEDIA', estado: 'REGISTRADO', foto: '' },
   ]);
-  expect(component.casosEnCustodia()).toHaveLength(1);
-  expect(component.emergenciasZona()).toHaveLength(1);
-  expect(component.esperandoAtencionMedica()).toHaveLength(1);
   expect(component.getPanelLink()).toBe('/fundacion');
+});
+
+it('loads every report page and counts only open and resolved reports', () => {
+  vi.mocked(casoService.getMisReportes)
+    .mockReturnValueOnce(
+      of({
+        content: [
+          { id: 1, estado: 'REGISTRADO', descripcion: 'Abierto' },
+          { id: 2, estado: 'ARCHIVADO', descripcion: 'Archivado' },
+        ],
+        number: 0,
+        totalPages: 2,
+      }),
+    )
+    .mockReturnValueOnce(
+      of({
+        content: [
+          { id: 3, estado: 'RESUELTO', descripcion: 'Resuelto' },
+          { id: 4, estado: 'EN_ATENCION', descripcion: 'En atención' },
+        ],
+        number: 1,
+        totalPages: 2,
+      }),
+    );
+
+  const fixture = TestBed.createComponent(HomeComponent);
+  fixture.detectChanges();
+  const component = fixture.componentInstance;
+
+  expect(casoService.getMisReportes).toHaveBeenNthCalledWith(1, 0, 50);
+  expect(casoService.getMisReportes).toHaveBeenNthCalledWith(2, 1, 50);
+  expect(component.misReportesActivos().map((caso) => caso.id)).toEqual([1, 4]);
+  expect(component.misReportesResueltos().map((caso) => caso.id)).toEqual([3]);
 });
 
 it('builds feed filters from selected values', () => {

@@ -2,6 +2,7 @@ package co.edu.uniquindio.huellitas.specification;
 
 import co.edu.uniquindio.huellitas.dto.reporte.FiltrosCasoDTO;
 import co.edu.uniquindio.huellitas.entity.Caso;
+import co.edu.uniquindio.huellitas.entity.enums.EstadoCaso;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
 
@@ -17,10 +18,14 @@ public class CasoSpecification {
             // Siempre filtrar por casos visibles en el feed público
             predicates.add(cb.isTrue(root.get("visible")));
 
+            if (filtros != null && filtros.estado() != null) {
+                predicates.add(cb.equal(root.get("estado"), filtros.estado()));
+            } else {
+                // Subtarea 16.3: El feed público solo muestra casos activos (excluye RESUELTO y ARCHIVADO)
+                predicates.add(cb.not(root.get("estado").in(EstadoCaso.RESUELTO, EstadoCaso.ARCHIVADO)));
+            }
+
             if (filtros != null) {
-                if (filtros.estado() != null) {
-                    predicates.add(cb.equal(root.get("estado"), filtros.estado()));
-                }
 
                 if (filtros.tipoCaso() != null) {
                     predicates.add(cb.equal(root.get("tipoCaso"), filtros.tipoCaso()));

@@ -14,8 +14,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
 import java.util.List;
+import java.time.Instant;
 
 @Service
 @RequiredArgsConstructor
@@ -29,7 +29,7 @@ public class ModeracionServiceImpl implements ModeracionService {
     @Override
     @Transactional(readOnly = true)
     public List<CasoModeracionDTO> listarCasosReportados() {
-        List<Caso> casos = casoRepository.findByMotivoModeracionNotNullOrVisibleFalse();
+        List<Caso> casos = casoRepository.findByModeracionPendienteTrueOrVisibleFalse();
         return casos.stream()
                 .map(moderacionMapper::toCasoModeracionDTO)
                 .toList();
@@ -42,6 +42,7 @@ public class ModeracionServiceImpl implements ModeracionService {
 
         boolean mantener = "MANTENER".equalsIgnoreCase(dto.decision());
         caso.setVisible(mantener);
+        caso.setModeracionPendiente(false);
         caso.setMotivoModeracion(dto.motivo());
         caso.setFechaUltimaActividad(Instant.now());
 

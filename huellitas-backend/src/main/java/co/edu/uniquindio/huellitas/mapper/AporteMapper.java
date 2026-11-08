@@ -21,8 +21,8 @@ public class AporteMapper {
                 casoId,
                 s.getAutor() != null ? s.getAutor().getId() : null,
                 s.getComentario(),
-                null,
-                Collections.emptyList(),
+                s.getUbicacionTexto(),
+                extraerFotografias(s),
                 FechaUtils.formatear(s.getFecha())
         );
     }
@@ -57,6 +57,9 @@ public class AporteMapper {
                 .comentario(s.getComentario())
                 .fecha(FechaUtils.formatear(s.getFecha()))
                 .autorNombre(s.getAutor() != null ? s.getAutor().getNombre() : null)
+                .zona(extraerZona(s))
+                .ubicacionTexto(s.getUbicacionTexto())
+                .fotografias(extraerFotografias(s))
                 .build();
     }
 
@@ -66,5 +69,24 @@ public class AporteMapper {
         }
         return seguimientos.stream().map(this::toDetalleDTO).toList();
     }
-}
 
+    private List<String> extraerFotografias(Seguimiento seguimiento) {
+        if (seguimiento.getFotografias() == null) {
+            return Collections.emptyList();
+        }
+        return seguimiento.getFotografias().stream()
+                .map(foto -> foto.getUrl())
+                .toList();
+    }
+
+    private String extraerZona(Seguimiento seguimiento) {
+        if (seguimiento.getBarrio() == null) {
+            return null;
+        }
+        String barrio = seguimiento.getBarrio().getNombre();
+        if (seguimiento.getBarrio().getMunicipio() == null) {
+            return barrio;
+        }
+        return barrio + " · " + seguimiento.getBarrio().getMunicipio().getNombre();
+    }
+}

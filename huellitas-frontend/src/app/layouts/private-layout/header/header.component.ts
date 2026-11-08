@@ -1,6 +1,9 @@
-import { Component, inject, computed, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Component, DestroyRef, OnInit, inject, computed, signal } from '@angular/core';
+import { NavigationEnd, Router, RouterLink } from '@angular/router';
+import { filter, fromEvent, interval } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService } from '../../../core/services/auth.service';
+import { NotificacionService } from '../../../core/services/notificacion.service';
 import { TokenService } from '../../../core/services/token.service';
 import { normalizeRole } from '../../../core/utils/role.utils';
 
@@ -10,13 +13,17 @@ import { normalizeRole } from '../../../core/utils/role.utils';
   templateUrl: './header.component.html',
   styleUrl: './header.component.css',
 })
-export class HeaderComponent {
+export class HeaderComponent implements OnInit {
   private authService = inject(AuthService);
   private tokenService = inject(TokenService);
+  private notificacionService = inject(NotificacionService);
+  private router = inject(Router);
+  private destroyRef = inject(DestroyRef);
 
   // Decode token once and cache the payload
   private payload = signal(this.tokenService.decodePayload());
   private rawRol = signal(this.authService.getRol());
+  readonly sinLeer = this.notificacionService.sinLeer;
 
   // Normalize role for role checks
   private rol = computed(() => normalizeRole(this.rawRol()));
@@ -43,6 +50,22 @@ export class HeaderComponent {
     const r = this.rol();
     return !r || r === 'CIUDADANO_VOLUNTARIO';
   });
+
+  ngOnInit(): void {
+    this.notificacionService.actualizarContador();
+    interval(60_000)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.notificacionService.actualizarContador());
+    this.router.events
+      .pipe(
+        filter((event): event is NavigationEnd => event instanceof NavigationEnd),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe(() => this.notificacionService.actualizarContador());
+    fromEvent(window, 'focus')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.notificacionService.actualizarContador());
+  }
 
   logout(): void {
     this.authService.logout();

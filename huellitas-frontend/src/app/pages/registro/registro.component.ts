@@ -7,8 +7,7 @@ import {
   ValidationErrors,
 } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { HttpClient } from '@angular/common/http';
-import { environment } from '../../../environments/environment';
+import { AuthService } from '../../core/services/auth.service';
 import { AuthBrandHeaderComponent } from '../../shared/components/auth-brand-header/auth-brand-header.component';
 
 type TipoCuenta = 'CIUDADANO_VOLUNTARIO' | 'FUNDACION_REFUGIO' | 'VETERINARIA' | null;
@@ -24,7 +23,6 @@ interface FormValue {
   nit?: string;
   tarjetaProf?: string;
   municipioOperacion?: string;
-  docSoporte?: string;
   aceptaDatos?: boolean;
 }
 
@@ -39,7 +37,8 @@ interface RegistroRequest {
   nit?: string;
   documentoLegal?: string;
   municipioOperacion?: string;
-  documentoSoporte?: string;
+  documentoSoporte?: File;
+  aceptoTratamientoDatos: boolean;
 }
 
 function confirmPasswordValidator(control: AbstractControl): ValidationErrors | null {
@@ -60,12 +59,14 @@ function confirmPasswordValidator(control: AbstractControl): ValidationErrors | 
 export class RegistroComponent {
   private fb = inject(FormBuilder);
   private router = inject(Router);
-  private httpClient = inject(HttpClient);
+  private authService = inject(AuthService);
 
   step = signal(1);
   tipoCuenta = signal<TipoCuenta>(null);
   isLoading = signal(false);
   errorMessage = signal<string | null>(null);
+  documentoSoporte = signal<File | null>(null);
+  errorDocumento = signal('');
 
   step2Form = this.fb.group({
     nombre: ['', Validators.required],
@@ -78,7 +79,6 @@ export class RegistroComponent {
     nit: [''],
     tarjetaProf: [''],
     municipioOperacion: [''],
-    docSoporte: [''],
     aceptaDatos: [false, Validators.requiredTrue],
   });
 
@@ -116,27 +116,53 @@ export class RegistroComponent {
     this.step.set(1);
   }
 
+  seleccionarDocumento(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const archivo = input.files?.[0] ?? null;
+    this.errorDocumento.set('');
+    if (!archivo) {
+      this.documentoSoporte.set(null);
+      return;
+    }
+    if (archivo.size > 5 * 1024 * 1024) {
+      this.documentoSoporte.set(null);
+      this.errorDocumento.set('El documento no puede superar 5 MB.');
+      input.value = '';
+      return;
+    }
+    if (!/\.(pdf|jpe?g|png)$/i.test(archivo.name)) {
+      this.documentoSoporte.set(null);
+      this.errorDocumento.set('Adjunta un archivo PDF, JPG o PNG.');
+      input.value = '';
+      return;
+    }
+    this.documentoSoporte.set(archivo);
+  }
+
   private buildInstitutionalFields(formValue: FormValue): Partial<RegistroRequest> {
     if (!this.isInstitutional()) {
       return {};
     }
+    const documentoSoporte = this.documentoSoporte();
     return {
       ...(formValue.nombreEntidad && { nombreEntidad: formValue.nombreEntidad }),
       ...(formValue.nit && { nit: formValue.nit }),
       ...(formValue.tarjetaProf && { documentoLegal: formValue.tarjetaProf }),
       ...(formValue.municipioOperacion && { municipioOperacion: formValue.municipioOperacion }),
-      ...(formValue.docSoporte && { documentoSoporte: formValue.docSoporte }),
+      ...(documentoSoporte && { documentoSoporte }),
     };
   }
 
   private buildRegistroPayload(): RegistroRequest {
     const formValue = this.step2Form.value as unknown as FormValue;
     const payload: RegistroRequest = {
-      nombre: formValue.nombre || '',
-      correo: formValue.email || '',
+      nombre: (formValue.nombre || '').trim(),
+      correo: (formValue.email || '').trim(),
       telefono: formValue.telefono || '',
       contrasena: formValue.password || '',
       rol: this.tipoCuenta() || 'CIUDADANO_VOLUNTARIO',
+      // Ley 1581: el backend guarda aceptoTratamientoDatos y fechaAceptacionDatos
+      aceptoTratamientoDatos: formValue.aceptaDatos === true,
     };
 
     // Agregar campos institucionales si aplica
@@ -146,7 +172,7 @@ export class RegistroComponent {
 
   onSubmit(): void {
     this.step2Form.markAllAsTouched();
-    if (this.step2Form.invalid) {
+    if (this.step2Form.invalid || this.errorDocumento()) {
       return;
     }
 
@@ -155,18 +181,18 @@ export class RegistroComponent {
 
     const payload = this.buildRegistroPayload();
 
-    this.httpClient
-      .post<{ message: string }>(`${environment.apiUrl}/auth/registro`, payload)
-      .subscribe({
-        next: () => {
-          this.isLoading.set(false);
-          void this.router.navigate(['/login']);
-        },
-        error: (err) => {
-          this.isLoading.set(false);
-          const errMsg = err.error?.message || 'Error al registrarse. Intenta de nuevo.';
-          this.errorMessage.set(errMsg);
-        },
-      });
+    this.authService.registro(payload).subscribe({
+      next: () => {
+        this.isLoading.set(false);
+        void this.router.navigate(['/login']);
+      },
+      error: (err: unknown) => {
+        this.isLoading.set(false);
+        const errorMsg =
+          (err as Record<string, Record<string, string> | undefined>)?.['error']?.['message'] ||
+          'Error al registrarse. Intenta de nuevo.';
+        this.errorMessage.set(errorMsg);
+      },
+    });
   }
 }

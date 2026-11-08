@@ -5,6 +5,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -22,6 +23,7 @@ import java.io.IOException;
  */
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtils jwtUtils;
@@ -47,6 +49,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             username = jwtUtils.extractUsername(jwt);
         } catch (Exception e) {
+            log.warn("No se pudo extraer el usuario del token JWT: {}", e.getMessage());
             filterChain.doFilter(request, response);
             return;
         }

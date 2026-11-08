@@ -1,0 +1,97 @@
+/* Botones y enlaces de acción. */
+
+.btn {
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0.7rem 1.4rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  transition: transform 0.12s ease;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  text-decoration: none;
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--pine-700);
+  outline-offset: 2px;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-primary {
+  background: var(--pine-700);
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(108, 95, 214, 0.35);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--pine-500);
+}
+
+.btn-secondary {
+  background: var(--sky-100);
+  color: var(--brown-900);
+  border-color: transparent;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--pine-100);
+}
+
+.btn-danger {
+  background: var(--coral-100);
+  color: var(--coral-600);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: var(--coral-600);
+  color: #fff;
+}
+
+.btn-sm {
+  padding: 0.42rem 0.9rem;
+  font-size: 0.78rem;
+}
+
+.btn-block {
+  width: 100%;
+}
+
+.icon-btn {
+  background: var(--pine-100);
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  font-size: 1.2rem;
+  cursor: pointer;
+  color: var(--pine-700);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease;
+}
+
+.icon-btn:hover {
+  background: var(--pine-200);
+}
+
+.link {
+  color: var(--pine-700);
+  font-weight: 600;
+}

@@ -22,7 +22,7 @@ public interface CasoRepository extends JpaRepository<Caso, Long>, JpaSpecificat
     Page<Caso> findByReportanteCorreoOrderByFechaRegistroDesc(String correo, Pageable pageable);
     boolean existsByCasoOriginalId(Long casoOriginalId);
     boolean existsByAnimalIdAndIdNot(Long animalId, Long casoId);
-    List<Caso> findByMotivoModeracionNotNullOrVisibleFalse();
+    List<Caso> findByModeracionPendienteTrueOrVisibleFalse();
     Page<Caso> findByUrgenciaInAndVisibleTrueOrderByFechaRegistroDesc(List<Urgencia> urgencias, Pageable pageable);
 
     // 13.4: Casos bajo custodia de una fundación específica

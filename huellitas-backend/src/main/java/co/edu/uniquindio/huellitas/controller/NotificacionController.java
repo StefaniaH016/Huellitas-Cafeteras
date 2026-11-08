@@ -15,7 +15,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/v1/notificaciones")
+@RequestMapping({"/v1/notificaciones", "/api/v1/notificaciones"})
 @RequiredArgsConstructor
 @Tag(name = "Notificaciones", description = "API para gestión de notificaciones del usuario")
 public class NotificacionController {

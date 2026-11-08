@@ -20,17 +20,17 @@ describe('ModeracionService', () => {
 
   it('loads reported cases', () => {
     service.getCasosReportados().subscribe();
-    const request = http.expectOne(`${environment.apiUrl}/moderacion/casos-reportados`);
+    const request = http.expectOne(`${environment.apiUrl}/moderacion/casos`);
     expect(request.request.method).toBe('GET');
-    request.flush({ casos: [] });
+    request.flush([]);
   });
 
-  it('submits a moderation resolution', () => {
-    const dto = { aprobado: false, razon: 'No cumple las reglas' };
-    service.resolverModeración(7, dto).subscribe();
-    const request = http.expectOne(`${environment.apiUrl}/moderacion/7/resolver`);
-    expect(request.request.method).toBe('POST');
+  it('submits a moderation decision with its reason', () => {
+    const dto = { decision: 'OCULTAR' as const, motivo: 'No cumple las reglas' };
+    service.resolverModeracion(7, dto).subscribe();
+    const request = http.expectOne(`${environment.apiUrl}/moderacion/casos/7`);
+    expect(request.request.method).toBe('PATCH');
     expect(request.request.body).toEqual(dto);
-    request.flush(null);
+    request.flush({ casoId: 7, decision: 'OCULTADO', fechaRevision: '2026-03-11' });
   });
 });

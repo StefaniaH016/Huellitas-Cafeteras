@@ -95,7 +95,6 @@ export class ReportarComponent implements OnInit, OnDestroy {
   createdCasoId = signal('');
   submitError = signal('');
   submitWarning = signal('');
-  pendingPhotoCaseId = signal<number | null>(null);
   fotos = signal<File[]>([]);
   previewUrls = signal<string[]>([]);
   fotoError = signal('');
@@ -104,6 +103,7 @@ export class ReportarComponent implements OnInit, OnDestroy {
     HERIDO: 'Herido',
     VULNERABLE: 'Vulnerable',
     EXTRAVIADO: 'Extraviado',
+    EN_ADOPCION: 'Adopción',
   };
 
   urgenciaLabels: Record<string, string> = {
@@ -465,9 +465,6 @@ export class ReportarComponent implements OnInit, OnDestroy {
   onPublicar(): void {
     this.submitError.set('');
     this.submitWarning.set('');
-    if (this.reintentarCargaPendiente()) {
-      return;
-    }
     if (!this.validarPublicacion()) {
       return;
     }
@@ -479,22 +476,6 @@ export class ReportarComponent implements OnInit, OnDestroy {
     } else {
       this.crearReporte(dto);
     }
-  }
-
-  private reintentarCargaPendiente(): boolean {
-    const pendingCaseId = this.pendingPhotoCaseId();
-    if (pendingCaseId === null) {
-      return false;
-    }
-
-    if (this.fotos().length === 0) {
-      this.currentStep.set(2);
-      this.submitError.set('Agrega al menos una foto para poder reintentar la publicación.');
-      return true;
-    }
-    this.enviando.set(true);
-    this.handleUploadImages(pendingCaseId.toString());
-    return true;
   }
 
   private validarPublicacion(): boolean {
@@ -532,12 +513,19 @@ export class ReportarComponent implements OnInit, OnDestroy {
   private crearReporte(dto: CrearReporteDTO): void {
     this.casoService.crearReporte(dto).subscribe({
       next: (response: unknown): void => {
-        const idGenerado = (response as CrearReporteResponse).id?.toString() || '#NUEVO';
-        this.handleUploadImages(idGenerado);
+        const id = (response as CrearReporteResponse).id;
+        if (id === undefined || id === null || !Number.isInteger(Number(id)) || Number(id) <= 0) {
+          this.submitWarning.set(
+            'El caso fue creado, pero no se recibió un identificador válido para guardar las fotos. Revisa Mis reportes antes de volver a publicarlo.',
+          );
+          this.finishPublicacion('#NUEVO');
+          return;
+        }
+        this.handleUploadImages(String(id));
       },
       error: (err: { error?: unknown }): void => {
         console.error('Error creating report:', err);
-        this.submitError.set('Error al publicar el reporte. Intenta de nuevo.');
+        this.submitError.set('No se pudo crear el reporte. Intenta de nuevo.');
         this.enviando.set(false);
       },
     });
@@ -569,7 +557,6 @@ export class ReportarComponent implements OnInit, OnDestroy {
       )
       .subscribe({
         next: (): void => {
-          this.pendingPhotoCaseId.set(null);
           this.finishPublicacion(idGenerado);
         },
         error: (uploadErr: unknown): void => {
@@ -585,37 +572,33 @@ export class ReportarComponent implements OnInit, OnDestroy {
     error: unknown,
   ): void {
     console.error('Error al subir imágenes:', error);
-    if (uploadedCount > 0 || this.editando()) {
+    if (this.editando()) {
       this.submitWarning.set(
         uploadedCount > 0
           ? 'Algunas fotos no pudieron guardarse. El caso conserva las fotos que sí se cargaron.'
           : 'Los cambios se guardaron, pero no se pudo agregar la nueva foto. Las fotos anteriores se conservan.',
       );
-      this.pendingPhotoCaseId.set(null);
       this.finishPublicacion(idGenerado);
       return;
     }
 
-    this.eliminarCasoSinFoto(casoIdNum);
-  }
-
-  private eliminarCasoSinFoto(casoId: number): void {
-    this.casoService.eliminarCaso(casoId).subscribe({
-      next: (): void => {
-        this.pendingPhotoCaseId.set(null);
+    this.casoService.eliminarCaso(casoIdNum).subscribe({
+      next: () => {
         this.currentStep.set(3);
         this.submitError.set(
-          'No se pudo registrar la foto y el caso no se publicó. Intenta cargarla de nuevo.',
+          'No se pudieron guardar las fotos y el reporte se eliminó. Puedes intentar publicarlo de nuevo.',
         );
         this.enviando.set(false);
       },
-      error: (error: unknown): void => {
-        console.error('Error eliminando el caso sin foto:', error);
-        this.pendingPhotoCaseId.set(casoId);
-        this.submitError.set(
-          'No se pudo guardar la foto ni eliminar el caso. Intenta publicar de nuevo para reintentar la carga.',
+      error: (cleanupError: unknown) => {
+        console.error(
+          'Error al eliminar el caso creado tras fallar la carga de fotos:',
+          cleanupError,
         );
-        this.enviando.set(false);
+        this.submitWarning.set(
+          `El caso #${idGenerado} pudo quedar creado sin todas sus fotos. Revisa Mis reportes antes de volver a publicarlo.`,
+        );
+        this.finishPublicacion(idGenerado);
       },
     });
   }

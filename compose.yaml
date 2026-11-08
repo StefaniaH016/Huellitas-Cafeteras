@@ -34,6 +34,7 @@ services:
       CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
     ports:
       - '8080:8080'
+      - '8081:8080' # Swagger UI: http://localhost:8081/swagger-ui/index.html
     depends_on:
       - postgres
     networks:
@@ -43,6 +44,8 @@ services:
     build:
       context: .
       dockerfile: ./huellitas-frontend/Dockerfile
+      args:
+        BUILD_CONFIGURATION: development
     container_name: huellitas-web
     ports:
       - '4200:80'

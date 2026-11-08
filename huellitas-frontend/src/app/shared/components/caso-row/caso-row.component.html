@@ -1,0 +1,23 @@
+<div class="list-thumb">
+  @if (caso().fotoPrincipal && !fotoRota()) {
+    <img [src]="caso().fotoPrincipal" alt="" (error)="fotoRota.set(true)" />
+  } @else {
+    <span aria-hidden="true">🐾</span>
+  }
+</div>
+<div class="list-info">
+  <a class="list-title" [routerLink]="['/caso-detalle', caso().id]">
+    Caso #{{ caso().id }} · {{ caso().descripcion }}
+  </a>
+  @if (metaTexto()) {
+    <p class="list-meta">{{ metaTexto() }}</p>
+  }
+</div>
+<app-caso-badges
+  [urgencia]="caso().urgencia"
+  [tipo]="mostrarTipo() ? caso().tipoCaso : null"
+  [estado]="mostrarEstado() ? caso().estado : null"
+/>
+<div class="list-actions">
+  <ng-content />
+</div>

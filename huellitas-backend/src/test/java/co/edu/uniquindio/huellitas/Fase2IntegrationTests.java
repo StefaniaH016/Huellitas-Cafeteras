@@ -19,6 +19,7 @@ import co.edu.uniquindio.huellitas.entity.enums.TipoCaso;
 import co.edu.uniquindio.huellitas.entity.enums.Urgencia;
 import co.edu.uniquindio.huellitas.repository.BarrioRepository;
 import co.edu.uniquindio.huellitas.repository.CasoRepository;
+import co.edu.uniquindio.huellitas.repository.MunicipioRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,6 +29,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.mock.web.MockPart;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -56,10 +58,14 @@ class Fase2IntegrationTests {
     @Autowired
     private CasoRepository casoRepository;
 
+    @Autowired
+    private MunicipioRepository municipioRepository;
+
     private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
     private Long barrioId;
     private Long casoCreadoId;
+    private String municipioNombre;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -69,6 +75,9 @@ class Fase2IntegrationTests {
 
         Barrio barrio = barrioRepository.findAll().stream().findFirst().orElseThrow();
         barrioId = barrio.getId();
+        municipioNombre = municipioRepository.findById(barrio.getMunicipio().getId())
+                .orElseThrow()
+                .getNombre();
 
         // Registrar usuario voluntario para reportar caso base si no existe
         String correoVoluntario = "voluntario_fase2@huellitas.co";
@@ -116,19 +125,23 @@ class Fase2IntegrationTests {
     @Test
     @DisplayName("Flujo Módulo 3: Verificación de entidades institucionales por Administrador")
     void testVerificaciones() throws Exception {
-        // 1. Registrar veterinaria pendiente de verificación
-        String correoVet = "vet_clinica@huellitas.co";
-        RegistroUsuarioDTO regVet = new RegistroUsuarioDTO(
-                "Clínica San Roque",
-                correoVet,
-                "VetPassword123!",
+        // 1. Registrar fundación pendiente de verificación
+        String correoFundacion = "fundacion_fase2@huellitas.co";
+        RegistroUsuarioDTO registroFundacion = new RegistroUsuarioDTO(
+                "Contacto Patitas",
+                correoFundacion,
+                "FundPassword123!",
                 "3101234567",
                 barrioId,
-                Rol.VETERINARIA
+                Rol.FUNDACION_REFUGIO,
+                "Fundación Patitas Fase 2",
+                "900111",
+                null,
+                municipioNombre
         );
         mockMvc.perform(post("/v1/auth/registro")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(regVet)))
+                        .content(objectMapper.writeValueAsString(registroFundacion)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.verificado").value(false));
 
@@ -146,7 +159,7 @@ class Fase2IntegrationTests {
 
         Long vetId = null;
         for (JsonNode n : listNode) {
-            if ("Clínica San Roque".equals(n.get("nombreEntidad").asText())) {
+            if ("Fundación Patitas Fase 2".equals(n.get("nombreEntidad").asText())) {
                 vetId = n.get("usuarioId").asLong();
                 break;
             }
@@ -160,8 +173,98 @@ class Fase2IntegrationTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(decisionDTO)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.estado").value("APROBADA"))
+                .andExpect(jsonPath("$.estado").value("VERIFICADA"))
                 .andExpect(jsonPath("$.verificado").value(true));
+
+        String fundacionToken = loginYObtenerToken(correoFundacion, "FundPassword123!");
+        mockMvc.perform(get("/v1/usuarios/me")
+                        .header("Authorization", "Bearer " + fundacionToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estadoVerificacionOrganizacion").value("VERIFICADA"))
+                .andExpect(jsonPath("$.aceptaCustodia").value(true))
+                .andExpect(jsonPath("$.capacidadAlbergue").value(10));
+
+        mockMvc.perform(patch("/v1/casos/" + casoCreadoId + "/custodia")
+                        .header("Authorization", "Bearer " + fundacionToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"accion\":\"ASUMIR\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value("EN_ATENCION"));
+    }
+
+    @Test
+    @DisplayName("Una entidad puede adjuntar soporte y solicitar una nueva revisión")
+    void testSolicitudNuevaRevisionConDocumento() throws Exception {
+        String correo = "fundacion_revision_fase2@huellitas.co";
+        RegistroUsuarioDTO registro = new RegistroUsuarioDTO(
+                "Contacto Revisión",
+                correo,
+                "FundPassword123!",
+                "3101234567",
+                barrioId,
+                Rol.FUNDACION_REFUGIO,
+                "Fundación Revisión Fase 2",
+                "900222",
+                null,
+                municipioNombre);
+        MockMultipartFile soporteInicial = new MockMultipartFile(
+                "documentoSoporte",
+                "soporte-inicial.pdf",
+                "application/pdf",
+                "%PDF-1.7 soporte inicial".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        MockPart datosRegistro = new MockPart(
+                "datos",
+                objectMapper.writeValueAsBytes(registro));
+        datosRegistro.getHeaders().setContentType(MediaType.APPLICATION_JSON);
+
+        MvcResult registroRes = mockMvc.perform(multipart("/v1/auth/registro/institucional")
+                        .file(soporteInicial)
+                        .part(datosRegistro))
+                .andExpect(status().isCreated())
+                .andReturn();
+        long usuarioId = objectMapper.readTree(registroRes.getResponse().getContentAsString())
+                .get("id").asLong();
+
+        String adminToken = loginYObtenerToken("admin@huellitas.co", "Admin12345!");
+        DecisionVerificacionDTO rechazo = new DecisionVerificacionDTO("RECHAZAR", "Actualizar documento");
+        mockMvc.perform(patch("/v1/verificaciones/" + usuarioId)
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(rechazo)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value("RECHAZADA"));
+
+        String tokenFundacion = loginYObtenerToken(correo, "FundPassword123!");
+        MockMultipartFile soporteActualizado = new MockMultipartFile(
+                "documentoSoporte",
+                "soporte-actualizado.pdf",
+                "application/pdf",
+                "%PDF-1.7 soporte actualizado".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        mockMvc.perform(multipart("/v1/verificaciones/solicitar-revision")
+                        .file(soporteActualizado)
+                        .header("Authorization", "Bearer " + tokenFundacion))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value("PENDIENTE"))
+                .andExpect(jsonPath("$.verificado").value(false));
+
+        MvcResult pendientesRes = mockMvc.perform(get("/v1/verificaciones/pendientes")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andReturn();
+        JsonNode pendientes = objectMapper.readTree(pendientesRes.getResponse().getContentAsString());
+        JsonNode solicitud = java.util.stream.StreamSupport.stream(pendientes.spliterator(), false)
+                .filter(item -> item.get("usuarioId").asLong() == usuarioId)
+                .findFirst()
+                .orElseThrow();
+        assertThat(solicitud.get("documentoSoporteDisponible").asBoolean()).isTrue();
+        assertThat(solicitud.get("documentoSoporteNombre").asText()).isEqualTo("soporte-actualizado.pdf");
+
+        mockMvc.perform(get("/v1/verificaciones/" + usuarioId + "/documento-soporte")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_PDF))
+                .andExpect(content().bytes(
+                        "%PDF-1.7 soporte actualizado".getBytes(java.nio.charset.StandardCharsets.UTF_8)));
     }
 
     @Test
@@ -201,7 +304,11 @@ class Fase2IntegrationTests {
                 "VetPassword123!",
                 "3101234567",
                 barrioId,
-                Rol.VETERINARIA
+                Rol.VETERINARIA,
+                "Veterinaria Bitacora",
+                "900112",
+                "TP124",
+                municipioNombre
         );
         mockMvc.perform(post("/v1/auth/registro")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -297,8 +404,9 @@ class Fase2IntegrationTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.estadoBitacora").value("ALTA_REGISTRADA"));
 
-        // 5. Descargar PDF clínico
-        MvcResult pdfResult = mockMvc.perform(get("/v1/casos/" + casoCreadoId + "/bitacora/pdf"))
+        // 5. Descargar PDF clínico (autenticado)
+        MvcResult pdfResult = mockMvc.perform(get("/v1/casos/" + casoCreadoId + "/bitacora/pdf")
+                        .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
                 .andExpect(header().string("Content-Type", MediaType.APPLICATION_PDF_VALUE))
                 .andReturn();

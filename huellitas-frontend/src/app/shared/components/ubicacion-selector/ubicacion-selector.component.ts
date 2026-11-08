@@ -11,6 +11,7 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Observable } from 'rxjs';
 import {
   UbicacionService,
   Departamento,
@@ -31,6 +32,10 @@ export class UbicacionSelectorComponent implements OnInit, OnChanges {
   @Input() deptoId: number | null = null;
   @Input() munId: number | null = null;
   @Input() barrioId: number | null = null;
+  /** Prefijo de los id de los campos, para usar el selector más de una vez en la misma pantalla. */
+  @Input() idPrefix = 'zona';
+  @Input() leyenda = 'Zona';
+  @Input() stacked = false;
 
   @Output() deptoChange = new EventEmitter<number | null>();
   @Output() munChange = new EventEmitter<number | null>();
@@ -88,48 +93,34 @@ export class UbicacionSelectorComponent implements OnInit, OnChanges {
   }
 
   loadDepartamentos(): void {
-    this.loading = true;
-    this.error = null;
-    this.ubicacionService.getDepartamentos().subscribe({
-      next: (data) => {
-        this.departamentos = data;
-        this.loading = false;
-      },
-      error: (err: unknown) => {
-        console.error('Error loading departamentos:', err);
-        this.error = 'Error al cargar departamentos';
-        this.loading = false;
-      },
+    this.cargar(this.ubicacionService.getDepartamentos(), 'departamentos', (data) => {
+      this.departamentos = data;
     });
   }
 
   loadMunicipios(deptoId: number): void {
-    this.loading = true;
-    this.error = null;
-    this.ubicacionService.getMunicipios(deptoId).subscribe({
-      next: (data) => {
-        this.municipios = data;
-        this.loading = false;
-      },
-      error: (err: unknown) => {
-        console.error('Error loading municipios:', err);
-        this.error = 'Error al cargar municipios';
-        this.loading = false;
-      },
+    this.cargar(this.ubicacionService.getMunicipios(deptoId), 'municipios', (data) => {
+      this.municipios = data;
     });
   }
 
   loadBarrios(munId: number): void {
+    this.cargar(this.ubicacionService.getBarrios(munId), 'barrios', (data) => {
+      this.barrios = data;
+    });
+  }
+
+  private cargar<T>(fuente: Observable<T[]>, nivel: string, asignar: (data: T[]) => void): void {
     this.loading = true;
     this.error = null;
-    this.ubicacionService.getBarrios(munId).subscribe({
+    fuente.subscribe({
       next: (data) => {
-        this.barrios = data;
+        asignar(data);
         this.loading = false;
       },
       error: (err: unknown) => {
-        console.error('Error loading barrios:', err);
-        this.error = 'Error al cargar barrios';
+        console.error(`Error loading ${nivel}:`, err);
+        this.error = `Error al cargar ${nivel}`;
         this.loading = false;
       },
     });

@@ -46,6 +46,55 @@ it('shows edit and delete actions for registered cases', () => {
   expect(actions.textContent).toContain('Eliminar');
 });
 
+it('separates active cases from resolved and archived history', () => {
+  vi.mocked(casoService.getMisReportes).mockReturnValue(
+    of({
+      content: [
+        { id: 11, estado: 'EN_ATENCION', urgencia: 'MEDIA', descripcion: 'Caso activo' },
+        { id: 12, estado: 'RESUELTO', urgencia: 'BAJA', descripcion: 'Caso resuelto' },
+        { id: 13, estado: 'ARCHIVADO', urgencia: 'BAJA', descripcion: 'Caso archivado' },
+      ],
+    }),
+  );
+  const fixture = TestBed.createComponent(MisReportesComponent);
+  fixture.detectChanges();
+
+  expect(fixture.nativeElement.textContent).toContain('Caso activo');
+  expect(fixture.nativeElement.textContent).not.toContain('Caso resuelto');
+  expect(fixture.nativeElement.textContent).not.toContain('Caso archivado');
+  expect(fixture.nativeElement.querySelector('#tab-activos').getAttribute('aria-selected')).toBe(
+    'true',
+  );
+
+  fixture.nativeElement.querySelector('#tab-historial').click();
+  fixture.detectChanges();
+
+  expect(fixture.nativeElement.textContent).not.toContain('Caso activo');
+  expect(fixture.nativeElement.textContent).toContain('Caso resuelto');
+  expect(fixture.nativeElement.textContent).toContain('Caso archivado');
+  expect(fixture.nativeElement.textContent).toContain('Resuelto');
+  expect(fixture.nativeElement.textContent).toContain('Archivado');
+});
+
+it('keeps closed cases read-only in history', () => {
+  vi.mocked(casoService.getMisReportes).mockReturnValue(
+    of({
+      content: [
+        { id: 14, estado: 'ARCHIVADO', urgencia: 'BAJA', descripcion: 'Caso de solo lectura' },
+      ],
+    }),
+  );
+  const fixture = TestBed.createComponent(MisReportesComponent);
+  fixture.detectChanges();
+  fixture.nativeElement.querySelector('#tab-historial').click();
+  fixture.detectChanges();
+
+  const actions = fixture.nativeElement.querySelector('.report-actions');
+  expect(actions.textContent).toContain('Ver caso');
+  expect(actions.textContent).not.toContain('Editar');
+  expect(actions.textContent).not.toContain('Eliminar');
+});
+
 it('deletes a registered case after user confirmation', () => {
   vi.spyOn(globalThis, 'confirm').mockReturnValue(true);
   const fixture = TestBed.createComponent(MisReportesComponent);

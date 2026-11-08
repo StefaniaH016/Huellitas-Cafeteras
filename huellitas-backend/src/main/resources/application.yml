@@ -60,6 +60,7 @@ spring:
     port: ${MAIL_PORT:587}
     username: ${MAIL_USERNAME:noreply@huellitas.org}
     password: ${MAIL_PASSWORD:}
+    from: ${MAIL_FROM:${MAIL_USERNAME:noreply@huellitas.org}}
     properties:
       mail:
         smtp:
@@ -100,7 +101,7 @@ management:
         include: health,info,metrics
   endpoint:
     health:
-      show-details: when-authorized
+      show-details: always
       livenessState:
         enabled: true
       readinessState:
@@ -108,6 +109,8 @@ management:
   health:
     db:
       enabled: true
+    mail:
+      enabled: false
 
 # ── Logging (debug para HTTP requests) ──────────────────────────
 logging:

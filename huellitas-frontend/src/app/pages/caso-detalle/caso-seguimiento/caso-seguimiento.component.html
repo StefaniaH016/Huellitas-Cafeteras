@@ -1,0 +1,199 @@
+<div>
+  <div>
+    @if (puedeAportar()) {
+      <form class="panel card-flat" id="form-aporte" (ngSubmit)="publicar()" novalidate>
+        <div class="panel-head">
+          <h3>
+            {{
+              caso().tipoCaso === 'EXTRAVIADO'
+                ? '¿Lo viste? Agrega un aporte'
+                : 'Agregar aporte al caso'
+            }}
+          </h3>
+        </div>
+        <fieldset class="choice-row">
+          <legend>Tipo de aporte</legend>
+          <label class="choice">
+            <input
+              type="radio"
+              name="tipo"
+              value="COMENTARIO"
+              [checked]="tipo() === 'COMENTARIO'"
+              (change)="tipo.set('COMENTARIO')"
+            />
+            <span>Comentario<small>Lo que observaste o hiciste</small></span>
+          </label>
+          <label class="choice">
+            <input
+              type="radio"
+              name="tipo"
+              value="AVISTAMIENTO"
+              [checked]="tipo() === 'AVISTAMIENTO'"
+              (change)="tipo.set('AVISTAMIENTO')"
+            />
+            <span>Avistamiento<small>Dónde lo viste</small></span>
+          </label>
+        </fieldset>
+        <div class="form-field">
+          <label for="aporte-texto">Descripción</label>
+          <textarea
+            id="aporte-texto"
+            name="descripcion"
+            [maxlength]="maxAporte"
+            [(ngModel)]="descripcion"
+            placeholder="Escribe lo que observaste o qué acción realizaste"
+          ></textarea>
+          <p class="field-hint">
+            <span>Entre 10 y {{ maxAporte }} caracteres</span
+            ><span>{{ descripcion.length }} / {{ maxAporte }}</span>
+          </p>
+        </div>
+        @if (tipo() === 'AVISTAMIENTO') {
+          <app-ubicacion-selector
+            [deptoId]="deptoId()"
+            [munId]="munId()"
+            [barrioId]="barrioId()"
+            (deptoChange)="deptoId.set($event)"
+            (munChange)="munId.set($event)"
+            (barrioChange)="barrioId.set($event)"
+            idPrefix="aporte"
+            leyenda="Zona"
+          ></app-ubicacion-selector>
+          <div class="form-field">
+            <label for="aporte-lugar">Referencia</label>
+            <input
+              id="aporte-lugar"
+              name="ubicacionTexto"
+              type="text"
+              maxlength="300"
+              [(ngModel)]="ubicacionTexto"
+              required
+              placeholder="Ej: Parque Sucre, frente a la tienda de la esquina"
+            />
+          </div>
+        }
+        <p class="group-label">Fotos <span class="optional">(opcional)</span></p>
+        <app-foto-picker campoId="aporte-fotos" (archivosChange)="fotos.set($event)" />
+        @if (descripcion && errorFormulario()) {
+          <p class="field-error">{{ errorFormulario() }}</p>
+        }
+        @if (envio.error()) {
+          <p class="feedback-error" role="alert">{{ envio.error() }}</p>
+        }
+        @if (publicado()) {
+          <p class="feedback-success" role="status">
+            Tu aporte quedó publicado. Gracias por ayudar.
+          </p>
+        }
+        <button
+          class="btn btn-primary btn-sm"
+          type="submit"
+          [disabled]="envio.cargando() || !!errorFormulario()"
+        >
+          {{ envio.cargando() ? 'Publicando...' : 'Publicar aporte' }}
+        </button>
+      </form>
+    }
+    @if (!puedeAportar()) {
+      @if (caso().estado === 'RESUELTO' || caso().estado === 'ARCHIVADO') {
+        <p class="note">El caso está cerrado: ya no recibe aportes.</p>
+      } @else {
+        <p class="note">
+          Los aportes los registra la ciudadanía. Tus acciones sobre el caso también aparecen aquí.
+        </p>
+      }
+    }
+
+    <div class="panel-head mt-sm"><h3>Actividad del caso</h3></div>
+    @if (moderacionAporte.exito()) {
+      <p class="feedback-success" role="status">{{ moderacionAporte.exito() }}</p>
+    }
+    @if (moderacionAporte.error()) {
+      <p class="feedback-error" role="alert">{{ moderacionAporte.error() }}</p>
+    }
+    @for (item of actividad(); track item.clave) {
+      <div class="timeline-item">
+        <div class="avatar-dot" aria-hidden="true">{{ item.icono }}</div>
+        <div class="timeline-body">
+          <p>
+            <strong>{{ item.titulo }}</strong>
+          </p>
+          @if (item.texto) {
+            <p class="quote">{{ item.texto }}</p>
+          }
+          @if (item.zona || item.referencia) {
+            <div class="timeline-location">
+              @if (item.zona) {
+                <p><strong>Zona:</strong> {{ item.zona }}</p>
+              }
+              @if (item.referencia) {
+                <p><strong>Punto de referencia:</strong> {{ item.referencia }}</p>
+              }
+            </div>
+          }
+          @if (item.fotografias?.length) {
+            <div class="timeline-photos" aria-label="Fotografías del aporte">
+              @for (foto of item.fotografias; track foto; let i = $index) {
+                <img [src]="foto" [alt]="'Foto del aporte ' + (i + 1)" />
+              }
+            </div>
+          }
+          <p class="list-meta">{{ formatFechaHora(item.fecha) }}</p>
+          @if (item.cambio) {
+            <p class="tl-change">{{ item.cambio }}</p>
+          }
+        </div>
+        @if (esAdministrador()) {
+          @if (item.aporteId; as aporteId) {
+            <div class="tl-tools">
+              @if (aporteSeleccionado() === aporteId) {
+                <form class="form-field" (ngSubmit)="ocultarAporte(aporteId)">
+                  <label [for]="'motivo-aporte-' + aporteId">Motivo para ocultar</label>
+                  <select
+                    [id]="'motivo-aporte-' + aporteId"
+                    [ngModel]="motivoOcultacion()"
+                    (ngModelChange)="motivoOcultacion.set($event)"
+                    [ngModelOptions]="{ standalone: true }"
+                    required
+                  >
+                    <option value="">Selecciona un motivo</option>
+                    <option value="Duplicado de otro aporte">Duplicado de otro aporte</option>
+                    <option value="Contenido inapropiado">Contenido inapropiado</option>
+                    <option value="Información falsa">Información falsa</option>
+                    <option value="Contenido no relacionado">Contenido no relacionado</option>
+                  </select>
+                  <button
+                    class="btn btn-primary btn-sm"
+                    type="submit"
+                    [disabled]="moderacionAporte.cargando() || !motivoOcultacion().trim()"
+                  >
+                    {{ moderacionAporte.cargando() ? 'Ocultando...' : 'Confirmar ocultación' }}
+                  </button>
+                  <button
+                    class="btn btn-secondary btn-sm"
+                    type="button"
+                    [disabled]="moderacionAporte.cargando()"
+                    (click)="cancelarModeracionAporte()"
+                  >
+                    Cancelar
+                  </button>
+                </form>
+              } @else {
+                <button
+                  class="btn btn-secondary btn-sm"
+                  type="button"
+                  [disabled]="moderacionAporte.cargando()"
+                  (click)="abrirModeracionAporte(aporteId)"
+                >
+                  Ocultar aporte
+                </button>
+              }
+            </div>
+          }
+        }
+      </div>
+    } @empty {
+      <p class="list-empty">Todavía no hay actividad en este caso.</p>
+    }
+  </div>
+</div>

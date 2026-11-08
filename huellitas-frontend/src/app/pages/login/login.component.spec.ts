@@ -57,32 +57,31 @@ it('shows an error when login fails', () => {
   expect(fixture.componentInstance.isLoading()).toBe(false);
 });
 
-it('switches to recovery and prevents the link default action', () => {
+it('does not show the unavailable password-recovery link or form', () => {
   const fixture = TestBed.createComponent(LoginComponent);
-  const event = new Event('click');
-  vi.spyOn(event, 'preventDefault');
+  fixture.detectChanges();
 
-  fixture.componentInstance.toggleRecovery(event);
-
-  expect(event.preventDefault).toHaveBeenCalledOnce();
-  expect(fixture.componentInstance.showRecovery()).toBe(true);
+  expect(fixture.nativeElement.textContent).not.toContain('¿Olvidaste tu contraseña?');
+  expect(fixture.nativeElement.textContent).not.toContain('Recuperar acceso');
+  expect(fixture.nativeElement.querySelector('input[type="email"]')).not.toBeNull();
+  expect(fixture.nativeElement.querySelector('input[type="password"]')).not.toBeNull();
 });
 
-it('marks an invalid recovery form as touched', () => {
+it('shows the app introduction and login form together in one card', () => {
   const fixture = TestBed.createComponent(LoginComponent);
-  fixture.componentInstance.onRecovery();
+  fixture.detectChanges();
 
-  expect(fixture.componentInstance.recoveryForm.controls.recoveryEmail.touched).toBe(true);
-});
+  const shell = fixture.nativeElement.querySelector('.login-shell') as HTMLElement | null;
+  const intro = fixture.nativeElement.querySelector('.login-intro') as HTMLElement | null;
+  const formPanel = fixture.nativeElement.querySelector('.login-panel') as HTMLElement | null;
+  const accent = formPanel?.querySelector('.auth-accent');
+  const brand = intro?.querySelector('.login-brand');
+  const message = intro?.querySelector('.login-intro-copy');
 
-it('shows the recovery confirmation for a valid email', () => {
-  const fixture = TestBed.createComponent(LoginComponent);
-  vi.spyOn(window, 'alert').mockImplementation(() => undefined);
-  fixture.componentInstance.recoveryForm.controls.recoveryEmail.setValue('user@example.test');
-
-  fixture.componentInstance.onRecovery();
-
-  expect(window.alert).toHaveBeenCalledWith(
-    'Si el correo existe, recibirás un enlace de recuperación.',
-  );
+  expect(shell).not.toBeNull();
+  expect(intro?.parentElement).toBe(shell);
+  expect(formPanel?.parentElement).toBe(shell);
+  expect(accent).not.toBeNull();
+  expect(brand?.nextElementSibling).toBe(message);
+  expect(intro?.querySelector('.intro-paw')).toBeNull();
 });

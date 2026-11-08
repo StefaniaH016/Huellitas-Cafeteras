@@ -28,5 +28,14 @@ public class Foto {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "caso_id", nullable = false)
     @JsonBackReference("caso-fotos")
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private Caso caso;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "seguimiento_id")
+    @JsonBackReference("seguimiento-fotos")
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private Seguimiento seguimiento;
 }
