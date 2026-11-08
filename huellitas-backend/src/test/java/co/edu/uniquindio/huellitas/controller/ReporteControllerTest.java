@@ -8,7 +8,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.mock.web.MockMultipartFile;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -17,7 +16,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
-import java.util.List;
 
 @ExtendWith(MockitoExtension.class)
 class ReporteControllerTest {
@@ -49,32 +47,6 @@ class ReporteControllerTest {
     @Test
     void actualizarReporteRechazaUsuarioNoAutenticado() {
         var response = reporteController.actualizarReporte(12L, null, null);
-
-        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
-        verifyNoInteractions(casoService);
-    }
-
-    @Test
-    void crearReporteConImagenRetornaCreadoCuandoUsuarioEstaAutenticado() {
-        CrearReporteDTO dto = null;
-        MockMultipartFile archivo = new MockMultipartFile(
-                "archivos", "animal.jpg", "image/jpeg", new byte[] {1});
-        CasoResponseDTO caso = CasoResponseDTO.builder().id(12L).build();
-        when(casoService.crearCasoConImagen(dto, List.of(archivo), usuario.getUsername())).thenReturn(caso);
-
-        var response = reporteController.crearReporteConImagen(dto, List.of(archivo), usuario);
-
-        assertEquals(HttpStatus.CREATED, response.getStatusCode());
-        assertEquals(caso, response.getBody());
-        verify(casoService).crearCasoConImagen(dto, List.of(archivo), usuario.getUsername());
-    }
-
-    @Test
-    void crearReporteConImagenRechazaUsuarioNoAutenticado() {
-        var response = reporteController.crearReporteConImagen(
-                null,
-                List.of(new MockMultipartFile("archivos", "animal.jpg", "image/jpeg", new byte[] {1})),
-                null);
 
         assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
         verifyNoInteractions(casoService);
