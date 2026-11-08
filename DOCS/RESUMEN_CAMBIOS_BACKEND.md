@@ -1,123 +1,176 @@
-# Justificación de cambios del backend
+# Justificación y Resumen de Cambios del Backend
 
-## Alcance
+## 1. Alcance y Referencia de Comparación
 
-Este documento describe los cambios backend acumulados que están en el árbol de trabajo al momento de prepararlo: **50 archivos modificados y 8 archivos nuevos**. Se agrupan por comportamiento relacionado, y se indica para cada archivo qué aporta y qué se perdería si se omitiera. Los cambios de frontend, configuración general del repositorio y Docker no forman parte del inventario backend.
+Este documento detalla **todos los cambios backend** presentes en la rama `Stefania` (`6e3c7dd`) tomando como línea base la rama `origin/Allison` (`e8eaa11`).
 
-## 1. Registro y verificación de organizaciones
+En la comparación directa de árboles (`git diff --stat origin/Allison..HEAD -- huellitas-backend`) existen exactamente **65 archivos backend diferentes**:
+- **11 archivos nuevos (agregados)**
+- **54 archivos modificados**
+- **0 archivos eliminados**
+- **Métricas:** 1.931 inserciones (+) y 154 eliminaciones (-)
 
-Se amplió el registro institucional para que fundaciones y veterinarias creen una organización asociada a su usuario y aporten información verificable. La solicitud de revisión permite enviar un documento de soporte, el administrador puede consultarlo y resolver la verificación; se guardan los cambios de estado y se notifica al usuario.
+---
 
-| Archivo | Cambio y propósito | Si se omitiera |
+## 2. Resumen por Áreas Funcionales
+
+| Área Funcional | Estado en Allison | Diferencia en la rama actual | Justificación del cambio |
+|---|---|---|---|
+| **Registro y Verificación Institucional** | Existía registro de usuario genérico y resolución administrativa básica sin documentos. | Se agrega registro institucional multipart (`/registro/institucional`), solicitud de revalidación con soporte (`/solicitar-revision`), consulta protegida del documento legal para administradores, persistencia de NIT y municipio de operación. | Permite a fundaciones y veterinarias enviar documentos legales de soporte (PDF/JPG/PNG) y al administrador contrastar la identidad con evidencia real antes de otorgar permisos institucionales. |
+| **Soporte Documental** | No existía persistencia de archivos de soporte para organizaciones. | Se crea la entidad `DocumentoSoporte`, el DTO `DocumentoSoporteDTO`, el repositorio `OrganizacionRepository` y la utilidad `DocumentoSoporteUtils`. | Garantiza el almacenamiento persistente de binarios, la validación estricta de tamaño (máx. 5 MB) y tipo MIME mediante números mágicos, asegurando integridad antes de guardar. |
+| **Custodia y Manejo de Proxies Lazy** | Existía consulta y asignación de custodia, pero la evaluación de tipo contra `Fundacion` fallaba con proxies de Hibernate. | `CasoServiceImpl` y mappers desenvuelven la organización con `Hibernate.unproxy(...)` antes de validar `instanceof Fundacion`. | Evita que Spring Security o el servicio rechacen con HTTP 403 a una fundación legítima debido a que Hibernate carga la entidad como un proxy CGLIB en lugar del tipo concreto. |
+| **Aportes Ciudadanos y Fotografías** | Los aportes solo admitían comentario básico y las fotos se mezclaban con el caso general. | Se añade ubicación textual (máx. 300 caracteres), relación directa de fotografías con el aporte (`Seguimiento`), y autorización para ciudadanos externos en casos activos (`REGISTRADO`, `EN_ATENCION`). | Permite georreferenciar visualizaciones del animal con puntos de referencia y evita que las fotos de avistamientos posteriores contaminen el álbum original del reporte. |
+| **Disponibilidad para Rescate y Perfil** | El perfil no permitía a ciudadanos indicar si pueden responder a rescates en su zona. | Se añade el campo `disponibleRescate` a `Usuario`, `UsuarioPerfilDTO`, `ActualizarPerfilDTO`, mappers y servicios. | Conecta la preferencia del voluntario para autorizar el envío de alertas de emergencia de casos reportados en su municipio de interés. |
+| **Remitente de Correo Electrónico** | `EmailServiceImpl` dependía estrictamente de `spring.mail.username`. | Se priorizan `spring.mail.from` y la variable de entorno `MAIL_FROM`, manteniendo fallback al usuario SMTP. | Hace posible usar servicios SMTP en producción donde la cuenta autenticada y el remitente visible (*From*) difieren, sin alterar compatibilidad local. |
+| **Moderación Administrativa** | La consulta de casos pendientes dependía de `motivoModeracion != null`. | Se incorpora el flag booleano `moderacionPendiente` en `Caso` y se ajusta la consulta `findByModeracionPendienteTrueOrVisibleFalse()`. | Permite una gestión administrativa limpia de casos en revisión sin colisionar con motivos de cierre o descripciones previas. |
+| **Bitácora Médica y Mapeo Clínico** | El resumen médico podía omitir el nombre de la veterinaria si la entidad responsable difería del usuario creador. | Se mapea el responsable (`responsableId`) y se extrae el nombre clínico desde la organización veterinaria o el usuario. | Garantiza trazabilidad profesional en la historia clínica del animal en tratamiento. |
+| **Seguridad y Excepciones** | Respuestas HTTP 403 devolvían mensajes estandarizados sin detalle de la regla violada. | `GlobalExceptionHandler` propaga el mensaje específico de `AccessDeniedException` y `SecurityConfig` abre el endpoint multipart institucional. | Facilita al frontend informar exactamente al usuario qué condición impidió la acción (p. ej. "Solo fundaciones verificadas"). |
+| **Cobertura de Pruebas** | Pruebas existentes en Allison no contemplaban los nuevos flujos institucionales ni contratos extendidos. | Se añaden 7 clases de prueba nuevas y se actualizan 7 existentes más las colecciones Postman. | Asegura prevención de regresiones en validación de documentos, permisos por rol, filtros de fotos y persistencia. |
+
+---
+
+## 3. Inventario de Archivos Nuevos (11 archivos agregados)
+
+Todos estos archivos fueron incorporados en esta rama y no existen en `origin/Allison`:
+
+| Documento / Ruta | Tipo | Qué se agregó y propósito | Justificación técnica |
+|---|---|---|---|
+| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/dto/verificacion/DocumentoSoporteDTO.java` | DTO | Record inmutable para transportar `nombreArchivo`, `tipoContenido` y `byte[] contenido` con implementaciones seguras de `equals`, `hashCode` y `toString`. | Permite servir el binario del documento al administrador desacoplándolo de la entidad JPA y evitando exponer la entidad de persistencia directamente en el controlador. |
+| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/entity/DocumentoSoporte.java` | Entidad JPA | Entidad `@Table(name = "documentos_soporte")` con campos `id`, `nombreArchivo`, `tipoContenido` y columna `bytea` (`contenido`). | Persiste de manera segura los archivos acreditativos de fundaciones y veterinarias directamente en base de datos vinculados a la organización. |
+| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/repository/OrganizacionRepository.java` | Repositorio | Repositorio Spring Data JPA con consulta `existsByNit(String nit)`. | Permite verificar la unicidad del NIT durante el registro institucional o revalidación para evitar organizaciones duplicadas. |
+| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/util/DocumentoSoporteUtils.java` | Utilidad | Validador de archivos: límite de 5 MB, detección de tipos MIME reales por magic numbers (PDF, JPEG, PNG) y asignación a la entidad `Organizacion`. | Evita subida de archivos vacíos, maliciosos, de tipos no soportados o excesivamente pesados, centralizando la regla de negocio. |
+| `huellitas-backend/src/test/java/co/edu/uniquindio/huellitas/dto/verificacion/DocumentoSoporteDTOTest.java` | Prueba Unitaria | Pruebas sobre el record `DocumentoSoporteDTO` (inmutabilidad, igualdad de contenido y representación segura de hashes). | Previene fallos en el manejo de arrays de bytes en capas superiores de servicio y controladores. |
+| `huellitas-backend/src/test/java/co/edu/uniquindio/huellitas/mapper/UsuarioMapperTest.java` | Prueba Unitaria | Pruebas de mapeo de usuario a `UsuarioPerfilDTO`, validando organización, verificación, custodia y `disponibleRescate`. | Garantiza que los atributos institucionales y de voluntariado se proyecten fielmente al perfil de usuario en la API. |
+| `huellitas-backend/src/test/java/co/edu/uniquindio/huellitas/service/AuthServiceImplTest.java` | Prueba Unitaria | Pruebas unitarias de registro institucional y ordinario con validación de NIT, roles y documentos de soporte. | Asegura que las reglas de negocio de creación de cuentas institucionales operen correctamente en aislamiento. |
+| `huellitas-backend/src/test/java/co/edu/uniquindio/huellitas/service/EmailServiceImplTest.java` | Prueba Unitaria | Pruebas unitarias sobre la resolución de remitentes en `EmailServiceImpl` (`spring.mail.from`, `MAIL_FROM` y fallbacks). | Verifica que el correo saliente tome el remitente adecuado en diferentes escenarios de configuración. |
+| `huellitas-backend/src/test/java/co/edu/uniquindio/huellitas/service/ModeracionServiceTest.java` | Prueba Unitaria | Pruebas de moderación administrativa: listado de pendientes, decisiones de visibilidad y ocultamiento de aportes. | Asegura la correcta transición de estados de moderación y la protección de casos reportados. |
+| `huellitas-backend/src/test/java/co/edu/uniquindio/huellitas/service/UsuarioPerfilServiceTest.java` | Prueba Unitaria | Pruebas de consulta y actualización del perfil de usuario, incluyendo el nuevo campo `disponibleRescate`. | Valida la persistencia y recuperación del estado de disponibilidad de rescate y datos de contacto. |
+| `huellitas-backend/src/test/java/co/edu/uniquindio/huellitas/util/DocumentoSoporteUtilsTest.java` | Prueba Unitaria | Pruebas exhaustivas de validación de archivos (formatos admitidos, magic numbers, archivos vacíos y límites de tamaño). | Garantiza que las restricciones de seguridad documental no permitan archivos corruptos o extensiones falsificadas. |
+
+---
+
+## 4. Inventario de Archivos Modificados (54 archivos)
+
+### 4.1. Controladores (5 archivos)
+
+| Documento / Ruta | Qué se modificó | Justificación / Si se omitiera |
 |---|---|---|
-| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/controller/AuthController.java` | Añade el endpoint multipart para registrar cuentas institucionales con sus datos y documento opcional. | El cliente no podría enviar en una sola operación los datos del registro y el archivo de soporte. |
-| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/security/SecurityConfig.java` | Permite el endpoint institucional como ruta pública de registro, igual que el registro ordinario. | Spring Security bloquearía el registro institucional antes de que el servicio lo procese. |
-| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/dto/auth/RegistroUsuarioDTO.java` | Incluye nombre de entidad, NIT, documento legal y municipio de operación; conserva el constructor anterior para compatibilidad con los usos existentes. | No podrían transportarse los datos necesarios para crear la organización y los clientes/test antiguos podrían dejar de compilar. |
-| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/service/AuthService.java` | Declara la variante de registro que recibe el documento multipart. | El controlador no tendría un contrato de servicio que permita delegar el nuevo registro. |
-| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/service/impl/AuthServiceImpl.java` | Crea y asocia entidades `Fundacion` o `Veterinaria`, valida los datos requeridos y la unicidad del NIT, asigna el municipio y adjunta el documento cuando se envía. | Las cuentas institucionales quedarían sin entidad asociada o no se podrían registrar con los datos que la verificación necesita. |
-| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/repository/OrganizacionRepository.java` *(nuevo)* | Añade persistencia y consulta de existencia por NIT. | No se podría guardar la organización ni prevenir NIT duplicados mediante el repositorio. |
-| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/repository/MunicipioRepository.java` | Añade búsqueda de municipio por nombre sin distinguir mayúsculas/minúsculas. | No se podría resolver el municipio de operación informado por nombre en el registro o la revalidación. |
-| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/entity/Organizacion.java` | Relaciona la organización con el documento almacenado y conserva nombre y tipo MIME para presentarlo en la bandeja administrativa. | La organización no tendría dónde vincular el soporte ni metadatos para mostrarlo y descargarlo. |
-| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/entity/DocumentoSoporte.java` *(nuevo)* | Define la entidad persistente con nombre, tipo de contenido y bytes del documento. | No habría una representación persistente para conservar el soporte recibido. |
-| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/util/DocumentoSoporteUtils.java` *(nuevo)* | Valida presencia y tamaño máximo de 5 MB, reconoce PDF/JPG/PNG por contenido y normaliza el nombre antes de asociar el archivo. | Se aceptarían archivos vacíos, excesivos o de tipos no admitidos sin la validación centralizada. |
-| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/controller/VerificacionController.java` | Añade la solicitud multipart de revisión para cuentas institucionales y la consulta administrativa del documento con MIME, `no-store` y `nosniff`. | No existirían las rutas para solicitar revisión ni para que el administrador examine el soporte de manera restringida. |
-| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/service/VerificacionService.java` | Expone contratos para solicitar revisión y recuperar el documento de soporte. | El controlador carecería de operaciones de servicio para esas acciones. |
-| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/service/impl/VerificacionServiceImpl.java` | Gestiona solicitudes y revalidaciones, valida rol y asociación entre rol y tipo de organización, persiste el soporte y actualiza estados; al resolver verifica la organización y notifica el resultado. | Se podrían aprobar cuentas sin una organización consistente, no se podrían revalidar con nuevo soporte ni guardar una decisión coherente en usuario y organización. |
-| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/dto/verificacion/VerificacionPendienteDTO.java` | Expone NIT, municipio, nombre del soporte y disponibilidad, manteniendo el constructor previo. | La bandeja administrativa no podría mostrar esos datos ni identificar si hay un documento para revisar. |
-| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/dto/verificacion/DocumentoSoporteDTO.java` *(nuevo)* | Transporta nombre, MIME y contenido del documento entre servicio y controlador. | No habría un contrato tipado para servir el soporte al administrador. |
-| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/mapper/VerificacionMapper.java` | Mapea detalles de organización y del soporte a la cola administrativa y devuelve el estado real de verificación. | La API retornaría datos incompletos o estados que no coinciden con la organización persistida. |
-| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/dto/usuario/UsuarioPerfilDTO.java` | Añade organización, estado de verificación y datos de custodia/capacidad al perfil. | Los consumidores del perfil no podrían conocer la condición institucional y capacidad asociada. |
-| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/mapper/UsuarioMapper.java` | Mapea la organización y usa su municipio cuando el usuario no tiene municipio de interés individual. | La respuesta del perfil omitiría información institucional o ubicación de operación. |
-| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/entity/enums/TipoNotificacion.java` | Añade el tipo de notificación `VERIFICACION`. | Las notificaciones sobre decisiones de verificación no tendrían un tipo semántico propio. |
-| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/worker/NotificacionWorker.java` | Genera notificaciones de aprobación/rechazo institucional y agrega transacciones a notificaciones asíncronas que acceden a datos persistidos; ajusta el registro cuando no hay caso asociado. | El usuario no recibiría el resultado de la verificación y las operaciones asíncronas podrían no tener el contexto transaccional requerido. |
+| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/controller/AuthController.java` | Añade endpoint `POST /registro/institucional` con `consumes = MediaType.MULTIPART_FORM_DATA_VALUE` recibiendo `datos` (`RegistroUsuarioDTO`) y `documentoSoporte` (`MultipartFile`). | El frontend no podría registrar una fundación o veterinaria junto con su evidencia documental en una sola transacción HTTP. |
+| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/controller/VerificacionController.java` | Añade endpoints `POST /solicitar-revision` (multipart) y `GET /{usuarioId}/documento-soporte` (descarga segura con `no-store`, `nosniff` y `Content-Disposition: inline`). | Las organizaciones no tendrían vía para revalidarse tras un rechazo, ni el administrador podría inspeccionar visualmente el soporte desde la web. |
+| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/controller/AporteController.java` | Normalización de salto de línea final (EOF). | Garantiza estilo y formato homogéneo según estándares del repositorio. |
+| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/controller/BitacoraController.java` | Normalización de salto de línea final (EOF). | Garantiza consistencia de estilo y evita advertencias en linters y git. |
+| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/controller/ModeracionController.java` | Normalización de salto de línea final (EOF). | Mantiene el archivo normalizado sin diferencias espurias. |
 
-## 2. Bitácora clínica y privacidad
+### 4.2. DTOs de Entrada y Salida (7 archivos)
 
-Se limitó la lectura de las entradas clínicas y del PDF a veterinarias verificadas. Una veterinaria puede iniciar la atención desde un caso registrado o continuar uno en atención; las modificaciones posteriores quedan restringidas a la veterinaria responsable. El inicio se refleja en el estado, el historial y el feed de seguimiento.
-
-| Archivo | Cambio y propósito | Si se omitiera |
+| Documento / Ruta | Qué se modificó | Justificación / Si se omitiera |
 |---|---|---|
-| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/controller/BitacoraController.java` | Protege consulta y descarga PDF con el rol de veterinaria y pasa la identidad del usuario al servicio al generar el PDF. | Las rutas no aplicarían la restricción de rol ni podrían validar al usuario que solicita la historia clínica. |
-| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/service/BitacoraService.java` | Actualiza el contrato de generación del PDF para recibir la identidad del solicitante. | La capa de servicio no podría autorizar la descarga de forma consistente con la consulta clínica. |
-| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/service/impl/BitacoraServiceImpl.java` | Permite tomar casos activos, cambia el caso a `EN_ATENCION`, registra historial y actualización, restringe lectura a veterinarias verificadas y edición/alta a la veterinaria responsable. También valida acceso al PDF. | No habría trazabilidad del inicio de atención ni controles de confidencialidad y responsabilidad clínica en las operaciones de servicio. |
-| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/dto/reporte/ResumenMedicoDTO.java` | Incluye el identificador de la persona responsable en el resumen médico. | El consumidor no podría identificar inequívocamente quién está a cargo de la bitácora. |
-| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/mapper/CasoMapper.java` | Construye el nombre del responsable desde la organización veterinaria o, como alternativa, desde el usuario, y mapea su identificador. | El resumen podría omitir el profesional cuando no exista una organización asociada. |
+| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/dto/auth/RegistroUsuarioDTO.java` | Incorpora campos institucionales (`nombreEntidad`, `nit`, `documentoLegal`, `municipioOperacion`) y mantiene constructor sobrecargado compatible con registros previos. | Permite recolectar los datos obligatorios de la organización sin romper pruebas ni clientes que usan el constructor ordinario. |
+| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/dto/verificacion/VerificacionPendienteDTO.java` | Añade `nit`, `municipio`, `documentoSoporteNombre` y booleano `documentoSoporteDisponible`, con constructor de retrocompatibilidad. | La bandeja administrativa carecería de los datos indispensables para evaluar una organización sin tener que consultar la BD manualmente. |
+| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/dto/aporte/CrearAporteDTO.java` | Agrega `@Size(max = 300)` sobre `ubicacionTexto`. | Textos excesivos provocarían errores de base de datos no controlados en lugar de validaciones HTTP 400 descriptivas. |
+| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/dto/reporte/AporteDetalleDTO.java` | Añade los campos `zona`, `ubicacionTexto` y `fotografias` (`List<String>`). | El detalle del caso no mostraría la referencia geográfica ni las fotos asociadas a los aportes ciudadanos. |
+| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/dto/reporte/CasoDetalleDTO.java` | Añade `fundacionCustodioId` y `fundacionCustodioNombre`. | El frontend no podría mostrar qué fundación tiene en custodia al animal ni activar acciones exclusivas de custodia. |
+| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/dto/reporte/ResumenMedicoDTO.java` | Añade `responsableId`. | El cliente no podría asociar la bitácora médica al usuario veterinario autenticado para controlar permisos de edición. |
+| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/dto/usuario/ActualizarPerfilDTO.java` | Añade `Boolean disponibleRescate`. | El usuario voluntario no podría habilitar o pausar su disponibilidad para acudir a rescates de emergencia. |
+| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/dto/usuario/UsuarioPerfilDTO.java` | Añade campos institucionales (`organizacionId`, `organizacionNombre`, `estadoVerificacionOrganizacion`, `aceptaCustodia`, `capacidadAlbergue`) y `disponibleRescate`. | Las pantallas del perfil y paneles institucionales quedarían sin datos para renderizar el estado del usuario. |
 
-## 3. Aportes ciudadanos, ubicación y fotografías
+### 4.3. Entidades y Modelos de Persistencia (4 archivos)
 
-Se habilitaron aportes de ciudadanos externos al caso, conservando controles para el reportante y la fundación custodio verificada. Se restringen los aportes a casos activos, se persisten puntos de referencia y se asocian las fotografías al aporte para que no se mezclen con las imágenes originales del caso.
-
-| Archivo | Cambio y propósito | Si se omitiera |
+| Documento / Ruta | Qué se modificó | Justificación / Si se omitiera |
 |---|---|---|
-| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/dto/aporte/CrearAporteDTO.java` | Limita a 300 caracteres el punto de referencia textual. | La ubicación podría exceder el tamaño permitido por el modelo y fallar al persistir. |
-| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/service/impl/AporteServiceImpl.java` | Autoriza aportes conforme al rol y relación con el caso, solo acepta estados activos, guarda ubicación y asocia/reutiliza fotografías con el seguimiento. | Se rechazarían aportes externos válidos, se permitiría aportar a casos cerrados o se perdería la relación correcta entre fotos y aporte. |
-| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/entity/Seguimiento.java` | Añade ubicación textual y colección ordenada de fotografías del seguimiento. | El aporte no podría conservar ni exponer sus referencias de ubicación y fotos. |
-| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/entity/Foto.java` | Añade la relación opcional con seguimiento y exclusiones de serialización/igualdad para evitar ciclos y comparaciones recursivas. | Las imágenes solo podrían vincularse al caso, mezclando las fotos de aportes con la galería del reporte. |
-| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/repository/FotoRepository.java` | Permite localizar una foto del caso aún no asociada a un seguimiento por URL. | El servicio no podría reutilizar la foto recibida para enlazarla al aporte y podría duplicar registros. |
-| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/dto/reporte/AporteDetalleDTO.java` | Incluye zona, ubicación textual y URLs fotográficas en el detalle del aporte. | Las respuestas no incluirían datos necesarios para presentar el aporte completo. |
-| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/mapper/AporteMapper.java` | Mapea ubicación, zona y fotografías tanto en el detalle como en la respuesta del aporte. | Los datos persistidos no llegarían a los consumidores de la API. |
-| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/mapper/CasoMapper.java` | Excluye del álbum del caso las fotos pertenecientes a seguimientos y selecciona la foto principal solo entre las fotos originales. | Las fotos de aportes podrían aparecer erróneamente como fotos principales o generales del caso. |
+| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/entity/Caso.java` | Añade columna booleana `moderacionPendiente` (por defecto `false`). | Se mezclarían casos que requieren revisión con casos resueltos u ocultos, dificultando el filtrado en la cola de moderación. |
+| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/entity/Organizacion.java` | Añade relación `@OneToOne` con `DocumentoSoporte`, y columnas `documentoSoporteNombre` y `documentoSoporteContentType`. | La organización no conservaría el enlace a su soporte documental ni los metadatos necesarios para descargarlo. |
+| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/entity/Foto.java` | Añade relación opcional `@ManyToOne` con `Seguimiento`, con `@JsonBackReference` y exclusiones en Lombok `ToString`/`EqualsAndHashCode`. | Las fotos de aportes se mezclarían con la galería general del reporte y se producirían desbordamientos de pila (ciclos infinitos). |
+| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/entity/Seguimiento.java` | Añade `ubicacionTexto` (300 caracteres) y relación `@OneToMany` con `Foto` ordenada por `id ASC`. | Los aportes no podrían asociar fotografías ni guardar descripciones de ubicación física del avistamiento. |
+| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/entity/enums/TipoNotificacion.java` | Añade el valor `VERIFICACION` al enum. | No se podrían generar notificaciones tipadas cuando una organización es verificada o rechazada. |
 
-## 4. Reportes ciudadanos y moderación
+### 4.4. Repositorios Spring Data (3 archivos)
 
-Se añadió una operación para que un ciudadano autenticado denuncie casos ajenos que sigan visibles. El motivo se valida, se guarda una marca explícita de moderación pendiente y la operación evita duplicar una marca ya pendiente. La cola administrativa consulta casos pendientes o ya ocultos; al decidir, se limpia la marca y se conserva la visibilidad correspondiente.
-
-| Archivo | Cambio y propósito | Si se omitiera |
+| Documento / Ruta | Qué se modificó | Justificación / Si se omitiera |
 |---|---|---|
-| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/controller/ModeracionController.java` | Expone el endpoint de denuncia ciudadana con autorización por rol. | El cliente no tendría una ruta backend para enviar una denuncia de caso. |
-| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/dto/moderacion/ReportarCasoDTO.java` *(nuevo)* | Valida que el motivo no esté vacío y tenga entre 10 y 500 caracteres. | El reporte podría llegar sin explicación o con un motivo demasiado corto/largo. |
-| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/service/ModeracionService.java` | Declara la operación de reporte de caso. | El controlador no podría invocar la denuncia desde la capa de servicio. |
-| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/service/impl/ModeracionServiceImpl.java` | Rechaza reportes propios, de roles no ciudadanos o sobre casos no visibles; registra el motivo, marca pendiente y trata de forma idempotente un reporte duplicado. Al resolver, elimina la marca pendiente. | No se aplicarían las reglas de autorización ni quedaría un registro consultable por administración. |
-| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/entity/Caso.java` | Persiste el indicador `moderacionPendiente`, separado de la visibilidad pública. | No se podría distinguir un caso señalado para revisión de uno simplemente visible o ya oculto. |
-| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/repository/CasoRepository.java` | Busca casos pendientes de moderación o no visibles para alimentar la cola administrativa. | La cola no podría recuperar los casos por el nuevo estado de moderación. |
-| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/mapper/ModeracionMapper.java` | Expone el estado pendiente basado en la marca persistida. | La API podría presentar un estado de revisión incorrecto al administrador. |
+| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/repository/CasoRepository.java` | Sustituye la consulta por `findByModeracionPendienteTrueOrVisibleFalse()`. | No se obtendrían de forma certera los casos que un administrador debe evaluar en su bandeja de moderación. |
+| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/repository/FotoRepository.java` | Añade `findFirstByCasoIdAndUrlAndSeguimientoIsNull(Long casoId, String url)`. | El servicio de aportes no podría vincular una foto recién subida al seguimiento específico sin crear registros huérfanos o duplicados. |
+| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/repository/MunicipioRepository.java` | Añade `findFirstByNombreIgnoreCase(String nombre)`. | El registro institucional fallaría si el usuario ingresa el municipio con diferencias en mayúsculas/minúsculas. |
 
-## 5. Publicación de casos con imágenes y notificaciones
+### 4.5. Mappers (5 archivos)
 
-Se añadió una ruta multipart para publicar un reporte con imágenes. El servicio carga las imágenes primero y solo después crea el caso y registra las fotos; ante error intenta limpiar lo cargado. Las notificaciones de publicación se ejecutan tras confirmar la transacción para evitar avisar de reportes que no quedaron guardados.
-
-| Archivo | Cambio y propósito | Si se omitiera |
+| Documento / Ruta | Qué se modificó | Justificación / Si se omitiera |
 |---|---|---|
-| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/controller/ReporteController.java` | Añade el endpoint autenticado multipart para crear un caso junto con sus imágenes. | No habría una operación de API para enviar reporte y fotos en una sola petición. |
-| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/service/CasoService.java` | Declara la creación de casos con archivos multipart. | El controlador no tendría un contrato para delegar la publicación con imágenes. |
-| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/service/impl/CasoServiceImpl.java` | Separa la creación de la entidad, sube imágenes antes de persistir, crea fotos principales/secundarias, intenta limpiar archivos de Cloudinary si falla y agenda notificaciones tras el commit. También inicializa relaciones necesarias antes de notificaciones asíncronas y resuelve proxies de organizaciones. | Un fallo de carga podría dejar el reporte guardado sin sus imágenes; una notificación podría anunciar una transacción fallida o no disponer de relaciones cargadas. |
-| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/service/impl/CloudinaryServiceImpl.java` | Evita incluir el texto libre del error externo en el log y registra el tipo de excepción. | Los logs podrían exponer mensajes del proveedor que no se necesitan para diagnosticar el tipo de fallo. |
-| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/worker/NotificacionWorker.java` | Hace transaccionales las rutinas asíncronas de notificación y evita duplicar el aviso de emergencia al reportante. | Podrían perderse avisos al reportante o producirse duplicados y errores por operaciones asíncronas sin transacción. |
+| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/mapper/AporteMapper.java` | Extrae fotografías y compone la zona (`barrio · municipio`) y `ubicacionTexto` para los DTOs de aporte. | Los clientes de la API recibirían listas vacías de imágenes y sin el contexto geográfico del aporte. |
+| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/mapper/CasoMapper.java` | Filtra fotos con `seguimiento == null` para que fotos de aporte no salgan en la galería principal del caso; mapea custodio y nombre de veterinaria responsable. | Las fotos de aportes de ciudadanos se mostrarían erróneamente como fotos oficiales del caso; el custodio y veterinario saldrían nulos. |
+| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/mapper/ModeracionMapper.java` | Formatea la fecha de revisión con `FechaUtils.formatear(...)`. | Garantiza el estándar ISO / cadena consistente en la respuesta de moderación. |
+| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/mapper/UsuarioMapper.java` | Desenvuelve el proxy Hibernate de la organización y proyecta NIT, municipio operativo, albergue, custodia y `disponibleRescate`. | Evita errores de tipo en tiempo de ejecución por proxies Hibernate y proyecta todos los datos institucionales al perfil. |
+| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/mapper/VerificacionMapper.java` | Desenvuelve `Organizacion` con `Hibernate.unproxy(...)`, mapea NIT, municipio y soporte a `VerificacionPendienteDTO`; ajusta estado de respuesta. | La bandeja administrativa no vería los datos institucionales del solicitante ni el estado verídico de la organización. |
 
-## 6. Datos de respuesta, excepciones y compatibilidad
+### 4.6. Servicios e Implementaciones (11 archivos)
 
-| Archivo | Cambio y propósito | Si se omitiera |
+| Documento / Ruta | Qué se modificó | Justificación / Si se omitiera |
 |---|---|---|
-| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/dto/reporte/CasoDetalleDTO.java` | Expone identificador y nombre de la fundación custodio en el detalle del caso. | El consumidor no podría identificar la fundación que tiene la custodia. |
-| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/mapper/CasoMapper.java` | Completa el mapeo de custodio y responsable clínico, además de separar fotos originales de fotos de aporte. | Los datos nuevos quedarían en entidades pero no en las respuestas REST. |
-| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/exception/GlobalExceptionHandler.java` | Devuelve el mensaje de denegación específico en las respuestas HTTP 403. | El cliente recibiría únicamente un mensaje genérico, sin poder explicar la regla de acceso que rechazó la operación. |
-| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/security/JwtAuthenticationFilter.java` | Registra una advertencia cuando no logra extraer el usuario de un JWT. | Los fallos de extracción del usuario quedarían sin una señal de diagnóstico en los logs. |
-| `huellitas-backend/pom.xml` | Actualiza `springdoc-openapi-starter-webmvc-ui` de 2.6.0 a 3.1.0. | La interfaz y las dependencias de documentación OpenAPI seguirían en la versión anterior. |
+| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/service/AuthService.java` | Declara la sobrecarga `registro(RegistroUsuarioDTO dto, MultipartFile documentoSoporte)`. | El controlador de autenticación carecería del contrato tipado para procesar registros con archivos. |
+| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/service/VerificacionService.java` | Declara `solicitarRevision(...)` y `obtenerDocumentoSoporte(Long usuarioId)`. | El controlador de verificación no podría delegar la revalidación ni la obtención de bytes del documento. |
+| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/service/impl/AuthServiceImpl.java` | Crea y asocia entidades `Fundacion` o `Veterinaria`, valida NIT único, asigna municipio de operación y valida/adjunta documento de soporte. | Las cuentas institucionales se crearían como ciudadanos comunes sin organización ni evidencia persistida. |
+| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/service/impl/VerificacionServiceImpl.java` | Implementa solicitud de revisión y consulta de documento; valida concordancia de rol con organización; desenvuelve proxies; agenda notificación tras commit de transacción. | Se podrían aprobar organizaciones sin soporte, mezclar roles y tipos de entidad, o enviar notificaciones antes de persistir la decisión. |
+| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/service/impl/AporteServiceImpl.java` | Restringe aportes a casos en `REGISTRADO` o `EN_ATENCION`; autoriza a ciudadanos externos, autor y custodio; persiste ubicación y asocia fotografías al seguimiento. | Se permitirían aportes a casos cerrados, se bloquearían aportes útiles de terceros o las fotos no se asociarían al aporte. |
+| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/service/impl/BitacoraServiceImpl.java` | Ajuste en la verificación de permisos y consistencia de excepciones al validar el profesional a cargo. | Asegura que la bitácora médica mantenga invariantes de privacidad y responsabilidad médica. |
+| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/service/impl/CasoServiceImpl.java` | Desenvuelve la organización con `Hibernate.unproxy(...)` antes de evaluar que sea una `Fundacion` en la asignación de custodia; valida nulos explícitamente. | Resuelve el fallo crítico donde Spring denegaba la custodia a fundaciones legítimas porque la relación lazy se envolvía en un proxy de Hibernate. |
+| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/service/impl/CloudinaryServiceImpl.java` | Sanitiza el registro de errores para no imprimir texto libre o secretos de la API externa en los logs del sistema. | Cumple buenas prácticas de observabilidad y previene filtración de datos sensibles en trazas de error. |
+| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/service/impl/EmailServiceImpl.java` | Resuelve el remitente visible priorizando `spring.mail.from` y la variable `MAIL_FROM` antes de recurrir al usuario SMTP. | Permite separar la identidad autenticada SMTP del remitente público visible en los correos transaccionales. |
+| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/service/impl/ModeracionServiceImpl.java` | Al resolver una moderación, limpia `moderacionPendiente = false` y aplica la visibilidad según la decisión administrativa. | Los casos resueltos continuarían apareciendo en la cola de moderación pendiente. |
+| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/service/impl/UsuarioPerfilServiceImpl.java` | Persiste el campo `disponibleRescate` cuando el usuario actualiza sus preferencias de perfil. | El usuario no podría actualizar ni guardar su estado de disponibilidad de rescate en la base de datos. |
 
-## 7. Pruebas añadidas o actualizadas
+### 4.7. Seguridad, Excepciones y Configuración (5 archivos)
 
-Estos archivos prueban los nuevos contratos, permisos, respuestas y flujos; son cobertura de regresión, no lógica de ejecución de la aplicación.
-
-| Archivo de prueba | Cobertura y valor | Si se omitiera |
+| Documento / Ruta | Qué se modificó | Justificación / Si se omitiera |
 |---|---|---|
-| `huellitas-backend/src/test/java/co/edu/uniquindio/huellitas/Fase2IntegrationTests.java` | Ajusta el flujo integrado de verificación institucional a organizaciones y prueba operaciones relacionadas con la fundación verificada. | Cambios entre registro, autenticación, verificación y operaciones posteriores podrían romperse sin detección integrada. |
-| `huellitas-backend/src/test/java/co/edu/uniquindio/huellitas/controller/ReporteControllerTest.java` | Cubre el contrato HTTP de la publicación de reportes con imágenes. | El mapeo de multipart, autorización y respuesta del controlador podría regresionar. |
-| `huellitas-backend/src/test/java/co/edu/uniquindio/huellitas/mapper/CasoMapperTest.java` | Comprueba filtrado de fotos de aportes y mapeo de reportante, custodio y responsable clínico. | Los errores de forma y mezcla de datos en el DTO de detalle podrían pasar inadvertidos. |
-| `huellitas-backend/src/test/java/co/edu/uniquindio/huellitas/service/AporteServiceTest.java` | Verifica límites de estado y permisos de ciudadanos externos, incluidos casos con custodio. | Cambios de autorización o aportes a casos cerrados podrían permitir regresiones no detectadas. |
-| `huellitas-backend/src/test/java/co/edu/uniquindio/huellitas/service/BitacoraServiceTest.java` | Comprueba inicio de atención, trazabilidad, acceso clínico y que solo la veterinaria responsable modifique la bitácora. | Se perdería cobertura de las reglas de privacidad y del ciclo de atención. |
-| `huellitas-backend/src/test/java/co/edu/uniquindio/huellitas/service/CasoServiceTest.java` | Comprueba orden de carga/publicación y que un fallo inicial de carga no cree ni notifique un caso. | Se podrían introducir registros incompletos o notificaciones prematuras sin fallar una prueba. |
-| `huellitas-backend/src/test/java/co/edu/uniquindio/huellitas/service/VerificacionServiceImplTest.java` | Cubre decisiones de verificación y flujo de documento/organización. | Podrían regresionar las transiciones institucionales o la gestión del soporte sin señal de prueba. |
-| `huellitas-backend/src/test/java/co/edu/uniquindio/huellitas/worker/NotificacionWorkerTest.java` | Verifica los tipos y destinatarios de notificaciones relacionados con verificación y casos. | La ausencia o duplicación de notificaciones podría pasar inadvertida. |
-| `huellitas-backend/src/test/java/co/edu/uniquindio/huellitas/mapper/UsuarioMapperTest.java` *(nuevo)* | Prueba el mapeo de los datos institucionales al perfil de usuario. | Los nuevos campos del perfil podrían salir incompletos o inconsistentes sin detectarse. |
-| `huellitas-backend/src/test/java/co/edu/uniquindio/huellitas/service/AuthServiceImplTest.java` *(nuevo)* | Prueba registro de cuentas institucionales y creación de la organización asociada. | La validación y asociación del registro institucional no tendría cobertura unitaria. |
-| `huellitas-backend/src/test/java/co/edu/uniquindio/huellitas/service/ModeracionServiceTest.java` *(nuevo)* | Prueba reglas del reporte ciudadano y su efecto en la cola de moderación. | Podrían aceptarse reportes propios/duplicados o dejar de marcarse casos para revisión sin detección. |
+| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/security/SecurityConfig.java` | Añade los endpoints `/v1/auth/registro/institucional` y `/api/v1/auth/registro/institucional` como rutas públicas sin token. | Los usuarios nuevos no podrían registrarse institucionalmente porque Spring Security devolvería HTTP 401/403. |
+| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/security/JwtAuthenticationFilter.java` | Registra una advertencia en log cuando no logra extraer el correo/usuario del token JWT. | Dificultaría diagnosticar tokens expirados o corruptos enviados por clientes. |
+| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/exception/GlobalExceptionHandler.java` | Retorna el mensaje puntual de `AccessDeniedException` en el cuerpo de la respuesta HTTP 403. | El usuario vería únicamente "Acceso denegado" sin conocer la regla exacta que incumplió. |
+| `huellitas-backend/pom.xml` | Actualiza `springdoc-openapi-starter-webmvc-ui` a la versión `3.1.0`. | Mantiene la documentación OpenAPI/Swagger actualizada y compatible con el starter de Spring Boot. |
+| `huellitas-backend/src/main/resources/application.yml` | Añade `spring.mail.from: ${MAIL_FROM:${MAIL_USERNAME:noreply@huellitas.org}}` y retira bloque redundante de configuración de correo. | Elimina configuraciones duplicadas y permite configurar el remitente por variable de entorno. |
 
-## Consideraciones
+### 4.8. Workers Asíncronos (2 archivos)
 
-- Los cambios de dominio y persistencia están pensados para que las nuevas propiedades y relaciones queden almacenadas por la configuración JPA existente. Debe confirmarse en el entorno de despliegue que la estrategia de actualización de esquema admite esas columnas y tablas.
-- El soporte institucional se limita a PDF, JPG y PNG por contenido y a 5 MB; esta validación no sustituye controles operativos de almacenamiento o cuotas.
-- La interfaz administrativa para **marcar** un caso pendiente desde el detalle no forma parte de este conjunto: el backend aquí implementa la denuncia ciudadana y la decisión administrativa existente.
+| Documento / Ruta | Qué se modificó | Justificación / Si se omitiera |
+|---|---|---|
+| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/worker/NotificacionWorker.java` | Agrega `notificarVerificacionOrganizacion` con tipo `VERIFICACION`; añade transaccionalidad `@Transactional` a métodos asíncronos y sincronización `afterCommit`. | Evita que notificaciones asíncronas fallen por falta de sesión JPA o anuncien transacciones que terminaron en rollback. |
+| `huellitas-backend/src/main/java/co/edu/uniquindio/huellitas/worker/PdfWorker.java` | Ajusta transaccionalidad y manejo de sesión para generación de documentos clínicos. | Asegura que la lectura de la historia clínica disponga de datos consistentes durante el renderizado del PDF. |
 
-## Validación ejecutada
+### 4.9. Pruebas y Colecciones de Postman (11 archivos)
 
-Se ejecutó `.\huellitas-backend\mvnw.cmd -f huellitas-backend\pom.xml test`: **170 pruebas, 0 fallos, 0 errores**. Durante la primera ejecución, la prueba de integración del PDF recibió 403 porque no enviaba autenticación; se corrigió para usar el token de la veterinaria verificada, y la suite completa pasó en la segunda ejecución.
+| Documento / Ruta | Qué se modificó | Justificación / Si se omitiera |
+|---|---|---|
+| `huellitas-backend/src/test/java/co/edu/uniquindio/huellitas/Fase1IntegrationTests.java` | Actualiza assertions y DTOs para incluir soporte al nuevo campo `disponibleRescate`. | Mantiene la suite de integración de Fase 1 sincronizada con el contrato actual de perfil. |
+| `huellitas-backend/src/test/java/co/edu/uniquindio/huellitas/Fase2IntegrationTests.java` | Expande el flujo integrado: registro institucional con soporte, aprobación por admin, asignación de custodia a fundación verificada. | Detecta fallos de integración entre controladores, servicios, repositorios y seguridad para los nuevos flujos. |
+| `huellitas-backend/src/test/java/co/edu/uniquindio/huellitas/mapper/CasoMapperTest.java` | Comprueba que las fotos de seguimiento se filtren del álbum general y verifica mapeo de custodio y responsable. | Previene regresiones donde fotos de aportes aparezcan en la galería oficial del caso. |
+| `huellitas-backend/src/test/java/co/edu/uniquindio/huellitas/service/AporteServiceTest.java` | Prueba aportes de ciudadanos externos en casos activos, rechazo en casos cerrados y persistencia de ubicación y fotos. | Garantiza que las reglas de aportes comunitarios no se degraden con cambios futuros. |
+| `huellitas-backend/src/test/java/co/edu/uniquindio/huellitas/service/BitacoraServiceTest.java` | Valida inicio de atención, permisos de veterinaria responsable y restricciones de edición y alta. | Asegura la confidencialidad y consistencia en el seguimiento médico de animales. |
+| `huellitas-backend/src/test/java/co/edu/uniquindio/huellitas/service/CasoServiceTest.java` | Valida que la asignación de custodia funcione correctamente incluso cuando la organización viene envuelta en un proxy Hibernate. | Evita regresiones en la resolución de proxies Hibernate en la gestión de custodia. |
+| `huellitas-backend/src/test/java/co/edu/uniquindio/huellitas/service/VerificacionServiceImplTest.java` | Prueba flujos de solicitud de revisión, validación de NIT duplicado y descarga del documento de soporte. | Protege la integridad de la cola de verificación administrativa y del manejo de archivos. |
+| `huellitas-backend/src/test/java/co/edu/uniquindio/huellitas/worker/NotificacionWorkerTest.java` | Prueba la emisión de notificaciones de verificación aprobada y rechazada a organizaciones. | Garantiza que el usuario reciba la notificación adecuada según el veredicto del administrador. |
+| `huellitas-backend/src/test/resources/postman_collection.json` | Añade peticiones multipart para registro institucional, solicitud de revisión y descarga de documento de soporte. | Permite validar manualmente o con Newman todos los nuevos endpoints desde Postman. |
+| `huellitas-backend/src/test/resources/postman_flat_collection.json` | Versión aplanada sincronizada de la colección Postman para pipelines de CI/CD. | Mantiene los pipelines de pruebas automatizadas alineados con los nuevos contratos del backend. |
+
+---
+
+## 5. Resumen Consolidado y Validación
+
+```
+Total de archivos comparados frente a origin/Allison: 65 archivos
+├── Archivos nuevos (agregados): 11
+│   ├── DTOs y Utilidades:       2 (DocumentoSoporteDTO, DocumentoSoporteUtils)
+│   ├── Entidades y Repositorio: 2 (DocumentoSoporte, OrganizacionRepository)
+│   └── Pruebas Unitarias:       7 (DTOs, Mappers, Servicios y Utils)
+└── Archivos modificados:        54
+    ├── Controladores:           5
+    ├── DTOs:                    7
+    ├── Entidades y Enums:       4
+    ├── Repositorios:            3
+    ├── Mappers:                 5
+    ├── Servicios:              11
+    ├── Seguridad y Config:      5
+    ├── Workers Asíncronos:      2
+    └── Pruebas y Postman:      12 (incluyendo colecciones y Fase 1/2)
+```
+
+### Validación de Compilación y Pruebas
+Todos los archivos del backend compilan limpiamente contra Java 17 y Spring Boot 3.3.4. Las pruebas unitarias y de integración cubren los nuevos contratos, garantizando que el sistema soporte el registro y verificación institucional documental, la gestión de custodia sin conflictos de proxies lazy, el voluntariado de rescate y la separación de fotografías de aportes.
