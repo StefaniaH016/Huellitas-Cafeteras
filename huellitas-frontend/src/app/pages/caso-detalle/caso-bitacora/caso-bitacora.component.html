@@ -2,7 +2,7 @@
   <div class="panel card-flat">
     <div class="panel-head">
       <h3>Resumen médico</h3>
-      @if (puedeConsultar() && bitacora()) {
+      @if (puedeDescargarPdf() && caso().resumenMedico) {
         <button class="btn btn-secondary btn-sm" type="button" (click)="descargarPdf()">
           Descargar historia clínica (PDF)
         </button>
@@ -33,12 +33,18 @@
     } @else {
       <p class="text-soft-md m-0">Este caso todavía no tiene atención médica.</p>
     }
-    @if (!puedeConsultar()) {
+    @if (!puedeConsultar() && puedeDescargarPdf() && caso().resumenMedico) {
+      <p class="note">
+        Las entradas no se muestran en esta vista; puedes descargarlas en la historia clínica PDF.
+      </p>
+    }
+    @if (!puedeConsultar() && !puedeDescargarPdf()) {
       <div class="banner">
         <span class="banner-ico" aria-hidden="true">🔒</span>
         <p>
           <strong>Solo ves el resumen médico.</strong>
-          Las entradas clínicas solo están disponibles para veterinarias verificadas.
+          Las entradas clínicas se muestran a la veterinaria verificada, el reportante, la fundación
+          custodio y administración.
         </p>
       </div>
     }
@@ -80,42 +86,61 @@
       }
 
       <div class="panel-head mt-sm"><h3>Entradas</h3></div>
-      @for (entrada of bitacora.evoluciones; track entrada.id) {
-        <article class="entry">
+      @for (entrada of entradasOrdenadas(); track entrada.id) {
+        <article class="entry" [class.entry-alta]="esEntradaAlta(entrada)">
           <div class="entry-head">
-            <p><strong>Evolución clínica</strong></p>
-            <span class="badge badge-atencion"><span class="badge-dot"></span>Evolución</span>
+            <p>
+              <strong>{{ esEntradaAlta(entrada) ? 'Alta médica' : 'Evolución clínica' }}</strong>
+            </p>
+            @if (esEntradaAlta(entrada)) {
+              <span class="badge badge-resuelto"><span class="badge-dot"></span>Alta</span>
+            } @else {
+              <span class="badge badge-atencion"><span class="badge-dot"></span>Evolución</span>
+            }
           </div>
           <dl class="entry-grid">
-            @if (entrada.diagnostico) {
+            @if (esEntradaAlta(entrada)) {
               <div>
-                <dt>Diagnóstico</dt>
-                <dd>{{ entrada.diagnostico }}</dd>
+                <dt>Condición al alta</dt>
+                <dd>{{ condicionAlta(entrada) }}</dd>
               </div>
-            }
-            @if (entrada.procedimiento) {
-              <div>
-                <dt>Procedimiento</dt>
-                <dd>{{ entrada.procedimiento }}</dd>
-              </div>
-            }
-            @if (entrada.tratamiento || entrada.medicamentos) {
-              <div>
-                <dt>Tratamiento y medicamentos</dt>
-                <dd>
-                  {{ entrada.tratamiento }}
-                  @if (entrada.tratamiento && entrada.medicamentos) {
-                    ·
-                  }
-                  {{ entrada.medicamentos }}
-                </dd>
-              </div>
-            }
-            @if (entrada.evolucion || entrada.observaciones) {
-              <div>
-                <dt>Evolución y observaciones</dt>
-                <dd>{{ entrada.evolucion || entrada.observaciones }}</dd>
-              </div>
+              @if (indicacionesAlta(entrada)) {
+                <div>
+                  <dt>Indicaciones y destino</dt>
+                  <dd>{{ indicacionesAlta(entrada) }}</dd>
+                </div>
+              }
+            } @else {
+              @if (entrada.diagnostico) {
+                <div>
+                  <dt>Diagnóstico</dt>
+                  <dd>{{ entrada.diagnostico }}</dd>
+                </div>
+              }
+              @if (entrada.procedimiento) {
+                <div>
+                  <dt>Procedimiento</dt>
+                  <dd>{{ entrada.procedimiento }}</dd>
+                </div>
+              }
+              @if (entrada.tratamiento || entrada.medicamentos) {
+                <div>
+                  <dt>Tratamiento y medicamentos</dt>
+                  <dd>
+                    {{ entrada.tratamiento }}
+                    @if (entrada.tratamiento && entrada.medicamentos) {
+                      ·
+                    }
+                    {{ entrada.medicamentos }}
+                  </dd>
+                </div>
+              }
+              @if (entrada.evolucion || entrada.observaciones) {
+                <div>
+                  <dt>Evolución y observaciones</dt>
+                  <dd>{{ entrada.evolucion || entrada.observaciones }}</dd>
+                </div>
+              }
             }
           </dl>
           @if (entrada.firmanteNombre || entrada.fechaFirma || entrada.fecha) {

@@ -71,6 +71,27 @@ it('uses the role alias and falls back to the token claim', () => {
   expect(localStorage.getItem('hc_rol')).toBe('VETERINARIA');
 });
 
+it('reads the role from the nested user in the login response', () => {
+  let result: string | undefined;
+  service.login('user@example.test', 'secret').subscribe((role) => (result = role));
+
+  http.expectOne(`${environment.apiUrl}/auth/login`).flush({
+    token: 'jwt',
+    tipo: 'Bearer',
+    usuario: {
+      id: 7,
+      nombre: 'Raul Tomas',
+      correo: 'user@example.test',
+      rol: 'FUNDACION_REFUGIO',
+      verificado: false,
+    },
+  });
+
+  expect(tokenService.setToken).toHaveBeenCalledWith('jwt');
+  expect(localStorage.getItem('hc_rol')).toBe('FUNDACION_REFUGIO');
+  expect(result).toBe('FUNDACION_REFUGIO');
+});
+
 it('registers a user with the expected request body', () => {
   const expected = { id: '1', correo: 'user@example.test', nombre: 'Luna' };
   let result: unknown;

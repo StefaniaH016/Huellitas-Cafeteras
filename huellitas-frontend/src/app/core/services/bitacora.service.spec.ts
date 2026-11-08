@@ -53,6 +53,7 @@ it('downloads medical record PDF', () => {
   service.descargarPdf(6).subscribe();
   const request = http.expectOne(`${baseUrl}/pdf`);
   expect(request.request.method).toBe('GET');
+  expect(request.request.responseType).toBe('blob');
   request.flush(new Blob());
 });
 

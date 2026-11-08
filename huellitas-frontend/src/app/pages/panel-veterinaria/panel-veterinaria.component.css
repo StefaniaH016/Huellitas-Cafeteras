@@ -299,7 +299,7 @@ progress::-moz-progress-bar {
 }
 
 .btn-secondary {
-  background: var(--paper-2);
+  background: var(--sky-100);
   color: var(--brown-900);
   border-color: transparent;
 }

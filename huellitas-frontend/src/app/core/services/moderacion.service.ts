@@ -17,10 +17,6 @@ export interface DecisionModeracionDTO {
   motivo: string;
 }
 
-export interface ReportarCasoDTO {
-  motivo: string;
-}
-
 export interface ModeracionResponse {
   casoId: number;
   decision: string;
@@ -36,13 +32,6 @@ export class ModeracionService {
 
   getCasosReportados(): Observable<CasoReportado[]> {
     return this.httpClient.get<CasoReportado[]>(`${this.apiUrl}/moderacion/casos`);
-  }
-
-  reportarCaso(casoId: number, dto: ReportarCasoDTO): Observable<ModeracionResponse> {
-    return this.httpClient.post<ModeracionResponse>(
-      `${this.apiUrl}/moderacion/casos/${casoId}/reportar`,
-      dto,
-    );
   }
 
   resolverModeracion(casoId: number, dto: DecisionModeracionDTO): Observable<ModeracionResponse> {

@@ -101,13 +101,6 @@ export class CasoService {
     return this.httpClient.post<ApiResponse>(`${this.apiUrl}`, dto);
   }
 
-  crearReporteConImagen(dto: ApiResponse, archivos: File[]): Observable<ApiResponse> {
-    const formData = new FormData();
-    formData.append('reporte', new Blob([JSON.stringify(dto)], { type: 'application/json' }));
-    archivos.forEach((archivo) => formData.append('archivos', archivo, archivo.name));
-    return this.httpClient.post<ApiResponse>(`${this.apiUrl}/con-imagenes`, formData);
-  }
-
   actualizarReporte(id: number, dto: ApiResponse): Observable<ApiResponse> {
     return this.httpClient.put<ApiResponse>(`${this.apiUrl}/${id}`, dto);
   }

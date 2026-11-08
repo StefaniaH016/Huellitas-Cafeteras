@@ -33,14 +33,4 @@ describe('ModeracionService', () => {
     expect(request.request.body).toEqual(dto);
     request.flush({ casoId: 7, decision: 'OCULTADO', fechaRevision: '2026-03-11' });
   });
-
-  it('submits a citizen case report with its reason', () => {
-    const dto = { motivo: 'La información parece duplicada' };
-    service.reportarCaso(12, dto).subscribe();
-    const request = http.expectOne(`${environment.apiUrl}/moderacion/casos/12/reportar`);
-
-    expect(request.request.method).toBe('POST');
-    expect(request.request.body).toEqual(dto);
-    request.flush({ casoId: 12, decision: 'REPORTADO', fechaRevision: '2026-11-06' });
-  });
 });

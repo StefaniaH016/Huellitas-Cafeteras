@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, convertToParamMap, Params, provideRouter, Router } from '@angular/router';
-import { BehaviorSubject, of, throwError } from 'rxjs';
+import { BehaviorSubject, NEVER, of, throwError } from 'rxjs';
 import { CasoService } from '../../core/services/caso.service';
 import { AuthService } from '../../core/services/auth.service';
 import { UsuarioService } from '../../core/services/usuario.service';
@@ -14,10 +14,7 @@ let route: Pick<ActivatedRoute, 'params' | 'queryParamMap'>;
 let routeParams: BehaviorSubject<Params>;
 let router: Router;
 let authService: Pick<AuthService, 'tieneRol'>;
-let moderacionService: Pick<
-  ModeracionService,
-  'getCasosReportados' | 'resolverModeracion' | 'reportarCaso'
->;
+let moderacionService: Pick<ModeracionService, 'getCasosReportados' | 'resolverModeracion'>;
 let usuarioService: Pick<UsuarioService, 'getMiPerfil'>;
 let bitacoraService: Pick<BitacoraService, 'getBitacora' | 'abrirBitacora'>;
 
@@ -94,9 +91,6 @@ beforeEach(() => {
     resolverModeracion: vi
       .fn()
       .mockReturnValue(of({ casoId: 12, decision: 'OCULTADO', fechaRevision: '2026-10-02' })),
-    reportarCaso: vi
-      .fn()
-      .mockReturnValue(of({ casoId: 12, decision: 'REPORTADO', fechaRevision: '2026-10-02' })),
   };
   routeParams = new BehaviorSubject<Params>({ id: '12' });
   route = {
@@ -184,7 +178,158 @@ it('does not request moderation data for non-administrator roles', () => {
   expect(fixture.nativeElement.textContent).not.toContain('Moderación');
 });
 
-it('allows a citizen to report another citizen case for moderation', () => {
+it('allows the case reporter to read the medical log', () => {
+  vi.mocked(authService.tieneRol).mockImplementation((role) => role === 'CIUDADANO_VOLUNTARIO');
+  vi.mocked(usuarioService.getMiPerfil).mockReturnValue(
+    of({
+      id: 21,
+      nombre: 'Reportante',
+      correo: 'reportante@test.com',
+      rol: 'CIUDADANO_VOLUNTARIO',
+      verificado: true,
+      disponibleRescate: false,
+    }),
+  );
+  vi.mocked(casoService.getDetalle).mockReturnValue(
+    of({ id: 12, autorId: 21, estado: 'EN_ATENCION', descripcion: 'Caso propio' }),
+  );
+
+  const fixture = TestBed.createComponent(CasoDetalleComponent);
+  fixture.detectChanges();
+  fixture.componentInstance.selectTab('bitacora');
+  fixture.detectChanges();
+
+  expect(fixture.componentInstance.puedeConsultarBitacora()).toBe(true);
+  expect(bitacoraService.getBitacora).toHaveBeenCalledWith(12);
+});
+
+it('allows the custodial foundation to read the medical log', () => {
+  vi.mocked(authService.tieneRol).mockImplementation((role) => role === 'FUNDACION_REFUGIO');
+  vi.mocked(usuarioService.getMiPerfil).mockReturnValue(
+    of({
+      id: 31,
+      nombre: 'Fundación Patitas',
+      correo: 'fundacion@test.com',
+      rol: 'FUNDACION_REFUGIO',
+      verificado: true,
+      organizacionId: 5,
+      disponibleRescate: false,
+    }),
+  );
+  vi.mocked(casoService.getDetalle).mockReturnValue(
+    of({ id: 12, autorId: 21, fundacionCustodioId: 5, estado: 'EN_ATENCION' }),
+  );
+
+  const fixture = TestBed.createComponent(CasoDetalleComponent);
+  fixture.detectChanges();
+  fixture.componentInstance.selectTab('bitacora');
+  fixture.detectChanges();
+
+  expect(fixture.componentInstance.puedeConsultarBitacora()).toBe(true);
+  expect(bitacoraService.getBitacora).toHaveBeenCalledWith(12);
+});
+
+it('does not allow a foundation without custody or a citizen unrelated to the case to read the medical log', () => {
+  vi.mocked(authService.tieneRol).mockImplementation((role) => role === 'FUNDACION_REFUGIO');
+  vi.mocked(usuarioService.getMiPerfil).mockReturnValue(
+    of({
+      id: 31,
+      nombre: 'Otra fundación',
+      correo: 'fundacion@test.com',
+      rol: 'FUNDACION_REFUGIO',
+      verificado: true,
+      organizacionId: 99,
+      disponibleRescate: false,
+    }),
+  );
+  vi.mocked(casoService.getDetalle).mockReturnValue(
+    of({ id: 12, autorId: 21, fundacionCustodioId: 5, estado: 'EN_ATENCION' }),
+  );
+
+  const foundationFixture = TestBed.createComponent(CasoDetalleComponent);
+  foundationFixture.detectChanges();
+  foundationFixture.componentInstance.selectTab('bitacora');
+  foundationFixture.detectChanges();
+  expect(foundationFixture.componentInstance.puedeConsultarBitacora()).toBe(false);
+  expect(bitacoraService.getBitacora).not.toHaveBeenCalled();
+
+  vi.mocked(authService.tieneRol).mockImplementation((role) => role === 'CIUDADANO_VOLUNTARIO');
+  vi.mocked(usuarioService.getMiPerfil).mockReturnValue(
+    of({
+      id: 22,
+      nombre: 'Ciudadano externo',
+      correo: 'externo@test.com',
+      rol: 'CIUDADANO_VOLUNTARIO',
+      verificado: true,
+      disponibleRescate: false,
+    }),
+  );
+  const citizenFixture = TestBed.createComponent(CasoDetalleComponent);
+  citizenFixture.detectChanges();
+  citizenFixture.componentInstance.selectTab('bitacora');
+  citizenFixture.detectChanges();
+  expect(citizenFixture.componentInstance.puedeConsultarBitacora()).toBe(false);
+  expect(bitacoraService.getBitacora).not.toHaveBeenCalled();
+});
+
+it('allows the case reporter to download the PDF without reading entries', () => {
+  vi.mocked(authService.tieneRol).mockImplementation((role) => role === 'CIUDADANO_VOLUNTARIO');
+  vi.mocked(usuarioService.getMiPerfil).mockReturnValue(
+    of({
+      id: 21,
+      nombre: 'Reportante',
+      correo: 'reportante@test.com',
+      rol: 'CIUDADANO_VOLUNTARIO',
+      verificado: true,
+      disponibleRescate: false,
+    }),
+  );
+  vi.mocked(casoService.getDetalle).mockReturnValue(
+    of({
+      id: 12,
+      autorId: 21,
+      estado: 'EN_ATENCION',
+      resumenMedico: { id: 5, altaMedica: true },
+    }),
+  );
+
+  const reporterFixture = TestBed.createComponent(CasoDetalleComponent);
+  reporterFixture.detectChanges();
+  expect(reporterFixture.componentInstance.puedeDescargarBitacoraPdf()).toBe(true);
+
+  expect(bitacoraService.getBitacora).not.toHaveBeenCalled();
+});
+
+it('allows the custodial foundation to download the PDF without reading entries', () => {
+  vi.mocked(authService.tieneRol).mockImplementation((role) => role === 'FUNDACION_REFUGIO');
+  vi.mocked(usuarioService.getMiPerfil).mockReturnValue(
+    of({
+      id: 31,
+      nombre: 'Fundación Patitas',
+      correo: 'fundacion@test.com',
+      rol: 'FUNDACION_REFUGIO',
+      verificado: true,
+      organizacionId: 5,
+      disponibleRescate: false,
+    }),
+  );
+  vi.mocked(casoService.getDetalle).mockReturnValue(
+    of({
+      id: 12,
+      autorId: 21,
+      fundacionCustodioId: 5,
+      estado: 'EN_ATENCION',
+      resumenMedico: { id: 5, altaMedica: true },
+    }),
+  );
+  const foundationFixture = TestBed.createComponent(CasoDetalleComponent);
+  foundationFixture.detectChanges();
+  expect(foundationFixture.componentInstance.puedeDescargarBitacoraPdf()).toBe(true);
+
+  expect(bitacoraService.getBitacora).not.toHaveBeenCalled();
+});
+
+it('does not offer citizen case reporting for moderation', () => {
   vi.mocked(authService.tieneRol).mockImplementation((role) => role === 'CIUDADANO_VOLUNTARIO');
   vi.mocked(usuarioService.getMiPerfil).mockReturnValue(
     of({
@@ -197,46 +342,12 @@ it('allows a citizen to report another citizen case for moderation', () => {
     }),
   );
   vi.mocked(casoService.getDetalle).mockReturnValue(
-    of({ id: 12, autorId: 21, estado: 'REGISTRADO', descripcion: 'Caso reportado' }),
-  );
-  const fixture = TestBed.createComponent(CasoDetalleComponent);
-  fixture.detectChanges();
-  const component = fixture.componentInstance;
-
-  expect(component.puedeDenunciarCaso()).toBe(true);
-  expect(fixture.nativeElement.textContent).toContain('Reportar caso');
-
-  component.motivoDenuncia = 'La información parece duplicada';
-  component.enviarDenunciaCaso();
-
-  expect(moderacionService.reportarCaso).toHaveBeenCalledWith(12, {
-    motivo: 'La información parece duplicada',
-  });
-  expect(component.denunciaEnviada()).toBe(true);
-  expect(component.mensajeDenuncia()).toContain('enviado a revisión');
-});
-
-it('does not allow a citizen to report their own case', () => {
-  vi.mocked(authService.tieneRol).mockImplementation((role) => role === 'CIUDADANO_VOLUNTARIO');
-  vi.mocked(usuarioService.getMiPerfil).mockReturnValue(
-    of({
-      id: 21,
-      nombre: 'Reportante',
-      correo: 'yo@test.com',
-      rol: 'CIUDADANO_VOLUNTARIO',
-      verificado: true,
-      disponibleRescate: false,
-    }),
-  );
-  vi.mocked(casoService.getDetalle).mockReturnValue(
-    of({ id: 12, autorId: 21, estado: 'REGISTRADO', descripcion: 'Mi caso' }),
+    of({ id: 12, autorId: 21, estado: 'REGISTRADO', descripcion: 'Caso de otro ciudadano' }),
   );
   const fixture = TestBed.createComponent(CasoDetalleComponent);
   fixture.detectChanges();
 
-  expect(fixture.componentInstance.puedeDenunciarCaso()).toBe(false);
   expect(fixture.nativeElement.textContent).not.toContain('Reportar caso');
-  expect(moderacionService.reportarCaso).not.toHaveBeenCalled();
 });
 
 it('keeps the medical-log tab selectable without bypassing read permissions', () => {
@@ -261,7 +372,7 @@ it('does not render a duplicate assisted summary on the information tab', () => 
   expect(fixture.nativeElement.textContent).not.toContain('Resumen asistencial');
 });
 
-it('places the veterinarian take-attention action in the Actions panel', () => {
+it('allows a verified veterinarian to open a log only when the case is already in attention', () => {
   vi.mocked(authService.tieneRol).mockImplementation((role) => role === 'VETERINARIA');
   vi.mocked(usuarioService.getMiPerfil).mockReturnValue(
     of({
@@ -275,7 +386,7 @@ it('places the veterinarian take-attention action in the Actions panel', () => {
     }),
   );
   vi.mocked(casoService.getDetalle).mockReturnValue(
-    of({ id: 12, estado: 'REGISTRADO', descripcion: 'Caso registrado' }),
+    of({ id: 12, estado: 'EN_ATENCION', descripcion: 'Caso en atención' }),
   );
   const fixture = TestBed.createComponent(CasoDetalleComponent);
   fixture.detectChanges();
@@ -293,13 +404,47 @@ it('places the veterinarian take-attention action in the Actions panel', () => {
   expect(component.mensajeAccion()).toContain('a tu cargo');
 });
 
-it('does not grant administrators access to clinical entries', () => {
-  vi.mocked(authService.tieneRol).mockImplementation((role) => role === 'ADMINISTRADOR');
+it('does not offer to open a medical log while the case is still registered', () => {
+  vi.mocked(authService.tieneRol).mockImplementation((role) => role === 'VETERINARIA');
+  vi.mocked(usuarioService.getMiPerfil).mockReturnValue(
+    of({
+      id: 22,
+      nombre: 'Dra. Vet',
+      correo: 'vet@test.com',
+      rol: 'VETERINARIA',
+      verificado: true,
+      organizacionId: 3,
+      disponibleRescate: false,
+    }),
+  );
+  vi.mocked(casoService.getDetalle).mockReturnValue(
+    of({ id: 12, estado: 'REGISTRADO', descripcion: 'Caso registrado' }),
+  );
   const fixture = TestBed.createComponent(CasoDetalleComponent);
   fixture.detectChanges();
 
-  expect(fixture.componentInstance.puedeConsultarBitacora()).toBe(false);
-  expect(bitacoraService.getBitacora).not.toHaveBeenCalled();
+  expect(fixture.componentInstance.puedeTomarAtencion()).toBe(false);
+  expect(fixture.nativeElement.textContent).not.toContain('Tomar atención médica');
+});
+
+it('waits for the case detail before rendering the veterinarian bitacora', () => {
+  vi.mocked(authService.tieneRol).mockImplementation((role) => role === 'VETERINARIA');
+  vi.mocked(casoService.getDetalle).mockReturnValue(NEVER);
+
+  const fixture = TestBed.createComponent(CasoDetalleComponent);
+  expect(() => fixture.detectChanges()).not.toThrow();
+  expect(fixture.nativeElement.textContent).not.toContain('Resumen médico');
+});
+
+it('allows administrators to consult clinical entries', () => {
+  vi.mocked(authService.tieneRol).mockImplementation((role) => role === 'ADMINISTRADOR');
+  const fixture = TestBed.createComponent(CasoDetalleComponent);
+  fixture.detectChanges();
+  fixture.componentInstance.selectTab('bitacora');
+  fixture.detectChanges();
+
+  expect(fixture.componentInstance.puedeConsultarBitacora()).toBe(true);
+  expect(bitacoraService.getBitacora).toHaveBeenCalledWith(12);
 });
 
 it('offers the reportant an action to add case information from the Actions panel', () => {
@@ -350,6 +495,79 @@ it('allows only the reporter to close their open case', () => {
   });
 });
 
+it('opens and cancels the closure dialog without calling the close endpoint', () => {
+  vi.mocked(authService.tieneRol).mockImplementation((role) => role === 'CIUDADANO_VOLUNTARIO');
+  vi.mocked(casoService.getDetalle).mockReturnValue(
+    of({
+      id: 12,
+      estado: 'REGISTRADO',
+      tipoCaso: 'VULNERABLE',
+      autorId: 21,
+      descripcion: 'Caso registrado',
+    }),
+  );
+  const fixture = TestBed.createComponent(CasoDetalleComponent);
+  fixture.detectChanges();
+  const component = fixture.componentInstance;
+
+  component.iniciarCierre();
+  fixture.detectChanges();
+  expect(fixture.nativeElement.querySelector('[role="dialog"]')).not.toBeNull();
+
+  fixture.nativeElement.querySelector('[aria-label="Cerrar diálogo"]').click();
+  fixture.detectChanges();
+
+  expect(component.mostrandoCierre()).toBe(false);
+  expect(fixture.nativeElement.querySelector('[role="dialog"]')).toBeNull();
+  expect(casoService.cerrarCaso).not.toHaveBeenCalled();
+});
+
+it('shows the reunion banner only when closure history records a reunion', () => {
+  vi.mocked(casoService.getDetalle).mockReturnValue(
+    of({
+      id: 12,
+      estado: 'RESUELTO',
+      tipoCaso: 'EXTRAVIADO',
+      descripcion: 'Gato extraviado',
+      historial: [
+        {
+          id: 2,
+          estadoNuevo: 'RESUELTO',
+          observacion: 'Cierre de caso: REENCUENTRO',
+        },
+      ],
+    }),
+  );
+  const fixture = TestBed.createComponent(CasoDetalleComponent);
+  fixture.detectChanges();
+
+  expect(fixture.nativeElement.textContent).toContain('¡El animal volvió a casa!');
+  expect(fixture.componentInstance.resultadoCierre()).toBe('REENCUENTRO');
+});
+
+it('does not claim a reunion for another resolved stray-animal outcome', () => {
+  vi.mocked(casoService.getDetalle).mockReturnValue(
+    of({
+      id: 12,
+      estado: 'RESUELTO',
+      tipoCaso: 'EXTRAVIADO',
+      descripcion: 'Gato extraviado',
+      historial: [
+        {
+          id: 2,
+          estadoNuevo: 'RESUELTO',
+          observacion: 'Cierre de caso: RECUPERADO',
+        },
+      ],
+    }),
+  );
+  const fixture = TestBed.createComponent(CasoDetalleComponent);
+  fixture.detectChanges();
+
+  expect(fixture.nativeElement.textContent).not.toContain('¡El animal volvió a casa!');
+  expect(fixture.nativeElement.textContent).toContain('Caso resuelto · Recuperado');
+});
+
 it('does not show case closure to another citizen or when a foundation has custody', () => {
   vi.mocked(authService.tieneRol).mockImplementation((role) => role === 'CIUDADANO_VOLUNTARIO');
   vi.mocked(usuarioService.getMiPerfil).mockReturnValue(
@@ -379,6 +597,71 @@ it('does not show case closure to another citizen or when a foundation has custo
   expect(fixture.nativeElement.textContent).not.toContain('Cerrar caso');
   expect(fixture.nativeElement.textContent).toContain('Agregar aporte');
   expect(casoService.cerrarCaso).not.toHaveBeenCalled();
+});
+
+it('allows the verified foundation with custody to close the case and sends the required recipient', () => {
+  vi.mocked(authService.tieneRol).mockImplementation((role) => role === 'FUNDACION_REFUGIO');
+  vi.mocked(usuarioService.getMiPerfil).mockReturnValue(
+    of({
+      id: 31,
+      nombre: 'Fundación Patitas',
+      correo: 'fundacion@test.co',
+      rol: 'FUNDACION_REFUGIO',
+      verificado: true,
+      disponibleRescate: false,
+      organizacionId: 5,
+      estadoVerificacionOrganizacion: 'VERIFICADA',
+      aceptaCustodia: true,
+    }),
+  );
+  vi.mocked(casoService.getDetalle).mockReturnValue(
+    of({
+      id: 12,
+      estado: 'EN_ATENCION',
+      tipoCaso: 'VULNERABLE',
+      fundacionCustodioId: 5,
+      descripcion: 'Caso bajo custodia',
+    }),
+  );
+  const fixture = TestBed.createComponent(CasoDetalleComponent);
+  fixture.detectChanges();
+  const component = fixture.componentInstance;
+
+  expect(component.puedeCerrarCaso()).toBe(true);
+  expect(fixture.nativeElement.textContent).toContain('Cerrar caso');
+
+  component.iniciarCierre();
+  component.entregadoA = 'Familia Pérez';
+  component.cerrarCaso();
+
+  expect(casoService.cerrarCaso).toHaveBeenCalledWith(12, {
+    motivoCierre: 'RECUPERADO',
+    entregadoA: 'Familia Pérez',
+    observacion: undefined,
+  });
+});
+
+it('allows administrators to close cases and archive any state accepted by the backend', () => {
+  vi.mocked(authService.tieneRol).mockImplementation((role) => role === 'ADMINISTRADOR');
+  vi.mocked(casoService.getDetalle).mockReturnValue(
+    of({ id: 12, estado: 'REGISTRADO', tipoCaso: 'VULNERABLE', descripcion: 'Caso nuevo' }),
+  );
+  const fixture = TestBed.createComponent(CasoDetalleComponent);
+  fixture.detectChanges();
+  const component = fixture.componentInstance;
+
+  expect(component.puedeCerrarCaso()).toBe(true);
+  expect(component.puedeArchivarCaso()).toBe(true);
+  expect(fixture.nativeElement.textContent).toContain('Cerrar caso');
+  expect(fixture.nativeElement.textContent).toContain('Archivar ahora');
+
+  component.iniciarCierre();
+  component.cerrarCaso();
+  expect(casoService.cerrarCaso).toHaveBeenCalledWith(12, {
+    motivoCierre: 'RECUPERADO',
+    entregadoA: undefined,
+    observacion: undefined,
+  });
 });
 
 it('allows citizens outside the case to contribute when a foundation has custody', () => {

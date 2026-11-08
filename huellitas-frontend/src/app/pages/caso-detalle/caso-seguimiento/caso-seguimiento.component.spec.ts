@@ -142,6 +142,86 @@ it('shows medical attention activity once with its status transition', () => {
   expect(component.actividad()[0].cambio).toBe('Registrado → En atención');
 });
 
+it('merges a closure contribution and its differently prefixed history entry', () => {
+  const observacion = 'La mascota fue entregada a una familia de acogida.';
+  const component = crear({
+    detalle: {
+      ...caso,
+      aportes: [
+        {
+          id: 8,
+          tipo: 'ACTUALIZACION',
+          comentario: `Caso cerrado con resultado: ENTREGADO_A_CUIDADOR. ${observacion}`,
+          fecha: '2026-10-03T10:00:00Z',
+          autorNombre: 'Oscar Tomas',
+        },
+      ],
+      historial: [
+        {
+          id: 8,
+          estadoAnterior: 'EN_ATENCION',
+          estadoNuevo: 'RESUELTO',
+          observacion: `Cierre de caso: ENTREGADO_A_CUIDADOR. ${observacion}`,
+          fecha: '2026-10-03T10:00:00Z',
+        },
+      ],
+    },
+  });
+
+  expect(component.actividad()).toHaveLength(1);
+  expect(component.actividad()[0].titulo).toBe('Oscar Tomas · Cierre de caso');
+  expect(component.actividad()[0].texto).toContain('Entregado a cuidador');
+  expect(component.actividad()[0].texto).toContain(observacion);
+  expect(component.actividad()[0].cambio).toBe('En atención → Resuelto');
+});
+
+it('merges custody updates with their differently worded status history entries', () => {
+  const fecha = '2026-11-08T05:53:00Z';
+  const component = crear({
+    detalle: {
+      ...caso,
+      aportes: [
+        {
+          id: 20,
+          tipo: 'ACTUALIZACION',
+          comentario: 'Custodia asumida por la fundación: Fundación Callejeros de corazón',
+          fecha,
+          autorNombre: 'Oscar Tomas',
+        },
+        {
+          id: 21,
+          tipo: 'ACTUALIZACION',
+          comentario: 'Custodia liberada por la fundación. Motivo: Que',
+          fecha,
+          autorNombre: 'Oscar Tomas',
+        },
+      ],
+      historial: [
+        {
+          id: 20,
+          estadoAnterior: 'RESUELTO',
+          estadoNuevo: 'RESUELTO',
+          observacion: 'Custodia asumida por Fundación Callejeros de corazón',
+          fecha,
+        },
+        {
+          id: 21,
+          estadoAnterior: 'RESUELTO',
+          estadoNuevo: 'RESUELTO',
+          observacion: 'Custodia liberada. Motivo: Que',
+          fecha,
+        },
+      ],
+    },
+  });
+
+  expect(component.actividad().map((item) => item.clave)).toEqual(['a20', 'a21']);
+  expect(component.actividad().map((item) => item.cambio)).toEqual([
+    'Resuelto → Resuelto',
+    'Resuelto → Resuelto',
+  ]);
+});
+
 it('lets administrators hide community contributions with a reason', () => {
   const fixture = crearFixture({ rol: 'ADMINISTRADOR' });
   const component = fixture.componentInstance;

@@ -22,13 +22,13 @@
     </div>
 
     <!-- Banners -->
-    @if (caso()?.estado === 'RESUELTO') {
+    @if (caso()?.estado === 'RESUELTO' && resultadoCierre() !== 'REENCUENTRO') {
       <div class="banner banner-ok">
         <span class="banner-ico" aria-hidden="true">✅</span>
         <p>
-          <strong>Caso resuelto · entregado a cuidador</strong>{{ caso()?.fundacion }} entregó el
-          animal a su nueva familia. Ya no aparece en el feed de casos activos y su historial se
-          conserva.
+          <strong>Caso resuelto · {{ resultadoCierreLabel() }}</strong>
+          El resultado quedó registrado en el historial. El caso ya no aparece entre los casos
+          activos y su historial se conserva.
         </p>
       </div>
     }
@@ -41,12 +41,16 @@
         </p>
       </div>
     }
-    @if (caso()?.tipo === 'EXTRAVIADO' && caso()?.estado === 'RESUELTO') {
+    @if (
+      caso()?.tipo === 'EXTRAVIADO' &&
+      ['RESUELTO', 'ARCHIVADO'].includes(caso()?.estado || '') &&
+      resultadoCierre() === 'REENCUENTRO'
+    ) {
       <div class="banner banner-ok">
         <span class="banner-ico" aria-hidden="true">🏡</span>
         <p>
-          <strong>¡El animal volvió a casa!</strong>{{ caso()?.reportante }} confirmó el
-          reencuentro. Gracias a todos los que colaboraron.
+          <strong>¡El animal volvió a casa!</strong> El reportante confirmó el reencuentro. Gracias
+          a todas las personas que colaboraron.
         </p>
       </div>
     }
@@ -183,12 +187,13 @@
           />
         }
 
-        @if (esVeterinaria() || activeTab() === 'bitacora') {
+        @if ((esVeterinaria() || activeTab() === 'bitacora') && casoDet(); as casoBitacora) {
           <div [hidden]="activeTab() !== 'bitacora'">
             <app-caso-bitacora
-              [caso]="casoDet()!"
+              [caso]="casoBitacora"
               [puedeConsultar]="puedeConsultarBitacora()"
               [puedeGestionar]="puedeGestionarBitacora()"
+              [puedeDescargarPdf]="puedeDescargarBitacoraPdf()"
               [formularioActivo]="formularioBitacora()"
               (actualizado)="loadDetalle(caso()!.id)"
               (sinBitacoraChange)="sinBitacoraMedica.set($event)"
@@ -204,7 +209,7 @@
             <h3>Acciones</h3>
           </div>
 
-          @if (errorAccion()) {
+          @if (errorAccion() && !mostrandoCierre()) {
             <p class="feedback-error" role="alert">{{ errorAccion() }}</p>
           }
           @if (mensajeAccion()) {
@@ -244,14 +249,6 @@
               caso()?.estado !== 'ARCHIVADO'
             ) {
               <button
-                class="btn btn-primary btn-block mb-sm"
-                type="button"
-                (click)="iniciarCierre()"
-                [disabled]="!puedeCerrarCaso() || accionEnCurso()"
-              >
-                Confirmar reencuentro
-              </button>
-              <button
                 class="btn btn-secondary btn-block"
                 type="button"
                 (click)="selectTab('seguimiento')"
@@ -260,7 +257,7 @@
                 Agregar aporte
               </button>
               <p class="note">
-                Solo tú, como reportante, puedes confirmar que el animal volvió a casa.
+                El reportante puede confirmar el reencuentro si el caso no está bajo custodia.
               </p>
               @if (!puedeAportarCaso()) {
                 <p class="note">
@@ -273,90 +270,6 @@
                 </p>
               }
             }
-            @if (
-              puedeCerrarCaso() &&
-              caso()?.tipo !== 'EXTRAVIADO' &&
-              caso()?.estado !== 'RESUELTO' &&
-              caso()?.estado !== 'ARCHIVADO'
-            ) {
-              <button
-                class="btn btn-primary btn-block mb-sm"
-                type="button"
-                (click)="iniciarCierre()"
-                [disabled]="accionEnCurso()"
-              >
-                Cerrar caso
-              </button>
-              <p class="note">
-                Solo tú, como reportante, puedes cerrar este caso mientras no tenga fundación
-                custodio.
-              </p>
-            }
-            @if (mostrandoCierre()) {
-              <form class="form-field" (ngSubmit)="cerrarCaso()">
-                <label for="resultado-cierre">Resultado del caso</label>
-                <select
-                  id="resultado-cierre"
-                  name="motivoCierre"
-                  [(ngModel)]="motivoCierre"
-                  required
-                >
-                  @if (caso()?.tipo === 'EXTRAVIADO') {
-                    <option value="REENCUENTRO">Reencuentro</option>
-                  } @else {
-                    <option value="RECUPERADO">Recuperado</option>
-                    <option value="ENTREGADO_A_CUIDADOR">Entregado a cuidador o adoptado</option>
-                    <option value="FALLECIDO">Falleció</option>
-                  }
-                </select>
-                @if (motivoCierre === 'ENTREGADO_A_CUIDADOR') {
-                  <label for="cierre-entregado-a">Entregado a</label>
-                  <input
-                    id="cierre-entregado-a"
-                    name="entregadoA"
-                    type="text"
-                    maxlength="200"
-                    [(ngModel)]="entregadoA"
-                    placeholder="Nombre de la persona o familia"
-                  />
-                }
-                <label for="cierre-observacion">Observaciones (opcional)</label>
-                <textarea
-                  id="cierre-observacion"
-                  name="observacionCierre"
-                  maxlength="1000"
-                  [(ngModel)]="observacionCierre"
-                  [placeholder]="
-                    caso()?.tipo === 'EXTRAVIADO'
-                      ? 'Cuéntanos cómo se reencontraron'
-                      : 'Añade información del cierre'
-                  "
-                ></textarea>
-                <div class="step-actions">
-                  <button
-                    class="btn btn-primary"
-                    type="submit"
-                    [disabled]="accionEnCurso() || !puedeCerrarCaso()"
-                  >
-                    {{
-                      accionEnCurso()
-                        ? 'Cerrando...'
-                        : motivoCierre === 'REENCUENTRO'
-                          ? 'Confirmar reencuentro'
-                          : 'Confirmar cierre'
-                    }}
-                  </button>
-                  <button
-                    class="btn btn-secondary"
-                    type="button"
-                    [disabled]="accionEnCurso()"
-                    (click)="cancelarCierre()"
-                  >
-                    Cancelar
-                  </button>
-                </div>
-              </form>
-            }
             <!-- Caso cerrado -->
             @if (
               (caso()?.estado === 'ARCHIVADO' || caso()?.estado === 'RESUELTO') &&
@@ -368,51 +281,38 @@
             }
           }
 
-          @if (puedeDenunciarCaso()) {
-            @if (errorDenuncia()) {
-              <p class="feedback-error" role="alert">{{ errorDenuncia() }}</p>
-            }
-            @if (mensajeDenuncia()) {
-              <p class="feedback-success" role="status">{{ mensajeDenuncia() }}</p>
-            }
-            @if (denunciaEnviada()) {
-              <p class="note">Gracias por ayudar a mantener segura la comunidad.</p>
-            } @else if (mostrandoDenuncia()) {
-              <form class="form-field" (ngSubmit)="enviarDenunciaCaso()">
-                <label for="motivo-denuncia-caso">¿Por qué debería revisarse este caso?</label>
-                <textarea
-                  id="motivo-denuncia-caso"
-                  name="motivoDenuncia"
-                  [(ngModel)]="motivoDenuncia"
-                  minlength="10"
-                  maxlength="500"
-                  required
-                  placeholder="Describe el contenido que consideras duplicado, inapropiado o incorrecto"
-                ></textarea>
-                <p class="field-hint">Entre 10 y 500 caracteres.</p>
-                <div class="step-actions">
-                  <button
-                    class="btn btn-primary"
-                    type="submit"
-                    [disabled]="denunciaEnCurso() || motivoDenuncia.trim().length < 10"
-                  >
-                    {{ denunciaEnCurso() ? 'Enviando...' : 'Enviar a revisión' }}
-                  </button>
-                  <button
-                    class="btn btn-secondary"
-                    type="button"
-                    [disabled]="denunciaEnCurso()"
-                    (click)="cancelarDenuncia()"
-                  >
-                    Cancelar
-                  </button>
-                </div>
-              </form>
-            } @else {
-              <button class="btn btn-secondary btn-block" type="button" (click)="iniciarDenuncia()">
-                Reportar caso
-              </button>
-              <p class="note">La denuncia se enviará al equipo para su revisión.</p>
+          @if (puedeCerrarCaso()) {
+            <button
+              class="btn btn-primary btn-block mb-sm"
+              type="button"
+              (click)="iniciarCierre()"
+              [disabled]="accionEnCurso()"
+            >
+              {{ puedeConfirmarReencuentro() ? 'Confirmar reencuentro' : 'Cerrar caso' }}
+            </button>
+            @if (mostrandoCierre()) {
+              <app-cierre-caso-dialog
+                [casoId]="caso()?.id ?? ''"
+                [puedeConfirmarReencuentro]="puedeConfirmarReencuentro()"
+                [esCasoExtraviado]="caso()?.tipo === 'EXTRAVIADO'"
+                [requiereResponsable]="
+                  !!(caso()?.fundacionCustodioId || motivoCierre === 'ENTREGADO_A_CUIDADOR')
+                "
+                [tieneAltaMedica]="caso()?.resumenMedico?.altaMedica === true"
+                [veterinariaNombre]="
+                  caso()?.resumenMedico?.veterinariaNombre || caso()?.veterinaria || ''
+                "
+                [fechaAlta]="formatearFecha(caso()?.resumenMedico?.fechaAlta ?? undefined)"
+                [tieneCustodia]="!!caso()?.fundacionCustodioId"
+                [fundacionNombre]="caso()?.fundacion || ''"
+                [accionEnCurso]="accionEnCurso()"
+                [error]="errorAccion()"
+                [(motivoCierre)]="motivoCierre"
+                [(entregadoA)]="entregadoA"
+                [(observacionCierre)]="observacionCierre"
+                (confirmar)="cerrarCaso()"
+                (cancelar)="cancelarCierre()"
+              />
             }
           }
 
@@ -430,22 +330,6 @@
               </button>
               <p class="note">El caso pasará a En atención.</p>
             }
-            <button
-              class="btn btn-secondary btn-block"
-              type="button"
-              disabled
-              title="El cierre de casos por fundaciones permanece bloqueado."
-            >
-              Cerrar caso
-            </button>
-            <p class="note">
-              @if (caso()?.resumenMedico?.altaMedica) {
-                Alta médica emitida el {{ caso()?.resumenMedico?.fechaAlta }}. El cierre de casos
-                permanece bloqueado para las fundaciones.
-              } @else {
-                El cierre de casos está bloqueado para las fundaciones.
-              }
-            </p>
             <!-- Extraviado: Sin acciones (reportante cierra) -->
             @if (caso()?.tipo === 'EXTRAVIADO') {
               <p class="note">
@@ -466,7 +350,7 @@
 
           <!-- VETERINARIA: Gestión de bitácora y atención médica -->
           @if (esVeterinaria()) {
-            <!-- Registrado o Custodia: Tomar atención -->
+            <!-- En atención: Tomar atención -->
             @if (puedeTomarAtencion()) {
               <button
                 class="btn btn-primary btn-block"
@@ -477,8 +361,8 @@
                 {{ tomandoAtencion() ? 'Tomando...' : 'Tomar atención médica' }}
               </button>
               <p class="note">
-                Al abrir la bitácora quedas como veterinaria responsable y el caso pasa a En
-                atención, aunque no tenga custodia.
+                El caso debe estar en atención. Al abrir la bitácora quedas como veterinaria
+                responsable.
               </p>
             }
             <!-- Bitácora: Registrar evolución -->
@@ -619,7 +503,7 @@
               <p class="note">En Seguimiento puedes ocultar aportes inapropiados.</p>
             }
             <!-- Archivo -->
-            @if (caso()?.estado === 'RESUELTO') {
+            @if (puedeArchivarCaso()) {
               <button
                 class="btn btn-primary btn-block mb-sm"
                 type="button"
@@ -627,7 +511,14 @@
               >
                 Archivar ahora
               </button>
-              <p class="note">Si no, el sistema lo archiva solo 7 días después del cierre.</p>
+              @if (caso()?.estado === 'RESUELTO') {
+                <p class="note">Si no, el sistema lo archiva solo 7 días después del cierre.</p>
+              } @else {
+                <p class="note">
+                  El administrador puede archivar casos registrados o en atención cuando sea
+                  necesario.
+                </p>
+              }
             }
             @if (mostrandoArchivo()) {
               <form class="form-field" (ngSubmit)="archivarCaso()">

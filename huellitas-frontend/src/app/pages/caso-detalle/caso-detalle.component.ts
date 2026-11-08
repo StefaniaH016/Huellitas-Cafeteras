@@ -13,8 +13,10 @@ import { AuthService } from '../../core/services/auth.service';
 import { UsuarioPerfil, UsuarioService } from '../../core/services/usuario.service';
 import {
   ESTADO_LABELS,
+  RESULTADO_LABELS,
   TIPO_LABELS,
   esCasoAbierto,
+  formatFecha as formatFechaDisplay,
   getUrgencyBadgeLabel,
   labelOf,
 } from '../../core/utils/caso-display.utils';
@@ -23,11 +25,11 @@ import { BitacoraService } from '../../core/services/bitacora.service';
 import {
   CasoReportado,
   DecisionModeracion,
-  ModeracionResponse,
   ModeracionService,
 } from '../../core/services/moderacion.service';
 import { CasoSeguimientoComponent } from './caso-seguimiento/caso-seguimiento.component';
 import { CasoBitacoraComponent } from './caso-bitacora/caso-bitacora.component';
+import { CierreCasoDialogComponent } from './cierre-caso-dialog/cierre-caso-dialog.component';
 
 interface Caso {
   id: string | number;
@@ -82,6 +84,10 @@ interface FotoResponse {
   principal?: boolean;
 }
 
+function esResultadoCierre(resultado: string): resultado is ResultadoCierre {
+  return ['REENCUENTRO', 'ENTREGADO_A_CUIDADOR', 'RECUPERADO', 'FALLECIDO'].includes(resultado);
+}
+
 interface CasoResponse {
   id?: string | number;
   tipoCaso?: string;
@@ -116,7 +122,13 @@ interface CasoResponse {
 @Component({
   selector: 'app-caso-detalle',
   standalone: true,
-  imports: [CommonModule, FormsModule, CasoSeguimientoComponent, CasoBitacoraComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    CasoSeguimientoComponent,
+    CasoBitacoraComponent,
+    CierreCasoDialogComponent,
+  ],
   templateUrl: './caso-detalle.component.html',
   styleUrls: ['./caso-detalle.component.css'],
 })
@@ -156,13 +168,6 @@ export class CasoDetalleComponent implements OnInit {
   motivoDecisionModeracion = 'Duplicado de otro reporte';
   marcacionModeracionLocal = signal(false);
   moderacionFinalizada = signal(false);
-  mostrandoDenuncia = signal(false);
-  denunciaEnCurso = signal(false);
-  denunciaEnviada = signal(false);
-  errorDenuncia = signal('');
-  mensajeDenuncia = signal('');
-  motivoDenuncia = '';
-
   fotos = signal<string[]>([]);
   selectedFotoIndex = signal<number>(0);
   fotoActual = computed(() => {
@@ -172,6 +177,26 @@ export class CasoDetalleComponent implements OnInit {
       return list[idx];
     }
     return this.caso()?.foto || '';
+  });
+  resultadoCierre = computed(() => {
+    const historial = this.caso()?.historial ?? [];
+    const cierre = [...historial].reverse().find((item) => {
+      const observacion = item['observacion'];
+      return typeof observacion === 'string' && observacion.startsWith('Cierre de caso:');
+    });
+    const observacion = cierre?.['observacion'];
+    if (typeof observacion !== 'string') {
+      return null;
+    }
+
+    const resultado = /^Cierre de caso:\s*(REENCUENTRO|ENTREGADO_A_CUIDADOR|RECUPERADO|FALLECIDO)/i
+      .exec(observacion)?.[1]
+      ?.toUpperCase();
+    return resultado && esResultadoCierre(resultado) ? resultado : null;
+  });
+  resultadoCierreLabel = computed(() => {
+    const resultado = this.resultadoCierre();
+    return resultado ? labelOf(RESULTADO_LABELS, resultado) : 'Resultado no disponible';
   });
   esFundacion = computed(() => this.authService.tieneRol('FUNDACION_REFUGIO'));
   esVeterinaria = computed(() => this.authService.tieneRol('VETERINARIA'));
@@ -183,7 +208,9 @@ export class CasoDetalleComponent implements OnInit {
       this.casoDisponibleParaCustodia(),
   );
   puedeArchivarCaso = computed(
-    () => this.authService.tieneRol('ADMINISTRADOR') && this.caso()?.estado === 'RESUELTO',
+    () =>
+      this.esAdministrador() &&
+      ['REGISTRADO', 'EN_ATENCION', 'RESUELTO'].includes(this.caso()?.estado ?? ''),
   );
   esReportanteCaso = computed(() => {
     const perfil = this.perfil();
@@ -195,26 +222,42 @@ export class CasoDetalleComponent implements OnInit {
       perfil.id === caso.autorId
     );
   });
-  puedeDenunciarCaso = computed(() => {
+  puedeCerrarCaso = computed(() => {
+    const caso = this.caso();
+    if (!caso || !['REGISTRADO', 'EN_ATENCION'].includes(caso.estado ?? '')) {
+      return false;
+    }
+    if (this.esAdministrador()) {
+      return true;
+    }
+    if (this.esReportanteCaso()) {
+      return !caso.fundacionCustodioId;
+    }
+
+    const perfil = this.perfil();
+    return (
+      this.esFundacion() &&
+      perfil?.estadoVerificacionOrganizacion === 'VERIFICADA' &&
+      !!caso.fundacionCustodioId &&
+      perfil.organizacionId === caso.fundacionCustodioId
+    );
+  });
+  puedeConfirmarReencuentro = computed(
+    () => this.esReportanteCaso() && this.caso()?.tipo === 'EXTRAVIADO',
+  );
+  puedeGestionarBitacora = computed(() => this.esVeterinariaResponsable());
+  puedeDescargarBitacoraPdf = computed(() => {
     const perfil = this.perfil();
     const caso = this.caso();
     return (
-      this.authService.tieneRol('CIUDADANO_VOLUNTARIO') &&
-      !!perfil &&
-      !!caso &&
-      perfil.id !== caso.autorId
+      this.esAdministrador() ||
+      (this.esVeterinaria() && perfil?.verificado === true) ||
+      this.esReportanteCaso() ||
+      (this.esFundacion() &&
+        !!caso?.fundacionCustodioId &&
+        perfil?.organizacionId === caso.fundacionCustodioId)
     );
   });
-  puedeCerrarCaso = computed(() => {
-    const caso = this.caso();
-    return (
-      this.esReportanteCaso() &&
-      !!caso &&
-      esCasoAbierto(caso.estado ?? '') &&
-      !caso.fundacionCustodioId
-    );
-  });
-  puedeGestionarBitacora = computed(() => this.esVeterinariaResponsable());
 
   private perfilHabilitadoParaCustodia(): boolean {
     const perfil = this.perfil();
@@ -245,7 +288,7 @@ export class CasoDetalleComponent implements OnInit {
     () =>
       this.puedeGestionarBitacora() &&
       this.sinBitacoraMedica() &&
-      (this.caso()?.estado === 'REGISTRADO' || this.caso()?.estado === 'EN_ATENCION'),
+      this.caso()?.estado === 'EN_ATENCION',
   );
   puedeAportarCaso = computed(() => {
     const caso = this.caso();
@@ -264,7 +307,15 @@ export class CasoDetalleComponent implements OnInit {
   });
   puedeConsultarBitacora = computed(() => {
     const perfil = this.perfil();
-    return this.esVeterinaria() && perfil?.verificado === true;
+    const caso = this.caso();
+    return (
+      this.esAdministrador() ||
+      (this.esVeterinaria() && perfil?.verificado === true) ||
+      this.esReportanteCaso() ||
+      (this.esFundacion() &&
+        !!caso?.fundacionCustodioId &&
+        perfil?.organizacionId === caso.fundacionCustodioId)
+    );
   });
 
   casoDet = computed(() => {
@@ -415,55 +466,6 @@ export class CasoDetalleComponent implements OnInit {
     });
   }
 
-  iniciarDenuncia(): void {
-    if (!this.puedeDenunciarCaso() || this.denunciaEnviada()) {
-      return;
-    }
-    this.errorDenuncia.set('');
-    this.mostrandoDenuncia.set(true);
-  }
-
-  cancelarDenuncia(): void {
-    if (!this.denunciaEnCurso()) {
-      this.mostrandoDenuncia.set(false);
-    }
-  }
-
-  enviarDenunciaCaso(): void {
-    const caso = this.caso();
-    const motivo = this.motivoDenuncia.trim();
-    if (!caso || !this.puedeDenunciarCaso() || this.denunciaEnCurso() || this.denunciaEnviada()) {
-      return;
-    }
-    if (motivo.length < 10 || motivo.length > 500) {
-      this.errorDenuncia.set('El motivo debe tener entre 10 y 500 caracteres.');
-      return;
-    }
-
-    this.denunciaEnCurso.set(true);
-    this.errorDenuncia.set('');
-    this.mensajeDenuncia.set('');
-    this.moderacionService.reportarCaso(Number(caso.id), { motivo }).subscribe({
-      next: (response: ModeracionResponse) => {
-        this.denunciaEnCurso.set(false);
-        this.denunciaEnviada.set(true);
-        this.mostrandoDenuncia.set(false);
-        this.mensajeDenuncia.set(
-          response.decision === 'YA_REPORTADO'
-            ? 'Este caso ya estaba marcado para revisión por el equipo.'
-            : 'El caso fue enviado a revisión por el equipo.',
-        );
-      },
-      error: (error: unknown) => {
-        console.error('Error al reportar el caso para moderación:', error);
-        this.denunciaEnCurso.set(false);
-        this.errorDenuncia.set(
-          getServerErrorMessage(error) ?? 'No fue posible reportar el caso. Intenta de nuevo.',
-        );
-      },
-    });
-  }
-
   private formatEspecie(especie?: string): string {
     const esp = (especie || '').toUpperCase();
     const map: Record<string, string> = {
@@ -507,6 +509,10 @@ export class CasoDetalleComponent implements OnInit {
     } catch {
       return fechaCreacion;
     }
+  }
+
+  formatearFecha(fecha?: string): string {
+    return formatFechaDisplay(fecha);
   }
 
   private extractFotos(response: CasoResponse): string[] {
@@ -705,7 +711,7 @@ export class CasoDetalleComponent implements OnInit {
     if (!this.puedeCerrarCaso()) {
       return;
     }
-    this.motivoCierre = this.caso()?.tipo === 'EXTRAVIADO' ? 'REENCUENTRO' : 'RECUPERADO';
+    this.motivoCierre = this.puedeConfirmarReencuentro() ? 'REENCUENTRO' : 'RECUPERADO';
     this.observacionCierre = '';
     this.entregadoA = '';
     this.errorAccion.set('');
@@ -720,46 +726,70 @@ export class CasoDetalleComponent implements OnInit {
 
   cerrarCaso(): void {
     const caso = this.caso();
-    if (
-      !caso ||
-      !this.puedeCerrarCaso() ||
-      this.accionEnCurso() ||
-      (this.motivoCierre === 'REENCUENTRO' && caso.tipo !== 'EXTRAVIADO')
-    ) {
+    if (!this.validarCierre(caso)) {
       return;
     }
 
-    const dto: CierreCasoDTO = {
-      motivoCierre: this.motivoCierre,
-      observacion: this.observacionCierre.trim() || undefined,
-      entregadoA:
-        this.motivoCierre === 'ENTREGADO_A_CUIDADOR'
-          ? this.entregadoA.trim() || undefined
-          : undefined,
-    };
-
+    const dto = this.crearCierreDTO(caso);
     this.accionEnCurso.set(true);
     this.errorAccion.set('');
     this.mensajeAccion.set('');
     this.casoService.cerrarCaso(Number(caso.id), dto).subscribe({
-      next: () => {
-        this.accionEnCurso.set(false);
-        this.mostrandoCierre.set(false);
-        this.mensajeAccion.set(
-          this.motivoCierre === 'REENCUENTRO'
-            ? 'El reencuentro quedó confirmado y el caso fue cerrado.'
-            : 'El caso fue cerrado correctamente.',
-        );
-        this.loadDetalle(caso.id);
-      },
-      error: (error: unknown) => {
-        console.error('Error al cerrar el caso:', error);
-        this.accionEnCurso.set(false);
-        this.errorAccion.set(
-          getServerErrorMessage(error) ?? 'No fue posible cerrar el caso. Intenta de nuevo.',
-        );
-      },
+      next: () => this.finalizarCierre(caso),
+      error: (error: unknown) => this.manejarErrorCierre(error),
     });
+  }
+
+  private validarCierre(caso: Caso | null): caso is Caso {
+    if (!caso || !this.puedeCerrarCaso() || this.accionEnCurso()) {
+      return false;
+    }
+    if (this.motivoCierre === 'REENCUENTRO' && !this.puedeConfirmarReencuentro()) {
+      return false;
+    }
+    if (!caso.fundacionCustodioId && this.motivoCierre !== 'ENTREGADO_A_CUIDADOR') {
+      return true;
+    }
+    if (this.entregadoA.trim()) {
+      return true;
+    }
+
+    this.errorAccion.set(
+      this.motivoCierre === 'ENTREGADO_A_CUIDADOR'
+        ? 'Indica a quién fue entregado el animal.'
+        : 'Indica la persona o familia responsable del cierre.',
+    );
+    return false;
+  }
+
+  private crearCierreDTO(caso: Caso): CierreCasoDTO {
+    return {
+      motivoCierre: this.motivoCierre,
+      observacion: this.observacionCierre.trim() || undefined,
+      entregadoA:
+        this.motivoCierre === 'ENTREGADO_A_CUIDADOR' || caso.fundacionCustodioId
+          ? this.entregadoA.trim() || undefined
+          : undefined,
+    };
+  }
+
+  private finalizarCierre(caso: Caso): void {
+    this.accionEnCurso.set(false);
+    this.mostrandoCierre.set(false);
+    this.mensajeAccion.set(
+      this.motivoCierre === 'REENCUENTRO'
+        ? 'El reencuentro quedó confirmado y el caso fue cerrado.'
+        : 'El caso fue cerrado correctamente.',
+    );
+    this.loadDetalle(caso.id);
+  }
+
+  private manejarErrorCierre(error: unknown): void {
+    console.error('Error al cerrar el caso:', error);
+    this.accionEnCurso.set(false);
+    this.errorAccion.set(
+      getServerErrorMessage(error) ?? 'No fue posible cerrar el caso. Intenta de nuevo.',
+    );
   }
 
   abrirFormularioBitacora(formulario: 'entrada' | 'alta'): void {

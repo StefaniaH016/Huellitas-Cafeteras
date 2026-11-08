@@ -2,13 +2,17 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable } from 'rxjs';
-import { tap, map } from 'rxjs/operators';
+import { map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { TokenService } from './token.service';
 import { normalizeRole } from '../utils/role.utils';
 
 interface LoginResponse {
   token: string;
+  usuario?: {
+    rol?: string;
+    role?: string;
+  };
   rol?: string;
   role?: string;
 }
@@ -32,20 +36,19 @@ export class AuthService {
   login(email: string, password: string): Observable<string> {
     const body = { correo: email, contrasena: password };
     return this.httpClient.post<LoginResponse>(`${environment.apiUrl}/auth/login`, body).pipe(
-      tap((response) => {
+      map((response) => {
         this.tokenService.setToken(response.token);
-        // Store rol from response, fallback to token payload
         const rol =
-          response.rol ?? response.role ?? this.tokenService.decodePayload()?.['rol'] ?? null;
+          response.usuario?.rol ??
+          response.usuario?.role ??
+          response.rol ??
+          response.role ??
+          this.tokenService.decodePayload()?.['rol'] ??
+          null;
         if (rol) {
           localStorage.setItem(this.rolKey, rol as string);
         }
-      }),
-      map((response) => {
-        return (response.rol ??
-          response.role ??
-          this.tokenService.decodePayload()?.['rol'] ??
-          null) as string;
+        return rol as string;
       }),
     );
   }

@@ -142,6 +142,10 @@ export class PanelFundacionComponent implements OnInit {
   }
 
   iniciarLiberacion(casoId: number): void {
+    const caso = this.fundacionAnimales().find((animal) => animal.id === casoId);
+    if (!caso || this.esCasoFinalizado(caso)) {
+      return;
+    }
     this.liberandoId.set(casoId);
     this.motivoLiberacion = '';
   }
@@ -153,7 +157,8 @@ export class PanelFundacionComponent implements OnInit {
 
   liberarCustodia(casoId: number): void {
     const motivo = this.motivoLiberacion.trim();
-    if (!motivo || this.custodiaEnCursoId() !== null) {
+    const caso = this.fundacionAnimales().find((animal) => animal.id === casoId);
+    if (!motivo || !caso || this.esCasoFinalizado(caso) || this.custodiaEnCursoId() !== null) {
       return;
     }
     this.errorMensaje.set('');
@@ -184,4 +189,9 @@ export class PanelFundacionComponent implements OnInit {
   getBadgeClass = getPanelBadgeClass;
   getBadgeLabel = getPanelBadgeLabel;
   scrollToPanel = scrollToDashboardPanel;
+
+  esCasoFinalizado(caso: Pick<PanelCaso, 'estado'>): boolean {
+    const estado = caso.estado?.trim().toUpperCase();
+    return estado === 'RESUELTO' || estado === 'ARCHIVADO';
+  }
 }

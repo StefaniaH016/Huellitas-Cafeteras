@@ -386,6 +386,9 @@
           <strong>REGISTRADO</strong>. La comunidad ya puede verlo.
         }
       </p>
+      @if (submitWarning()) {
+        <p class="field-error" role="status">{{ submitWarning() }}</p>
+      }
       <div class="success-actions">
         <button class="btn btn-secondary" routerLink="/mis-reportes">Mis reportes</button>
         <button class="btn btn-secondary" routerLink="/casos">Ver casos</button>

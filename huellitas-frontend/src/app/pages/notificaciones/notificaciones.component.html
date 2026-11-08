@@ -16,18 +16,18 @@
           <button
             class="chip"
             type="button"
-            [class.active]="!soloSinLeer()"
-            [attr.aria-pressed]="!soloSinLeer()"
-            (click)="filtrar(false)"
+            [class.active]="filtroActivo() === 'todas'"
+            [attr.aria-pressed]="filtroActivo() === 'todas'"
+            (click)="filtrar('todas')"
           >
-            Todas<span class="count-pill">{{ notificaciones().length }}</span>
+            Todas<span class="count-pill">{{ contadores().todas }}</span>
           </button>
           <button
             class="chip"
             type="button"
-            [class.active]="soloSinLeer()"
-            [attr.aria-pressed]="soloSinLeer()"
-            (click)="filtrar(true)"
+            [class.active]="filtroActivo() === 'sin-leer'"
+            [attr.aria-pressed]="filtroActivo() === 'sin-leer'"
+            (click)="filtrar('sin-leer')"
           >
             Sin leer<span class="count-pill">{{ sinLeer() }}</span>
           </button>
@@ -35,57 +35,57 @@
             <button
               class="chip"
               type="button"
-              [class.active]="false"
-              [attr.aria-pressed]="false"
-              disabled
+              [class.active]="filtroActivo() === 'mis-casos'"
+              [attr.aria-pressed]="filtroActivo() === 'mis-casos'"
+              (click)="filtrar('mis-casos')"
             >
-              Mis casos<span class="count-pill">—</span>
+              Mis casos<span class="count-pill">{{ contadores().misCasos }}</span>
             </button>
             <button
               class="chip"
               type="button"
-              [class.active]="false"
-              [attr.aria-pressed]="false"
-              disabled
+              [class.active]="filtroActivo() === 'mi-zona'"
+              [attr.aria-pressed]="filtroActivo() === 'mi-zona'"
+              (click)="filtrar('mi-zona')"
             >
-              Mi zona<span class="count-pill">—</span>
+              Mi zona<span class="count-pill">{{ contadores().miZona }}</span>
             </button>
             <button
               class="chip"
               type="button"
-              [class.active]="false"
-              [attr.aria-pressed]="false"
-              disabled
+              [class.active]="filtroActivo() === 'recordatorios'"
+              [attr.aria-pressed]="filtroActivo() === 'recordatorios'"
+              (click)="filtrar('recordatorios')"
             >
-              Recordatorios<span class="count-pill">—</span>
+              Recordatorios<span class="count-pill">{{ contadores().recordatorios }}</span>
             </button>
           } @else {
             <button
               class="chip"
               type="button"
-              [class.active]="false"
-              [attr.aria-pressed]="false"
-              disabled
+              [class.active]="filtroActivo() === 'cuentas'"
+              [attr.aria-pressed]="filtroActivo() === 'cuentas'"
+              (click)="filtrar('cuentas')"
             >
-              Cuentas<span class="count-pill">—</span>
+              Cuentas<span class="count-pill">{{ contadores().cuentas }}</span>
             </button>
             <button
               class="chip"
               type="button"
-              [class.active]="false"
-              [attr.aria-pressed]="false"
-              disabled
+              [class.active]="filtroActivo() === 'moderacion'"
+              [attr.aria-pressed]="filtroActivo() === 'moderacion'"
+              (click)="filtrar('moderacion')"
             >
-              Moderación<span class="count-pill">—</span>
+              Moderación<span class="count-pill">{{ contadores().moderacion }}</span>
             </button>
             <button
               class="chip"
               type="button"
-              [class.active]="false"
-              [attr.aria-pressed]="false"
-              disabled
+              [class.active]="filtroActivo() === 'sin-actividad'"
+              [attr.aria-pressed]="filtroActivo() === 'sin-actividad'"
+              (click)="filtrar('sin-actividad')"
             >
-              Sin actividad<span class="count-pill">—</span>
+              Sin actividad<span class="count-pill">{{ contadores().sinActividad }}</span>
             </button>
           }
         </div>
@@ -96,7 +96,7 @@
           <p class="feedback-error" role="alert">{{ carga.error() }}</p>
         }
 
-        @for (notificacion of notificaciones(); track notificacion.id) {
+        @for (notificacion of notificacionesFiltradas(); track notificacion.id) {
           <article class="notif" [class.is-unread]="!notificacion.leida">
             <span
               class="notif-dot"
@@ -131,9 +131,7 @@
           </article>
         } @empty {
           @if (!carga.cargando()) {
-            <p class="list-empty">
-              No tienes notificaciones{{ soloSinLeer() ? ' sin leer' : '' }}.
-            </p>
+            <p class="list-empty">No tienes {{ nombreFiltroActivo() }}.</p>
           }
         }
       </div>

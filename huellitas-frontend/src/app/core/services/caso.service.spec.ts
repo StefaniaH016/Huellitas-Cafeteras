@@ -115,6 +115,42 @@ describe('CasoService: archivo', () => {
   });
 });
 
+describe('CasoService: creación de casos e imágenes', () => {
+  let service: CasoService;
+  let httpMock: HttpTestingController;
+
+  beforeEach(() => {
+    const setup = setupCasoServiceTest();
+    service = setup.service;
+    httpMock = setup.httpMock;
+  });
+
+  afterEach(() => httpMock.verify());
+
+  it('creates a case with the JSON endpoint', () => {
+    const dto = { descripcion: 'Caso urgente' };
+    service.crearReporte(dto).subscribe();
+    const request = httpMock.expectOne(apiUrl);
+
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual(dto);
+    request.flush({ id: 21 });
+  });
+
+  it('uploads each image to the existing endpoint and associates it with the case', () => {
+    const archivo = new File(['image'], 'animal.jpg', { type: 'image/jpeg' });
+    service.subirImagen(archivo, 21).subscribe();
+    const request = httpMock.expectOne(
+      (item) => item.url === `${environment.apiUrl}/imagenes` && item.params.get('casoId') === '21',
+    );
+
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toBeInstanceOf(FormData);
+    expect((request.request.body as FormData).get('archivo')).toBe(archivo);
+    request.flush({ url: 'https://example.test/animal.jpg' });
+  });
+});
+
 describe('CasoService: cierre de caso', () => {
   let service: CasoService;
   let httpMock: HttpTestingController;

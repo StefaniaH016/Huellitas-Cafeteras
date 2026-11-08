@@ -112,22 +112,29 @@
                   </button>
                 }
               }
-              <button
-                class="btn btn-primary btn-sm"
-                type="button"
-                [disabled]="accionEnCurso() !== null || cargando()"
-                (click)="resolverVerificacion(cuenta.usuarioId, 'APROBAR')"
-              >
-                Aprobar
-              </button>
-              <button
-                class="btn btn-secondary btn-sm"
-                type="button"
-                [disabled]="accionEnCurso() !== null || cargando()"
-                (click)="resolverVerificacion(cuenta.usuarioId, 'RECHAZAR')"
-              >
-                Rechazar
-              </button>
+              @if (puedeResolverVerificacion(cuenta)) {
+                <button
+                  class="btn btn-primary btn-sm"
+                  type="button"
+                  [disabled]="accionEnCurso() !== null || cargando()"
+                  (click)="resolverVerificacion(cuenta.usuarioId, 'APROBAR')"
+                >
+                  Aprobar
+                </button>
+                <button
+                  class="btn btn-secondary btn-sm"
+                  type="button"
+                  [disabled]="accionEnCurso() !== null || cargando()"
+                  (click)="resolverVerificacion(cuenta.usuarioId, 'RECHAZAR')"
+                >
+                  Rechazar
+                </button>
+              } @else {
+                <p class="note">
+                  La cuenta debe completar los datos de su organización y solicitar revisión antes
+                  de poder aprobarla o rechazarla.
+                </p>
+              }
             </div>
           </div>
         }

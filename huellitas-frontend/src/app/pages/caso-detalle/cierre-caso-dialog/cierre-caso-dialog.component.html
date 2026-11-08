@@ -1,0 +1,177 @@
+<div class="dialog-backdrop">
+  <section
+    class="close-dialog"
+    #dialog
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="close-dialog-title"
+    aria-describedby="close-dialog-description"
+    tabindex="-1"
+  >
+    <header class="dialog-header">
+      <h2 id="close-dialog-title">Cerrar caso #{{ casoId }}</h2>
+      <button
+        class="dialog-close"
+        type="button"
+        aria-label="Cerrar diálogo"
+        [disabled]="accionEnCurso"
+        (click)="cancelarDialogo()"
+      >
+        ×
+      </button>
+    </header>
+
+    <p id="close-dialog-description" class="dialog-description">
+      El caso pasará a Resuelto, saldrá del feed de casos activos y se notificará a los
+      involucrados.
+    </p>
+
+    <form class="form-field" (ngSubmit)="confirmar.emit()">
+      @if (tieneAltaMedica || tieneCustodia) {
+        <ul class="case-context">
+          @if (tieneAltaMedica) {
+            <li>
+              <span class="context-check" aria-hidden="true">✓</span>
+              <span>
+                Alta médica emitida por {{ veterinariaNombre || 'la veterinaria responsable' }}
+                @if (fechaAlta) {
+                  el {{ fechaAlta }}
+                }
+                .
+              </span>
+            </li>
+          }
+          @if (tieneCustodia) {
+            <li>
+              <span class="context-check" aria-hidden="true">✓</span>
+              <span>
+                {{ fundacionNombre || 'La fundación responsable' }} tiene la custodia: registra la
+                recuperación y a quién entrega al animal.
+              </span>
+            </li>
+          }
+        </ul>
+      }
+
+      <fieldset class="results-fieldset">
+        <legend>Resultado</legend>
+        <div class="result-options">
+          <label class="result-option" [class.selected]="motivoCierre === 'ENTREGADO_A_CUIDADOR'">
+            <input
+              type="radio"
+              name="motivoCierre"
+              [checked]="motivoCierre === 'ENTREGADO_A_CUIDADOR'"
+              (change)="seleccionarResultado('ENTREGADO_A_CUIDADOR')"
+              value="ENTREGADO_A_CUIDADOR"
+              required
+            />
+            <span class="result-copy">
+              <strong>Entregado a cuidador</strong>
+              <small>Regreso a su hogar o adopción</small>
+            </span>
+          </label>
+          <label class="result-option" [class.selected]="motivoCierre === 'RECUPERADO'">
+            <input
+              type="radio"
+              name="motivoCierre"
+              [checked]="motivoCierre === 'RECUPERADO'"
+              (change)="seleccionarResultado('RECUPERADO')"
+              value="RECUPERADO"
+              required
+            />
+            <span class="result-copy">
+              <strong>Recuperado</strong>
+              <small>Se recuperó y sigue en el refugio</small>
+            </span>
+          </label>
+          <label class="result-option" [class.selected]="motivoCierre === 'FALLECIDO'">
+            <input
+              type="radio"
+              name="motivoCierre"
+              [checked]="motivoCierre === 'FALLECIDO'"
+              (change)="seleccionarResultado('FALLECIDO')"
+              value="FALLECIDO"
+              required
+            />
+            <span class="result-copy">
+              <strong>Falleció</strong>
+            </span>
+          </label>
+          @if (esCasoExtraviado) {
+            <label
+              class="result-option"
+              [class.selected]="motivoCierre === 'REENCUENTRO'"
+              [class.disabled]="!puedeConfirmarReencuentro"
+            >
+              <input
+                type="radio"
+                name="motivoCierre"
+                [checked]="motivoCierre === 'REENCUENTRO'"
+                (change)="seleccionarResultado('REENCUENTRO')"
+                value="REENCUENTRO"
+                [disabled]="!puedeConfirmarReencuentro"
+                required
+              />
+              <span class="result-copy">
+                <strong>Reencuentro</strong>
+                <small>Solo para mascotas extraviadas</small>
+              </span>
+            </label>
+          }
+        </div>
+      </fieldset>
+
+      @if (requiereResponsable) {
+        <div class="form-field">
+          <label for="cierre-entregado-a">Entregado a</label>
+          <input
+            id="cierre-entregado-a"
+            name="entregadoA"
+            type="text"
+            maxlength="200"
+            [ngModel]="entregadoA"
+            (ngModelChange)="entregadoAChange.emit($event)"
+            required
+            placeholder="Nombre de la persona o familia"
+          />
+        </div>
+      }
+
+      <div class="form-field">
+        <label for="cierre-observacion">Observaciones</label>
+        <textarea
+          id="cierre-observacion"
+          name="observacionCierre"
+          maxlength="1000"
+          [ngModel]="observacionCierre"
+          (ngModelChange)="observacionCierreChange.emit($event)"
+          placeholder="Añade información del cierre"
+        ></textarea>
+      </div>
+
+      @if (error) {
+        <p class="dialog-error" role="alert">{{ error }}</p>
+      }
+
+      <div class="dialog-actions">
+        <button class="btn btn-primary" type="submit" [disabled]="accionEnCurso">
+          {{
+            accionEnCurso
+              ? 'Cerrando...'
+              : motivoCierre === 'REENCUENTRO'
+                ? 'Confirmar reencuentro'
+                : 'Confirmar cierre'
+          }}
+        </button>
+        <button
+          class="btn btn-secondary"
+          type="button"
+          [disabled]="accionEnCurso"
+          (click)="cancelarDialogo()"
+        >
+          Cancelar
+        </button>
+      </div>
+    </form>
+  </section>
+</div>

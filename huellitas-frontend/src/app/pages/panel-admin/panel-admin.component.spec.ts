@@ -14,6 +14,8 @@ const pendiente: VerificacionPendiente = {
   nombreEntidad: 'Fundación Huellitas',
   rolSolicitado: 'FUNDACION_REFUGIO',
   estado: 'PENDIENTE',
+  nit: '900123456',
+  municipio: 'Armenia',
   documentoSoporteDisponible: true,
 };
 
@@ -73,8 +75,25 @@ it('loads pending accounts and renders their validation actions', () => {
   expect(fixture.nativeElement.textContent).toContain('Fundación Huellitas');
   expect(fixture.nativeElement.textContent).toContain('Aprobar');
   expect(fixture.nativeElement.textContent).toContain('Rechazar');
-  expect(fixture.nativeElement.textContent).toContain('NIT: No informado');
+  expect(fixture.nativeElement.textContent).toContain('NIT: 900123456');
   expect(fixture.nativeElement.textContent).toContain('Ver documento');
+});
+
+it('does not offer decisions for an account without an associated organization', () => {
+  vi.mocked(verificacionService.getPendientes).mockReturnValue(
+    of([{ ...pendiente, nit: null, municipio: null, documentoSoporteDisponible: false }]),
+  );
+  const fixture = TestBed.createComponent(PanelAdminComponent);
+  fixture.detectChanges();
+
+  expect(fixture.nativeElement.textContent).toContain(
+    'La cuenta debe completar los datos de su organización',
+  );
+  expect(fixture.nativeElement.textContent).not.toContain('Aprobar');
+  expect(fixture.nativeElement.textContent).not.toContain('Rechazar');
+
+  fixture.componentInstance.resolverVerificacion(pendiente.usuarioId, 'APROBAR');
+  expect(verificacionService.resolverVerificacion).not.toHaveBeenCalled();
 });
 
 it('loads general cases in addition to cases reported for moderation', () => {
@@ -128,6 +147,7 @@ it('reports a failure when a verification cannot be resolved', () => {
     throwError(() => new Error('Request failed')),
   );
   const fixture = TestBed.createComponent(PanelAdminComponent);
+  fixture.detectChanges();
 
   fixture.componentInstance.resolverVerificacion(pendiente.usuarioId, 'APROBAR');
 

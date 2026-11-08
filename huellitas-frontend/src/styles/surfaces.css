@@ -318,8 +318,8 @@
 }
 
 .entry-alta {
-  border-color: var(--mint-700);
-  box-shadow: inset 4px 0 0 var(--mint-700);
+  border-color: #2e8b63;
+  box-shadow: inset 4px 0 0 #2e8b63;
 }
 
 /* Notificaciones */
@@ -335,8 +335,13 @@
 }
 
 .notif.is-unread {
-  background: var(--paper-2);
-  border-color: var(--pine-100);
+  background: var(--sky-100);
+  border-color: var(--pine-500);
+}
+
+.notif .btn-secondary {
+  background: var(--card-bg);
+  border-color: var(--line);
 }
 
 .notif-dot {

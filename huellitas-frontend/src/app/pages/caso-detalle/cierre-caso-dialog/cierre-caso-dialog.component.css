@@ -1,0 +1,263 @@
+:host {
+  position: relative;
+  z-index: 1000;
+}
+
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  background: rgb(43 37 78 / 48%);
+  backdrop-filter: blur(3px);
+}
+
+.close-dialog {
+  width: min(100%, 700px);
+  max-height: min(94vh, 900px);
+  overflow-y: auto;
+  padding: 2rem;
+  border: 1px solid #e4defb;
+  border-radius: 24px;
+  background: #fff;
+  box-shadow: 0 24px 70px rgb(30 22 70 / 25%);
+}
+
+.dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.dialog-header h2 {
+  margin: 0;
+  color: #3e356c;
+  font-size: 1.35rem;
+  line-height: 1.25;
+}
+
+.dialog-close {
+  display: grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid #e1dcf6;
+  border-radius: 50%;
+  background: #f7f5ff;
+  color: #51477f;
+  font-size: 1.6rem;
+  cursor: pointer;
+}
+
+.dialog-description {
+  margin: 0.65rem 0 1.7rem;
+  color: #8a83ae;
+  line-height: 1.6;
+}
+
+.form-field {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.form-field label {
+  color: #4a426f;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.form-field input,
+.form-field textarea {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #dcd5f5;
+  border-radius: 16px;
+  padding: 0.8rem 1rem;
+  background: #fff;
+  color: #51477f;
+  font: inherit;
+}
+
+.form-field textarea {
+  min-height: 112px;
+  resize: vertical;
+}
+
+.form-field input:focus-visible,
+.form-field textarea:focus-visible,
+.dialog-close:focus-visible,
+.btn:focus-visible {
+  outline: 2px solid #6c5ce7;
+  outline-offset: 2px;
+}
+
+.case-context {
+  display: grid;
+  gap: 0.8rem;
+  margin: 0 0 1.55rem;
+  padding: 0;
+  color: #51477f;
+  list-style: none;
+}
+
+.case-context li {
+  display: grid;
+  grid-template-columns: 1.5rem minmax(0, 1fr);
+  align-items: start;
+  gap: 0.75rem;
+  line-height: 1.5;
+}
+
+.context-check {
+  display: grid;
+  width: 1.5rem;
+  height: 1.5rem;
+  place-items: center;
+  border-radius: 50%;
+  background: #def5ec;
+  color: #2e8b63;
+  font-weight: 800;
+}
+
+.results-fieldset {
+  min-width: 0;
+  margin: 0 0 1.25rem;
+  padding: 0;
+  border: 0;
+}
+
+.results-fieldset legend {
+  margin-bottom: 0.65rem;
+  color: #4a426f;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.result-options {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.result-option {
+  display: flex;
+  min-height: 52px;
+  align-items: center;
+  gap: 0.7rem;
+  border: 1px solid #ddd7f6;
+  border-radius: 17px;
+  padding: 0.65rem 1rem;
+  color: #3e356c;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.result-option.selected {
+  border-color: #6c5ce7;
+  background: #f0edff;
+}
+
+.result-option.disabled {
+  color: #aaa5c1;
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.result-option input {
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 auto;
+  margin: 0;
+  accent-color: #6c5ce7;
+}
+
+.result-option:has(input:focus-visible) {
+  outline: 2px solid #6c5ce7;
+  outline-offset: 2px;
+}
+
+.result-copy {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.result-copy strong {
+  font-size: 0.92rem;
+}
+
+.result-copy small {
+  color: #81799f;
+  font-size: 0.82rem;
+}
+
+.form-field + .form-field {
+  margin-top: 1.05rem;
+}
+
+.dialog-error {
+  margin: 0;
+  color: #bb4444;
+  font-size: 0.88rem;
+}
+
+.dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  margin-top: 1.2rem;
+}
+
+.btn {
+  min-height: 46px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 0.7rem 1.2rem;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn:disabled,
+.dialog-close:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.btn-primary {
+  background: #6c5ce7;
+  color: #fff;
+  box-shadow: 0 8px 18px rgb(108 92 231 / 24%);
+}
+
+.btn-secondary {
+  border-color: #ddd7f6;
+  background: #f7f5ff;
+  color: #4a426f;
+}
+
+@media (max-width: 480px) {
+  .close-dialog {
+    padding: 1.2rem;
+    border-radius: 20px;
+  }
+
+  .dialog-actions {
+    flex-direction: column-reverse;
+  }
+
+  .dialog-actions .btn {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .result-option {
+    transition: none;
+  }
+}

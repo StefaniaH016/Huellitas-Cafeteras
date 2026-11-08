@@ -25,7 +25,7 @@ import {
 import { Observable } from 'rxjs';
 import { EstadoAccion, EstadoCarga } from '../../../core/utils/request.utils';
 
-/** Muestra el resumen a otros roles y las entradas clínicas solo a veterinarias verificadas. */
+/** Muestra las entradas clínicas a la veterinaria verificada, al reportante y a la fundación custodio. */
 @Component({
   selector: 'app-caso-bitacora',
   imports: [FormsModule],
@@ -37,6 +37,7 @@ export class CasoBitacoraComponent implements OnChanges {
   readonly caso = input.required<CasoDetalle>();
   readonly puedeConsultar = input(false);
   readonly puedeGestionar = input(false);
+  readonly puedeDescargarPdf = input(false);
   readonly formularioActivo = input<'entrada' | 'alta' | null>(null);
   readonly actualizado = output<void>();
   readonly sinBitacoraChange = output<boolean>();
@@ -56,6 +57,15 @@ export class CasoBitacoraComponent implements OnChanges {
     () =>
       this.bitacora()?.estado === 'ALTA_REGISTRADA' ||
       this.caso().resumenMedico?.altaMedica === true,
+  );
+  readonly entradasOrdenadas = computed(() =>
+    [...(this.bitacora()?.evoluciones ?? [])].sort((a, b) => {
+      const fechaA = Date.parse(a.fechaFirma || a.fecha);
+      const fechaB = Date.parse(b.fechaFirma || b.fecha);
+      const tiempoA = Number.isNaN(fechaA) ? 0 : fechaA;
+      const tiempoB = Number.isNaN(fechaB) ? 0 : fechaB;
+      return tiempoB - tiempoA || b.id - a.id;
+    }),
   );
   readonly admiteEntradas = computed(
     () => this.puedeGestionar() && esCasoAbierto(this.caso().estado) && !this.conAlta(),
@@ -135,6 +145,18 @@ export class CasoBitacoraComponent implements OnChanges {
         this.errorPdf.set('No fue posible descargar el resumen clínico.');
       },
     });
+  }
+
+  esEntradaAlta(entrada: Bitacora['evoluciones'][number]): boolean {
+    return entrada.diagnostico.trim().toLocaleUpperCase().startsWith('ALTA MÉDICA:');
+  }
+
+  condicionAlta(entrada: Bitacora['evoluciones'][number]): string {
+    return entrada.diagnostico.replace(/^ALTA MÉDICA:\s*/i, '');
+  }
+
+  indicacionesAlta(entrada: Bitacora['evoluciones'][number]): string {
+    return (entrada.tratamiento ?? '').replace(/^Indicaciones:\s*/i, '');
   }
 
   private ejecutar(fuente: Observable<unknown>, exito: string, despues?: () => void): void {

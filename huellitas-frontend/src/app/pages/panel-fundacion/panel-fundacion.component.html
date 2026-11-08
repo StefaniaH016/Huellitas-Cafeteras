@@ -129,7 +129,7 @@
               >
                 Ver bitácora
               </button>
-              @if (liberandoId() !== animal.id) {
+              @if (!esCasoFinalizado(animal) && liberandoId() !== animal.id) {
                 <button
                   class="btn btn-secondary btn-sm"
                   type="button"
@@ -140,7 +140,7 @@
                 </button>
               }
             </div>
-            @if (liberandoId() === animal.id) {
+            @if (!esCasoFinalizado(animal) && liberandoId() === animal.id) {
               <form class="form-field" (ngSubmit)="liberarCustodia(animal.id)">
                 <label [for]="'motivo-liberacion-' + animal.id"
                   >Motivo para liberar la custodia</label

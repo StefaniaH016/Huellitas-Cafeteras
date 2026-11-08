@@ -66,3 +66,22 @@ it('does not show the unavailable password-recovery link or form', () => {
   expect(fixture.nativeElement.querySelector('input[type="email"]')).not.toBeNull();
   expect(fixture.nativeElement.querySelector('input[type="password"]')).not.toBeNull();
 });
+
+it('shows the app introduction and login form together in one card', () => {
+  const fixture = TestBed.createComponent(LoginComponent);
+  fixture.detectChanges();
+
+  const shell = fixture.nativeElement.querySelector('.login-shell') as HTMLElement | null;
+  const intro = fixture.nativeElement.querySelector('.login-intro') as HTMLElement | null;
+  const formPanel = fixture.nativeElement.querySelector('.login-panel') as HTMLElement | null;
+  const accent = formPanel?.querySelector('.auth-accent');
+  const brand = intro?.querySelector('.login-brand');
+  const message = intro?.querySelector('.login-intro-copy');
+
+  expect(shell).not.toBeNull();
+  expect(intro?.parentElement).toBe(shell);
+  expect(formPanel?.parentElement).toBe(shell);
+  expect(accent).not.toBeNull();
+  expect(brand?.nextElementSibling).toBe(message);
+  expect(intro?.querySelector('.intro-paw')).toBeNull();
+});

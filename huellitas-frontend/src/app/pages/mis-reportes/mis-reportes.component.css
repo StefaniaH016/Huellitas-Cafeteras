@@ -28,6 +28,56 @@
   color: rgb(255 255 255 / 86%);
 }
 
+.report-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.2rem;
+  padding: 0.35rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--paper-2);
+}
+
+.report-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 42px;
+  flex: 1;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 0.5rem 1rem;
+  background: transparent;
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.report-tab.active {
+  border-color: var(--line);
+  background: var(--card-bg);
+  color: var(--pine-700);
+  box-shadow: var(--shadow);
+}
+
+.report-tab:focus-visible {
+  outline: 2px solid var(--pine-700);
+  outline-offset: 2px;
+}
+
+.tab-count {
+  min-width: 1.5rem;
+  border-radius: 999px;
+  padding: 0.1rem 0.35rem;
+  background: var(--pine-100);
+  color: var(--pine-700);
+  font-size: 0.75rem;
+  text-align: center;
+}
+
 .report-list {
   display: grid;
   gap: 1rem;
@@ -162,7 +212,7 @@
 
 .btn-secondary {
   border-color: var(--line);
-  background: var(--paper-2);
+  background: var(--sky-100);
   color: var(--brown-900);
 }
 
@@ -237,6 +287,10 @@
 
   .page-header h1 {
     font-size: 1.7rem;
+  }
+
+  .report-tabs {
+    border-radius: 16px;
   }
 
   .report-card {

@@ -1,8 +1,9 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { CasoService } from '../../core/services/caso.service';
+import { ESTADO_LABELS, esCasoAbierto } from '../../core/utils/caso-display.utils';
 
 interface CasoReporte {
   id: number;
@@ -26,9 +27,16 @@ export class MisReportesComponent implements OnInit {
   private casoService = inject(CasoService);
 
   reportes = signal<CasoReporte[]>([]);
+  pestanaActiva = signal<'activos' | 'historial'>('activos');
   cargando = signal(false);
   error = signal('');
   eliminandoId = signal<number | null>(null);
+  readonly etiquetasEstado = ESTADO_LABELS;
+  reportesActivos = computed(() => this.reportes().filter((caso) => esCasoAbierto(caso.estado)));
+  reportesHistorial = computed(() => this.reportes().filter((caso) => !esCasoAbierto(caso.estado)));
+  reportesVisibles = computed(() =>
+    this.pestanaActiva() === 'activos' ? this.reportesActivos() : this.reportesHistorial(),
+  );
 
   ngOnInit(): void {
     this.cargarReportes();
@@ -51,6 +59,10 @@ export class MisReportesComponent implements OnInit {
         this.cargando.set(false);
       },
     });
+  }
+
+  seleccionarPestana(pestana: 'activos' | 'historial'): void {
+    this.pestanaActiva.set(pestana);
   }
 
   eliminar(caso: CasoReporte): void {

@@ -20,15 +20,21 @@ let bitacora: Record<string, ReturnType<typeof vi.fn>>;
 function crear(
   puedeConsultar: boolean,
   puedeGestionar = puedeConsultar,
+  puedeDescargarPdf = puedeConsultar,
+  hayResumenMedico = false,
 ): ComponentFixture<CasoBitacoraComponent> {
   TestBed.configureTestingModule({
     imports: [CasoBitacoraComponent],
     providers: [{ provide: BitacoraService, useValue: bitacora }],
   });
   const fixture = TestBed.createComponent(CasoBitacoraComponent);
-  fixture.componentRef.setInput('caso', caso);
+  fixture.componentRef.setInput('caso', {
+    ...caso,
+    resumenMedico: hayResumenMedico ? { id: 8, altaMedica: true } : null,
+  });
   fixture.componentRef.setInput('puedeConsultar', puedeConsultar);
   fixture.componentRef.setInput('puedeGestionar', puedeGestionar);
+  fixture.componentRef.setInput('puedeDescargarPdf', puedeDescargarPdf);
   fixture.detectChanges();
   return fixture;
 }
@@ -113,6 +119,51 @@ it('shows medical entries in the MOCKUPS2 card structure', () => {
   expect(entry.querySelector('.entry-sign')?.textContent).toContain('Firmada por Dra. Vet');
 });
 
+it('shows the latest evolution first and styles the medical discharge as a green card', () => {
+  bitacora['getBitacora'].mockReturnValue(
+    of({
+      id: 1,
+      casoId: 4,
+      estado: 'ALTA_REGISTRADA',
+      alta: { fechaAlta: '2026-11-06T16:00:00-05:00', estado: 'ALTA_REGISTRADA' },
+      evoluciones: [
+        {
+          id: 2,
+          fecha: '2026-11-04T10:00:00-05:00',
+          diagnostico: 'Primera evolución',
+          firmanteNombre: 'Dra. Vet',
+        },
+        {
+          id: 3,
+          fecha: '2026-11-05T10:00:00-05:00',
+          diagnostico: 'Evolución más reciente',
+          firmanteNombre: 'Dra. Vet',
+        },
+        {
+          id: 4,
+          fecha: '2026-11-06T16:00:00-05:00',
+          diagnostico: 'ALTA MÉDICA: Herida cicatrizada',
+          tratamiento: 'Indicaciones: Control en 15 días. Apto para adopción.',
+          firmanteNombre: 'Dra. Vet',
+          fechaFirma: '2026-11-06T16:00:00-05:00',
+        },
+      ],
+    }),
+  );
+  const fixture = crear(true);
+
+  const entries = Array.from(fixture.nativeElement.querySelectorAll('.entry')) as HTMLElement[];
+  expect(entries).toHaveLength(3);
+  expect(entries[0].classList.contains('entry-alta')).toBe(true);
+  expect(entries[0].textContent).toContain('Condición al alta');
+  expect(entries[0].textContent).toContain('Herida cicatrizada');
+  expect(entries[0].textContent).toContain('Indicaciones y destino');
+  expect(entries[0].textContent).toContain('Control en 15 días. Apto para adopción.');
+  expect(entries[0].querySelector('.badge-resuelto')?.textContent).toContain('Alta');
+  expect(entries[1].textContent).toContain('Evolución más reciente');
+  expect(entries[2].textContent).toContain('Primera evolución');
+});
+
 it('shows only the form selected from the Actions panel', () => {
   const fixture = crear(true);
 
@@ -167,4 +218,28 @@ it('downloads the PDF through an object URL', () => {
   expect(click).toHaveBeenCalled();
   expect(revoke).toHaveBeenCalledWith('blob:pdf');
   vi.restoreAllMocks();
+});
+
+it('shows and downloads the PDF for an authorized read-only user without requesting clinical entries', () => {
+  const create = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:pdf');
+  vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+  vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+  const fixture = crear(false, false, true, true);
+  const button = fixture.nativeElement.querySelector('button') as HTMLButtonElement;
+
+  expect(button.textContent).toContain('Descargar historia clínica (PDF)');
+  expect(bitacora['getBitacora']).not.toHaveBeenCalled();
+
+  button.click();
+
+  expect(bitacora['descargarPdf']).toHaveBeenCalledWith(4);
+  expect(create).toHaveBeenCalled();
+  vi.restoreAllMocks();
+});
+
+it('does not show the PDF download for an unrelated user', () => {
+  const fixture = crear(false, false, false, true);
+
+  expect(fixture.nativeElement.textContent).not.toContain('Descargar historia clínica (PDF)');
+  expect(bitacora['descargarPdf']).not.toHaveBeenCalled();
 });

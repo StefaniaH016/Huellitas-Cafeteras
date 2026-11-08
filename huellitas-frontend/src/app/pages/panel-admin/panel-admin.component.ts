@@ -137,6 +137,14 @@ export class PanelAdminComponent implements OnInit, OnDestroy {
   }
 
   resolverVerificacion(usuarioId: number, decision: DecisionVerificacion): void {
+    const cuenta = this.adminValidaciones().find((item) => item.usuarioId === usuarioId);
+    if (cuenta && !this.puedeResolverVerificacion(cuenta)) {
+      this.errorMensaje.set(
+        'La cuenta debe completar los datos de su organización y solicitar revisión antes de resolverla.',
+      );
+      return;
+    }
+
     this.accionEnCurso.set(usuarioId);
     this.errorMensaje.set('');
     this.mensaje.set('');
@@ -156,6 +164,10 @@ export class PanelAdminComponent implements OnInit, OnDestroy {
         this.errorMensaje.set('No fue posible resolver la verificación. Intenta nuevamente.');
       },
     });
+  }
+
+  puedeResolverVerificacion(cuenta: VerificacionPendiente): boolean {
+    return !!cuenta.nit?.trim();
   }
 
   getBadgeClass = getPanelBadgeClass;
