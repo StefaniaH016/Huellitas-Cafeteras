@@ -36,10 +36,6 @@ class PdfGeneracionYPermisosTest {
     @Mock
     private CasoRepository casoRepository;
     @Mock
-    private HistorialEstadoRepository historialEstadoRepository;
-    @Mock
-    private SeguimientoRepository seguimientoRepository;
-    @Mock
     private UsuarioRepository usuarioRepository;
     @Mock
     private BitacoraMapper bitacoraMapper;
@@ -65,8 +61,6 @@ class PdfGeneracionYPermisosTest {
                 bitacoraMedicaRepository,
                 registroMedicoRepository,
                 casoRepository,
-                historialEstadoRepository,
-                seguimientoRepository,
                 usuarioRepository,
                 bitacoraMapper,
                 pdfWorker,

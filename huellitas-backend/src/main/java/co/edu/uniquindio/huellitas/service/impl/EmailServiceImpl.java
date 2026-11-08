@@ -24,7 +24,7 @@ public class EmailServiceImpl implements EmailService {
 
     private final JavaMailSender mailSender;
 
-    @Value("${spring.mail.username:${mail.username:noreply@huellitas.org}}")
+    @Value("${spring.mail.from:${MAIL_FROM:${spring.mail.username:${mail.username:noreply@huellitas.org}}}}")
     private String correoRemitente;
 
     private String getRemitente() {

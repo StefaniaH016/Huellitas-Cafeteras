@@ -735,7 +735,12 @@ public class CasoServiceImpl implements CasoService {
             usuario = usuarioRepository.save(usuario);
         }
 
-        if (usuario.getOrganizacion() == null || !(usuario.getOrganizacion() instanceof Fundacion fundacion)) {
+        if (usuario.getOrganizacion() == null) {
+            throw new AccessDeniedException("Solo las fundaciones pueden consultar sus casos en custodia");
+        }
+
+        Object organizacion = Hibernate.unproxy(usuario.getOrganizacion());
+        if (!(organizacion instanceof Fundacion fundacion)) {
             throw new AccessDeniedException("Solo las fundaciones pueden consultar sus casos en custodia");
         }
 
