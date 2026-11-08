@@ -347,6 +347,10 @@
     border-radius: 16px;
   }
 
+  .report-tabs {
+    border-radius: 16px;
+  }
+
   .report-card {
     grid-template-columns: 1fr;
     gap: 0.75rem;

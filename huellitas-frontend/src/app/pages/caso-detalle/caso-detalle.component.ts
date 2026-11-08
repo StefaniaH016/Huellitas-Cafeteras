@@ -356,7 +356,9 @@ export class CasoDetalleComponent implements OnInit {
       this.casoDisponibleParaCustodia(),
   );
   puedeArchivarCaso = computed(
-    () => this.authService.tieneRol('ADMINISTRADOR') && this.caso()?.estado === 'RESUELTO',
+    () =>
+      this.esAdministrador() &&
+      ['REGISTRADO', 'EN_ATENCION', 'RESUELTO'].includes(this.caso()?.estado ?? ''),
   );
   esReportanteCaso = computed(() => {
     const perfil = this.perfil();
@@ -368,26 +370,42 @@ export class CasoDetalleComponent implements OnInit {
       perfil.id === caso.autorId
     );
   });
-  puedeDenunciarCaso = computed(() => {
+  puedeCerrarCaso = computed(() => {
+    const caso = this.caso();
+    if (!caso || !['REGISTRADO', 'EN_ATENCION'].includes(caso.estado ?? '')) {
+      return false;
+    }
+    if (this.esAdministrador()) {
+      return true;
+    }
+    if (this.esReportanteCaso()) {
+      return !caso.fundacionCustodioId;
+    }
+
+    const perfil = this.perfil();
+    return (
+      this.esFundacion() &&
+      perfil?.estadoVerificacionOrganizacion === 'VERIFICADA' &&
+      !!caso.fundacionCustodioId &&
+      perfil.organizacionId === caso.fundacionCustodioId
+    );
+  });
+  puedeConfirmarReencuentro = computed(
+    () => this.esReportanteCaso() && this.caso()?.tipo === 'EXTRAVIADO',
+  );
+  puedeGestionarBitacora = computed(() => this.esVeterinariaResponsable());
+  puedeDescargarBitacoraPdf = computed(() => {
     const perfil = this.perfil();
     const caso = this.caso();
     return (
-      this.authService.tieneRol('CIUDADANO_VOLUNTARIO') &&
-      !!perfil &&
-      !!caso &&
-      perfil.id !== caso.autorId
+      this.esAdministrador() ||
+      (this.esVeterinaria() && perfil?.verificado === true) ||
+      this.esReportanteCaso() ||
+      (this.esFundacion() &&
+        !!caso?.fundacionCustodioId &&
+        perfil?.organizacionId === caso.fundacionCustodioId)
     );
   });
-  puedeCerrarCaso = computed(() => {
-    const caso = this.caso();
-    return (
-      this.esReportanteCaso() &&
-      !!caso &&
-      esCasoAbierto(caso.estado ?? '') &&
-      !caso.fundacionCustodioId
-    );
-  });
-  puedeGestionarBitacora = computed(() => this.esVeterinariaResponsable());
 
   private perfilHabilitadoParaCustodia(): boolean {
     const perfil = this.perfil();
@@ -418,7 +436,7 @@ export class CasoDetalleComponent implements OnInit {
     () =>
       this.puedeGestionarBitacora() &&
       this.sinBitacoraMedica() &&
-      (this.caso()?.estado === 'REGISTRADO' || this.caso()?.estado === 'EN_ATENCION'),
+      this.caso()?.estado === 'EN_ATENCION',
   );
   puedeAportarCaso = computed(() => {
     const caso = this.caso();
@@ -437,7 +455,15 @@ export class CasoDetalleComponent implements OnInit {
   });
   puedeConsultarBitacora = computed(() => {
     const perfil = this.perfil();
-    return this.esVeterinaria() && perfil?.verificado === true;
+    const caso = this.caso();
+    return (
+      this.esAdministrador() ||
+      (this.esVeterinaria() && perfil?.verificado === true) ||
+      this.esReportanteCaso() ||
+      (this.esFundacion() &&
+        !!caso?.fundacionCustodioId &&
+        perfil?.organizacionId === caso.fundacionCustodioId)
+    );
   });
 
   casoDet = computed(() => {

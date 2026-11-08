@@ -511,7 +511,7 @@ export class ReportarComponent implements OnInit, OnDestroy {
   }
 
   private crearReporte(dto: CrearReporteDTO): void {
-    this.casoService.crearReporteConImagen(dto, this.fotos()).subscribe({
+    this.casoService.crearReporte(dto).subscribe({
       next: (response: unknown): void => {
         const id = (response as CrearReporteResponse).id;
         if (id === undefined || id === null || !Number.isInteger(Number(id)) || Number(id) <= 0) {
