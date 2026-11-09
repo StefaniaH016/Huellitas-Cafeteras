@@ -5,10 +5,12 @@ import co.edu.uniquindio.huellitas.entity.enums.EstadoCaso;
 import co.edu.uniquindio.huellitas.repository.CasoRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -16,17 +18,15 @@ import java.util.List;
 /**
  * Worker W-04: Limpieza y Cierre de Casos.
  *
- * <p>Tarea programada que se ejecuta automáticamente cada noche a las 02:00 AM.
+ * <p>Tarea programada que se ejecuta automáticamente según la expresión cron configurada.
  * Su objetivo es mantener el listado principal limpio y sin información obsoleta:
  *
  * <ul>
  *   <li>Archiva automáticamente los casos en estado RESUELTO que lleven más de
- *       30 días sin actividad, retirándolos del feed activo.</li>
- *   <li>Archiva los casos REGISTRADO o EN_ATENCION que llevan más de 90 días sin
- *       ninguna actualización, considerándolos inactivos.</li>
+ *       N días sin actividad (configurable), retirándolos del feed activo.</li>
  *   <li>Envía recordatorios (vía {@link NotificacionWorker}) al reportante de
- *       casos que llevan entre 14 y 29 días sin actividad para que confirmen
- *       si aún requieren atención.</li>
+ *       casos que llevan M días sin actividad para que confirmen
+ *       si aún requieren atención (configurable).</li>
  * </ul>
  *
  * <p>Usa {@code @Scheduled} habilitado por {@code @EnableScheduling} en
@@ -37,31 +37,28 @@ import java.util.List;
 @Slf4j
 public class LimpiezaWorker {
 
-    /** Días sin actividad para archivar casos RESUELTOS. */
-    private static final long DIAS_RESUELTO_PARA_ARCHIVAR = 30;
-
-    /** Días sin actividad para archivar casos activos abandonados. */
-    private static final long DIAS_ACTIVO_PARA_ARCHIVAR = 90;
-
-    /** Días sin actividad para enviar recordatorio al reportante. */
-    private static final long DIAS_PARA_RECORDATORIO = 14;
-
     private final CasoRepository casoRepository;
     private final NotificacionWorker notificacionWorker;
+    private final Clock clock;
+
+    @Value("${limpieza.dias-archivar-resuelto}")
+    private long diasArchivarResuelto;
+
+    @Value("${limpieza.dias-recordatorio-inactividad}")
+    private long diasRecordatorioInactividad;
 
     /**
-     * Ejecución diaria a las 02:00 AM.
+     * Ejecución programada según cron configurado.
      * Revisa todos los casos y aplica las reglas de limpieza.
      */
-    @Scheduled(cron = "0 0 2 * * *")
+    @Scheduled(cron = "${limpieza.cron}")
     @Transactional
     public void ejecutar() {
-        log.info("W-04 LimpiezaWorker: iniciando revisión nocturna de casos...");
+        log.info("W-04 LimpiezaWorker: iniciando revisión de casos...");
 
-        Instant ahora = Instant.now();
-        Instant limiteResuelto = ahora.minus(DIAS_RESUELTO_PARA_ARCHIVAR, ChronoUnit.DAYS);
-        Instant limiteAbandono = ahora.minus(DIAS_ACTIVO_PARA_ARCHIVAR, ChronoUnit.DAYS);
-        Instant limiteRecordatorio = ahora.minus(DIAS_PARA_RECORDATORIO, ChronoUnit.DAYS);
+        Instant ahora = clock.instant();
+        Instant limiteResuelto = ahora.minus(diasArchivarResuelto, ChronoUnit.DAYS);
+        Instant limiteRecordatorio = ahora.minus(diasRecordatorioInactividad, ChronoUnit.DAYS);
 
         List<Caso> todos = casoRepository.findAll();
 
@@ -79,29 +76,15 @@ public class LimpiezaWorker {
             if (estado == EstadoCaso.RESUELTO
                     && ultimaActividad.isBefore(limiteResuelto)) {
                 archivar(caso, ahora,
-                        "Archivado automáticamente tras " + DIAS_RESUELTO_PARA_ARCHIVAR
+                        "Archivado automáticamente tras " + diasArchivarResuelto
                                 + " días en estado RESUELTO sin actividad.");
                 archivados++;
                 continue;
             }
 
-            // ── Archivar casos activos abandonados (sin actividad >90d) ─
-            if ((estado == EstadoCaso.REGISTRADO || estado == EstadoCaso.EN_ATENCION)
-                    && ultimaActividad.isBefore(limiteAbandono)) {
-                archivar(caso, ahora,
-                        "Archivado automáticamente por inactividad superior a "
-                                + DIAS_ACTIVO_PARA_ARCHIVAR + " días.");
-                archivados++;
-                continue;
-            }
-
-            // ── Recordatorio a los 14 días sin actividad ────────────────
-            if ((estado == EstadoCaso.REGISTRADO || estado == EstadoCaso.EN_ATENCION)
-                    && ultimaActividad.isBefore(limiteRecordatorio)
-                    && caso.getReportante() != null) {
-                notificacionWorker.notificarRecordatorio(caso);
-                recordatorios++;
-            }
+            // ── Recordatorio por inactividad (implementación pendiente bloque 2) ────────────────
+            // TODO: 17.3 - Enviar recordatorios al reportante cuando un caso activo
+            // lleva más de M días sin actividad según fechaUltimaActividad
         }
 
         log.info("W-04 LimpiezaWorker: {} casos archivados, {} recordatorios enviados.",
