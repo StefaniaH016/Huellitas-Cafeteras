@@ -1159,6 +1159,115 @@ collection = {
                     }]
                 }
             ]
+        },
+        # Módulo 17 - HU-17: Historial y Archivado Automático
+        {
+            "name": "Módulo 17 - HU-17: Historial y Archivado Automático",
+            "item": [
+                {
+                    "name": "GET /v1/casos/historial (Todos los casos archivados y resueltos)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": "{{baseUrl}}/v1/casos/historial?page=0&size=10"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
+                                "var json = pm.response.json();",
+                                "pm.test('Retorna lista paginada de casos históricos', function () { pm.expect(json).to.have.property('content'); pm.expect(Array.isArray(json.content)).to.be.true; });"
+                            ]
+                        }
+                    }]
+                },
+                {
+                    "name": "GET /v1/casos/historial?estado=RESUELTO (Solo casos resueltos)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": "{{baseUrl}}/v1/casos/historial?estado=RESUELTO&page=0&size=10"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
+                                "var json = pm.response.json();",
+                                "pm.test('Retorna solo casos RESUELTO', function () {",
+                                "    pm.expect(json.content).to.satisfy(function(items) {",
+                                "        return items.every(item => item.estado === 'RESUELTO');",
+                                "    });",
+                                "});"
+                            ]
+                        }
+                    }]
+                },
+                {
+                    "name": "GET /v1/casos/historial?estado=ARCHIVADO (Solo casos archivados)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": "{{baseUrl}}/v1/casos/historial?estado=ARCHIVADO&page=0&size=10"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
+                                "var json = pm.response.json();",
+                                "pm.test('Retorna solo casos ARCHIVADO', function () {",
+                                "    pm.expect(json.content).to.satisfy(function(items) {",
+                                "        return items.every(item => item.estado === 'ARCHIVADO');",
+                                "    });",
+                                "});"
+                            ]
+                        }
+                    }]
+                },
+                {
+                    "name": "GET /v1/casos/mis-reportes?estado=REGISTRADO (Filtro por estado)",
+                    "request": {
+                        "method": "GET",
+                        "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+                        "url": "{{baseUrl}}/v1/casos/mis-reportes?estado=REGISTRADO&page=0&size=10"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
+                                "var json = pm.response.json();",
+                                "pm.test('Retorna mis reportes con estado REGISTRADO', function () { pm.expect(json).to.have.property('content'); });"
+                            ]
+                        }
+                    }]
+                },
+                {
+                    "name": "GET /v1/casos/mis-reportes (Sin filtro - comportamiento original)",
+                    "request": {
+                        "method": "GET",
+                        "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+                        "url": "{{baseUrl}}/v1/casos/mis-reportes?page=0&size=10"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
+                                "var json = pm.response.json();",
+                                "pm.test('Retorna todos mis reportes sin filtro', function () { pm.expect(json).to.have.property('content'); });"
+                            ]
+                        }
+                    }]
+                }
+            ]
         }
     ]
 }
