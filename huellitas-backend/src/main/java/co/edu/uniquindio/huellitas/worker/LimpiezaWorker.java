@@ -59,11 +59,13 @@ public class LimpiezaWorker {
         Instant ahora = clock.instant();
         Instant limiteResuelto = ahora.minus(diasArchivarResuelto, ChronoUnit.DAYS);
         Instant limiteRecordatorio = ahora.minus(diasRecordatorioInactividad, ChronoUnit.DAYS);
+        Instant limiteRevisionAdmin = ahora.minus(diasRecordatorioInactividad + 15, ChronoUnit.DAYS);
 
         List<Caso> todos = casoRepository.findAll();
 
         int archivados = 0;
         int recordatorios = 0;
+        int marcadosRevision = 0;
 
         for (Caso caso : todos) {
             Instant ultimaActividad = caso.getFechaUltimaActividad() != null
@@ -73,8 +75,7 @@ public class LimpiezaWorker {
             EstadoCaso estado = caso.getEstado();
 
             // ── Archivar casos RESUELTOS sin actividad reciente ───────
-            if (estado == EstadoCaso.RESUELTO
-                    && ultimaActividad.isBefore(limiteResuelto)) {
+            if (estado == EstadoCaso.RESUELTO && ultimaActividad.isBefore(limiteResuelto)) {
                 archivar(caso, ahora,
                         "Archivado automáticamente tras " + diasArchivarResuelto
                                 + " días en estado RESUELTO sin actividad.");
@@ -82,13 +83,40 @@ public class LimpiezaWorker {
                 continue;
             }
 
-            // ── Recordatorio por inactividad (implementación pendiente bloque 2) ────────────────
-            // TODO: 17.3 - Enviar recordatorios al reportante cuando un caso activo
-            // lleva más de M días sin actividad según fechaUltimaActividad
+            // ── 17.3: Recordatorio por inactividad en casos activos ────────────────
+            if ((estado == EstadoCaso.REGISTRADO || estado == EstadoCaso.EN_ATENCION)
+                    && caso.getReportante() != null) {
+
+                long diasInactividad = ChronoUnit.DAYS.between(ultimaActividad, ahora);
+
+                // Marcar para revisión administrativa a M+15 días (45 días)
+                if (ultimaActividad.isBefore(limiteRevisionAdmin) && !caso.isModeracionPendiente()) {
+                    caso.setModeracionPendiente(true);
+                    casoRepository.save(caso);
+                    marcadosRevision++;
+                    log.info("W-04 Caso #{} marcado para revisión administrativa tras {} días sin actividad",
+                            caso.getId(), diasInactividad);
+                }
+
+                // Enviar recordatorio a los M días (30 días) sin duplicados
+                if (ultimaActividad.isBefore(limiteRecordatorio)) {
+                    // Evitar recordatorios duplicados: solo enviar si nunca se envió
+                    // o si han pasado al menos 7 días desde el último recordatorio
+                    boolean debeEnviarRecordatorio = caso.getFechaUltimoRecordatorio() == null
+                            || caso.getFechaUltimoRecordatorio().isBefore(ahora.minus(7, ChronoUnit.DAYS));
+
+                    if (debeEnviarRecordatorio) {
+                        notificacionWorker.notificarRecordatorio(caso, diasInactividad);
+                        caso.setFechaUltimoRecordatorio(ahora);
+                        casoRepository.save(caso);
+                        recordatorios++;
+                    }
+                }
+            }
         }
 
-        log.info("W-04 LimpiezaWorker: {} casos archivados, {} recordatorios enviados.",
-                archivados, recordatorios);
+        log.info("W-04 LimpiezaWorker: {} casos archivados, {} recordatorios enviados, {} marcados para revisión.",
+                archivados, recordatorios, marcadosRevision);
     }
 
     // ── helper ───────────────────────────────────────────────────────────────

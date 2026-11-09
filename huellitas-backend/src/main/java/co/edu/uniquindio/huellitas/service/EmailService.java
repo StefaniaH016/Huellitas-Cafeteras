@@ -26,4 +26,10 @@ public interface EmailService {
      * Si falla, la operación principal no se ve afectada.
      */
     void enviarCorreoEmergencia(Caso caso, String correoDestino);
+
+    /**
+     * Envía correo de recordatorio al reportante por inactividad del caso.
+     * Subtarea 17.3
+     */
+    void enviarCorreoRecordatorio(Caso caso, String correoReportante, long diasInactividad);
 }

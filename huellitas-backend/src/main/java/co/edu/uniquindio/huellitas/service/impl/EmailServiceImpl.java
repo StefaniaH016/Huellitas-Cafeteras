@@ -125,4 +125,39 @@ public class EmailServiceImpl implements EmailService {
             log.error("Error inesperado al enviar correo de emergencia para caso {} a {}: {}", caso.getId(), correoDestino, e.getMessage());
         }
     }
+
+    @Override
+    @Async
+    public void enviarCorreoRecordatorio(Caso caso, String correoReportante, long diasInactividad) {
+        try {
+            SimpleMailMessage mensaje = new SimpleMailMessage();
+            mensaje.setFrom(getRemitente());
+            mensaje.setTo(correoReportante);
+            mensaje.setSubject("🔔 Recordatorio - Caso #" + caso.getId() + " sin actividad");
+            mensaje.setText(String.format(
+                    "Hola,%n%nTu caso #%d lleva %d días sin actividad.%n%n" +
+                    "Detalles del caso:%n" +
+                    "- Animal: %s%n" +
+                    "- Estado actual: %s%n" +
+                    "- Ubicación: %s%n%n" +
+                    "¿El caso aún requiere atención? Si la situación cambió o el animal ya fue rescatado, " +
+                    "por favor actualiza el estado del caso en la plataforma.%n%n" +
+                    "Si no recibes respuesta en los próximos días, el caso será revisado por un administrador.%n%n" +
+                    "Saludos,%nEquipo Huellitas",
+                    caso.getId(),
+                    diasInactividad,
+                    caso.getAnimal() != null ? caso.getAnimal().getNombre() : "Sin nombre",
+                    caso.getEstado() != null ? caso.getEstado().name() : "REGISTRADO",
+                    caso.getBarrio() != null ? caso.getBarrio().getNombre() : "No especificada"
+            ));
+
+            mailSender.send(mensaje);
+            log.info("Correo de recordatorio enviado al reportante del caso {} ({} días de inactividad)", 
+                    caso.getId(), diasInactividad);
+        } catch (MailException e) {
+            log.warn("Error al enviar correo de recordatorio para caso {}: {}", caso.getId(), e.getMessage());
+        } catch (Exception e) {
+            log.error("Error inesperado al enviar correo de recordatorio para caso {}: {}", caso.getId(), e.getMessage());
+        }
+    }
 }

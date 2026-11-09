@@ -102,16 +102,24 @@ public class NotificacionWorker {
 
     /**
      * Notifica al reportante que su caso lleva tiempo sin actividad.
+     * Subtarea 17.3: También envía correo electrónico.
      */
     @Async
-    public void notificarRecordatorio(Caso caso) {
+    public void notificarRecordatorio(Caso caso, long diasInactividad) {
         if (caso.getReportante() == null) return;
 
         String mensaje = String.format(
-                "🔔 Tu caso #%d lleva varios días sin actividad. ¿Aún requiere atención?",
-                caso.getId()
+                "🔔 Tu caso #%d lleva %d días sin actividad. ¿Aún requiere atención?",
+                caso.getId(), diasInactividad
         );
         guardar(caso.getReportante(), caso, TipoNotificacion.RECORDATORIO, mensaje);
+
+        // 17.3: Enviar correo al reportante
+        try {
+            emailService.enviarCorreoRecordatorio(caso, caso.getReportante().getCorreo(), diasInactividad);
+        } catch (Exception e) {
+            log.warn("Error al enviar correo de recordatorio: {}", e.getMessage());
+        }
     }
 
     /**
