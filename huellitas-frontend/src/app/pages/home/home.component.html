@@ -245,11 +245,9 @@
             name="departamentoId"
             (change)="onDepartamentoChange()"
           >
-            <option value="">Quindío</option>
+            <option value="">Seleccionar departamento</option>
             @for (dep of departamentos(); track dep.id) {
-              @if (dep.nombre !== 'Quindío') {
-                <option [value]="dep.id">{{ dep.nombre }}</option>
-              }
+              <option [value]="dep.id">{{ dep.nombre }}</option>
             }
           </select>
         </div>

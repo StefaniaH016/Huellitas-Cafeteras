@@ -230,6 +230,6 @@ export class NotificacionesComponent implements OnInit {
   }
 
   goBack(): void {
-    void this.router.navigate(['/']);
+    void this.router.navigate(['/home']);
   }
 }

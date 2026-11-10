@@ -36,6 +36,8 @@
   border: 1px solid var(--line);
   border-radius: 999px;
   background: var(--paper-2);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .report-tab {
@@ -54,6 +56,8 @@
   font-size: 0.9rem;
   font-weight: 700;
   cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
 }
 
 .report-tab.active {
@@ -94,9 +98,7 @@
   border-radius: 22px;
   background: var(--card-bg);
   box-shadow: var(--shadow);
-  transition:
-    transform 0.15s ease,
-    box-shadow 0.15s ease;
+  transition: all 0.15s ease;
 }
 
 .report-card:hover {
@@ -110,7 +112,6 @@
   min-height: 160px;
   border-radius: 16px;
   background: linear-gradient(135deg, var(--mint-100), var(--sky-100));
-  object-fit: cover;
 }
 
 .report-photo.placeholder {
@@ -177,10 +178,8 @@
   text-align: center;
   text-decoration: none;
   cursor: pointer;
-  transition:
-    background-color 0.15s ease,
-    color 0.15s ease,
-    transform 0.15s ease;
+  transition: all 0.15s ease;
+  min-height: 44px;
 }
 
 .btn:hover:not(:disabled) {
@@ -196,6 +195,7 @@
 .btn-sm {
   padding: 0.48rem 0.9rem;
   font-size: 0.8rem;
+  min-height: 40px;
 }
 
 .btn-primary {
@@ -274,36 +274,180 @@
   color: var(--ink-soft);
 }
 
-@media (max-width: 700px) {
+/* ===== MOBILE RESPONSIVE ===== */
+@media (max-width: 760px) {
   .my-reports {
-    padding: 1.6rem 1.2rem 2.5rem;
+    padding: 1rem 0.75rem 2rem;
   }
 
   .page-header {
     align-items: flex-start;
     flex-direction: column;
-    padding: 1.5rem;
+    padding: 1.25rem;
+    gap: 1rem;
+    border-radius: 16px;
+    margin-bottom: 1rem;
   }
 
   .page-header h1 {
-    font-size: 1.7rem;
+    font-size: 1.5rem;
+    margin: 0;
+  }
+
+  .page-header p {
+    font-size: 0.9rem;
+  }
+
+  .page-header .btn {
+    width: 100%;
+    min-height: 44px;
   }
 
   .report-tabs {
-    border-radius: 16px;
+    gap: 0.35rem;
+    padding: 0.25rem;
+    margin-bottom: 1rem;
+    border-radius: 12px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .report-tab {
+    padding: 0.45rem 0.85rem;
+    font-size: 0.85rem;
+    min-height: 40px;
+    flex-shrink: 0;
+  }
+
+  .tab-count {
+    font-size: 0.7rem;
+    padding: 0.05rem 0.3rem;
+  }
+
+  .report-list {
+    gap: 0.75rem;
   }
 
   .report-card {
     grid-template-columns: 1fr;
+    gap: 0.75rem;
+    padding: 0.9rem;
+    border-radius: 14px;
+  }
+
+  .report-card:hover {
+    transform: none; /* Disable hover effect on touch devices */
+    box-shadow: var(--shadow);
   }
 
   .report-photo {
-    height: 190px;
-    min-height: 190px;
+    width: 100%;
+    height: 150px;
+    min-height: 150px;
+    border-radius: 12px;
+  }
+
+  .report-photo.placeholder {
+    font-size: 2rem;
+  }
+
+  .report-content {
+    gap: 0.4rem;
+    padding: 0;
+  }
+
+  .report-status {
+    padding: 0.2rem 0.6rem;
+    font-size: 0.7rem;
+  }
+
+  .report-content h2 {
+    font-size: 1rem;
+    line-height: 1.3;
+  }
+
+  .report-location {
+    font-size: 0.8rem;
   }
 
   .report-actions {
     width: 100%;
+    flex-direction: column;
+    gap: 0.4rem;
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+  }
+
+  .report-actions .btn {
+    width: 100%;
+    font-size: 0.8rem;
+    padding: 0.5rem 0.9rem;
+    min-height: 40px;
+  }
+
+  .btn {
+    font-size: 0.85rem;
+    padding: 0.6rem 1rem;
+  }
+
+  .btn-sm {
+    padding: 0.45rem 0.8rem;
+    font-size: 0.75rem;
+    min-height: 36px;
+  }
+
+  .message {
+    padding: 1rem;
+    font-size: 0.9rem;
+    border-radius: 12px;
+  }
+
+  .empty-state {
+    padding: 2rem 1rem;
+    border-radius: 12px;
+  }
+
+  .empty-state h2 {
+    font-size: 1.2rem;
+  }
+
+  .empty-state p {
+    font-size: 0.85rem;
+  }
+}
+
+/* ===== TABLET (761px - 1024px) ===== */
+@media (min-width: 761px) and (max-width: 1024px) {
+  .my-reports {
+    padding: 1.8rem 1.25rem 2.5rem;
+  }
+
+  .page-header {
+    padding: 1.5rem;
+    gap: 1.2rem;
+  }
+
+  .page-header h1 {
+    font-size: 1.8rem;
+  }
+
+  .report-tabs {
+    gap: 0.45rem;
+    padding: 0.3rem;
+  }
+
+  .report-tab {
+    padding: 0.55rem 0.95rem;
+    font-size: 0.9rem;
+  }
+
+  .report-card {
+    gap: 1rem;
+    padding: 1rem;
+  }
+
+  .report-photo {
+    min-height: 150px;
   }
 }
 
