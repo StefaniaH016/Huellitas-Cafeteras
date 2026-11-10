@@ -348,7 +348,28 @@
   }
 
   .report-tabs {
-    border-radius: 16px;
+    gap: 0.35rem;
+    padding: 0.25rem;
+    margin-bottom: 1rem;
+    border-radius: 12px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .report-tab {
+    padding: 0.45rem 0.85rem;
+    font-size: 0.85rem;
+    min-height: 40px;
+    flex-shrink: 0;
+  }
+
+  .tab-count {
+    font-size: 0.7rem;
+    padding: 0.05rem 0.3rem;
+  }
+
+  .report-list {
+    gap: 0.75rem;
   }
 
   .report-card {
