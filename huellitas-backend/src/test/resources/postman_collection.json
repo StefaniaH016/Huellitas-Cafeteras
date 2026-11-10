@@ -1629,6 +1629,164 @@
           ]
         }
       ]
+    },
+    {
+      "name": "Módulo 17 - Archivado Automático e Historial (/v1/casos)",
+      "item": [
+        {
+          "name": "GET /v1/casos/historial (Todos los archivados)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/casos/historial"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
+                  "var json = pm.response.json();",
+                  "pm.test('Retorna objeto paginado con casos archivados', function () {",
+                  "    pm.expect(json).to.have.property('content');",
+                  "    pm.expect(Array.isArray(json.content)).to.be.true;",
+                  "    pm.expect(json).to.have.property('totalElements');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/casos/historial?estado=RESUELTO",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/casos/historial?estado=RESUELTO"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
+                  "var json = pm.response.json();",
+                  "pm.test('Solo retorna casos RESUELTOS', function () {",
+                  "    pm.expect(json).to.have.property('content');",
+                  "    if (json.content.length > 0) {",
+                  "        json.content.forEach(caso => pm.expect(caso.estado).to.eql('RESUELTO'));",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/casos/historial?estado=ARCHIVADO",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/casos/historial?estado=ARCHIVADO"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
+                  "var json = pm.response.json();",
+                  "pm.test('Solo retorna casos ARCHIVADOS', function () {",
+                  "    pm.expect(json).to.have.property('content');",
+                  "    if (json.content.length > 0) {",
+                  "        json.content.forEach(caso => pm.expect(caso.estado).to.eql('ARCHIVADO'));",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/casos/mis-reportes?estado=RESUELTO",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/casos/mis-reportes?estado=RESUELTO"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
+                  "var json = pm.response.json();",
+                  "pm.test('Retorna solo mis reportes RESUELTOS', function () {",
+                  "    pm.expect(json).to.have.property('content');",
+                  "    if (json.content.length > 0) {",
+                  "        json.content.forEach(caso => pm.expect(caso.estado).to.eql('RESUELTO'));",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/casos/mis-reportes (Sin filtro estado)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/casos/mis-reportes"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
+                  "var json = pm.response.json();",
+                  "pm.test('Retorna todos mis reportes paginados sin filtrar', function () {",
+                  "    pm.expect(json).to.have.property('content');",
+                  "    pm.expect(Array.isArray(json.content)).to.be.true;",
+                  "    pm.expect(json).to.have.property('totalElements');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
     }
   ]
 }
