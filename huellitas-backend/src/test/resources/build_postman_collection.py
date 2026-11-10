@@ -4,7 +4,7 @@ import os
 collection = {
     "info": {
         "name": "Huellitas Cafeteras API - Suite Completa (100% Automatizada)",
-        "description": "Colección de pruebas automatizadas para la API de Huellitas Cafeteras. Ejecutar en orden con Postman Collection Runner contra el backend local.",
+        "description": "Colección de pruebas automatizadas para la API de Huellitas Cafeteras. Ejecutar en orden desde el inicio con Postman Collection Runner contra el backend local; los módulos de casos y bitácora comparten el caso creado durante la ejecución. La prueba POST /v1/imagenes usa huellitas-frontend/public/huellitas-cafeteras-icono.png; volver a seleccionar el archivo en Postman si la ruta local no se resuelve al importar.",
         "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
     },
     "variable": [
@@ -294,7 +294,10 @@ collection = {
                             "exec": [
                                 "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
                                 "var json = pm.response.json();",
-                                "pm.test('Entidad verificada', function () { pm.expect(json.estadoVerificacion).to.eql('VERIFICADA'); });"
+                                "pm.test('Fundación queda verificada', function () {",
+                                "    pm.expect(json.estado).to.eql('VERIFICADA');",
+                                "    pm.expect(json.verificado).to.be.true;",
+                                "});"
                             ]
                         }
                     }]
@@ -438,7 +441,10 @@ collection = {
                             "exec": [
                                 "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
                                 "var json = pm.response.json();",
-                                "pm.test('Entidad aprobada y verificada', function () { pm.expect(json.verificado).to.be.true; });"
+                                "pm.test('Veterinaria queda verificada', function () {",
+                                "    pm.expect(json.estado).to.eql('VERIFICADA');",
+                                "    pm.expect(json.verificado).to.be.true;",
+                                "});"
                             ]
                         }
                     }]
@@ -580,6 +586,7 @@ collection = {
                         "body": {
                             "mode": "formdata",
                             "formdata": [
+                                {"key": "archivo", "type": "file", "src": "C:\\Users\\danva\\Projects\\Huellitas-Cafeteras\\huellitas-frontend\\public\\huellitas-cafeteras-icono.png"},
                                 {"key": "casoId", "value": "{{casoId}}", "type": "text"}
                             ]
                         },
@@ -593,8 +600,8 @@ collection = {
                                 "pm.test('Status code es 201 Created', function () { pm.response.to.have.status(201); });",
                                 "var json = pm.response.json();",
                                 "pm.test('Retorna URL y publicId de imagen', function () {",
-                                "    pm.expect(json.url).to.not.be.empty;",
-                                "    pm.expect(json.publicId).to.not.be.empty;",
+                                "    pm.expect(json.url).to.be.a('string').and.not.empty;",
+                                "    pm.expect(json.publicId).to.be.a('string').and.not.empty;",
                                 "});"
                             ]
                         }
@@ -761,7 +768,31 @@ collection = {
                             "exec": [
                                 "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
                                 "var json = pm.response.json();",
-                                "pm.test('Caso tiene custodia asignada', function () { pm.expect(json).to.have.property('fundacionCustodia'); });"
+                                "pm.test('La respuesta corresponde al caso puesto en custodia', function () {",
+                                "    pm.expect(Number(json.id)).to.eql(Number(pm.collectionVariables.get('casoId')));",
+                                "    pm.expect(json.estado).to.eql('EN_ATENCION');",
+                                "});"
+                            ]
+                        }
+                    }]
+                },
+                {
+                    "name": "GET /v1/casos/en-custodia (Verificar custodia asumida)",
+                    "request": {
+                        "method": "GET",
+                        "header": [{"key": "Authorization", "value": "******"}],
+                        "url": "{{baseUrl}}/v1/casos/en-custodia?page=0&size=10"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
+                                "var json = pm.response.json();",
+                                "pm.test('Incluye el caso cuya custodia se acaba de asumir', function () {",
+                                "    pm.expect(json.content.some(function (caso) { return Number(caso.id) === Number(pm.collectionVariables.get('casoId')); })).to.be.true;",
+                                "});"
                             ]
                         }
                     }]
@@ -805,7 +836,7 @@ collection = {
                             "exec": [
                                 "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
                                 "var json = pm.response.json();",
-                                "pm.test('Retorna estructura paginada con content', function () { pm.expect(json).to.have.property('content'); });"
+                                "pm.test('Retorna estructura paginada con content', function () { pm.expect(json).to.have.property('content'); });",
                             ]
                         }
                     }]
@@ -892,6 +923,58 @@ collection = {
             "name": "Módulo 09 - Bitácora Médica (/v1/casos/{id}/bitacora)",
             "item": [
                 {
+                    "name": "PATCH /v1/casos/{id}/estado (Asegurar EN_ATENCION para bitácora)",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {"key": "Authorization", "value": "******"},
+                            {"key": "Content-Type", "value": "application/json"}
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"estado\": \"EN_ATENCION\",\n  \"observacion\": \"Preparación del caso para pruebas de bitácora veterinaria\"\n}"
+                        },
+                        "url": "{{baseUrl}}/v1/casos/{{casoId}}/estado"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('Caso pasa a EN_ATENCION o ya estaba en ese estado', function () {",
+                                "    pm.expect(pm.response.code).to.be.oneOf([200, 409]);",
+                                "});",
+                                "if (![200, 409].includes(pm.response.code)) {",
+                                "    pm.execution.setNextRequest(null);",
+                                "}"
+                            ]
+                        }
+                    }]
+                },
+                {
+                    "name": "GET /v1/casos/{id} (Verificar precondición de bitácora)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": "{{baseUrl}}/v1/casos/{{casoId}}"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('Estado del caso permite abrir bitácora', function () {",
+                                "    pm.response.to.have.status(200);",
+                                "    pm.expect(pm.response.json().estado).to.eql('EN_ATENCION');",
+                                "});",
+                                "if (pm.response.code !== 200 || pm.response.json().estado !== 'EN_ATENCION') {",
+                                "    pm.execution.setNextRequest(null);",
+                                "}"
+                            ]
+                        }
+                    }]
+                },
+                {
                     "name": "POST /v1/casos/{id}/bitacora (Apertura)",
                     "request": {
                         "method": "POST",
@@ -910,12 +993,13 @@ collection = {
                         "script": {
                             "type": "text/javascript",
                             "exec": [
-                                "pm.test('Status code es 201 Created o 409 si ya abierta', function () {",
-                                "    pm.expect(pm.response.code).to.be.oneOf([201, 409]);",
-                                "});",
+                                "pm.test('Status code es 201 Created', function () { pm.response.to.have.status(201); });",
                                 "if (pm.response.code === 201) {",
                                 "    var json = pm.response.json();",
-                                "    pm.test('Bitácora abierta en estado ABIERTA', function () { pm.expect(json.estado).to.eql('ABIERTA'); });",
+                                "    pm.test('Bitácora abierta para el caso de esta ejecución', function () {",
+                                "        pm.expect(Number(json.casoId)).to.eql(Number(pm.collectionVariables.get('casoId')));",
+                                "        pm.expect(json.estado).to.eql('ABIERTA');",
+                                "    });",
                                 "}"
                             ]
                         }
