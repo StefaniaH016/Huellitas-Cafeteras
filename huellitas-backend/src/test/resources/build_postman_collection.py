@@ -4,7 +4,7 @@ import os
 collection = {
     "info": {
         "name": "Huellitas Cafeteras API - Suite Completa (100% Automatizada)",
-        "description": "Colección de pruebas automatizadas para la API de Huellitas Cafeteras. Ejecutar en orden desde el inicio con Postman Collection Runner contra el backend local; los módulos de casos y bitácora comparten el caso creado durante la ejecución. La prueba POST /v1/imagenes usa huellitas-frontend/public/huellitas-cafeteras-icono.png; volver a seleccionar el archivo en Postman si la ruta local no se resuelve al importar.",
+        "description": "Colección de pruebas automatizadas para la API de Huellitas Cafeteras. Ejecutar en orden desde el inicio con Postman Collection Runner contra el backend local; los módulos de casos y bitácora comparten el caso creado durante la ejecución. Para POST /v1/imagenes, configura la Working Directory de Postman en esta carpeta de recursos, que contiene huellitas-cafeteras-icono.png.",
         "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
     },
     "variable": [
@@ -586,7 +586,7 @@ collection = {
                         "body": {
                             "mode": "formdata",
                             "formdata": [
-                                {"key": "archivo", "type": "file", "src": "C:\\Users\\danva\\Projects\\Huellitas-Cafeteras\\huellitas-frontend\\public\\huellitas-cafeteras-icono.png"},
+                                {"key": "archivo", "type": "file", "src": "huellitas-cafeteras-icono.png"},
                                 {"key": "casoId", "value": "{{casoId}}", "type": "text"}
                             ]
                         },
