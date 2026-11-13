@@ -20,6 +20,12 @@ public interface CasoRepository extends JpaRepository<Caso, Long>, JpaSpecificat
     Page<Caso> findByVisibleTrueAndEstado(EstadoCaso estado, Pageable pageable);
     Page<Caso> findByReportanteId(Long reportanteId, Pageable pageable);
     Page<Caso> findByReportanteCorreoOrderByFechaRegistroDesc(String correo, Pageable pageable);
+    
+    // 17.5: Mis reportes con filtro por estado
+    Page<Caso> findByReportanteCorreoAndEstadoOrderByFechaRegistroDesc(String correo, EstadoCaso estado, Pageable pageable);
+    
+    // 17.5: Historial de casos resueltos y archivados
+    Page<Caso> findByEstadoInOrderByFechaArchivadoDesc(List<EstadoCaso> estados, Pageable pageable);
     boolean existsByCasoOriginalId(Long casoOriginalId);
     boolean existsByAnimalIdAndIdNot(Long animalId, Long casoId);
     List<Caso> findByModeracionPendienteTrueOrVisibleFalse();

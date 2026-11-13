@@ -4,15 +4,16 @@ import os
 collection = {
     "info": {
         "name": "Huellitas Cafeteras API - Suite Completa (100% Automatizada)",
-        "description": "Colección completa y autosuficiente de pruebas automatizadas para los 13 módulos y 28 endpoints de Huellitas Cafeteras. Diseñada para ejecutarse de punta a punta con 100% de éxito (0 fallos) en Postman Collection Runner y Newman.",
+        "description": "Colección de pruebas automatizadas para la API de Huellitas Cafeteras. Ejecutar en orden desde el inicio con Postman Collection Runner contra el backend local; los módulos de casos y bitácora comparten el caso creado durante la ejecución. Para POST /v1/imagenes, configura la Working Directory de Postman en esta carpeta de recursos, que contiene huellitas-cafeteras-icono.png.",
         "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
     },
     "variable": [
-        {"key": "baseUrl", "value": "http://localhost:8080/api"},
+        {"key": "baseUrl", "value": "http://localhost:8080"},
         {"key": "admin_correo", "value": "admin@huellitas.co"},
         {"key": "admin_contrasena", "value": "Admin12345!"},
         {"key": "token", "value": ""},
         {"key": "admin_token", "value": ""},
+        {"key": "vet_token", "value": ""},
         {"key": "casoId", "value": "1"},
         {"key": "usuarioId", "value": "2"},
         {"key": "vetUsuarioId", "value": "3"},
@@ -22,6 +23,7 @@ collection = {
         {"key": "user_correo", "value": ""},
         {"key": "user_contrasena", "value": "Voluntario12345!"},
         {"key": "vet_correo", "value": ""},
+        {"key": "vet_contrasena", "value": "Veterinaria12345!"},
         {"key": "notificacionId", "value": "1"},
         {"key": "custodiaId", "value": "1"},
         {"key": "aporteId", "value": "1"},
@@ -188,8 +190,11 @@ collection = {
                                 "exec": [
                                     "const randomId = Math.floor(Math.random() * 900000) + 100000;",
                                     "const email = 'fundacion_' + randomId + '@huellitas.co';",
+                                    "const nit = '900' + randomId + '-1';",
                                     "pm.environment.set('fundacion_correo', email);",
-                                    "pm.collectionVariables.set('fundacion_correo', email);"
+                                    "pm.collectionVariables.set('fundacion_correo', email);",
+                                    "pm.environment.set('fundacion_nit', nit);",
+                                    "pm.collectionVariables.set('fundacion_nit', nit);"
                                 ]
                             }
                         },
@@ -210,7 +215,7 @@ collection = {
                         "header": [{"key": "Content-Type", "value": "application/json"}],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n  \"nombre\": \"Fundación Huellas de Amor\",\n  \"correo\": \"{{fundacion_correo}}\",\n  \"contrasena\": \"{{fundacion_contrasena}}\",\n  \"telefono\": \"3123456789\",\n  \"rol\": \"FUNDACION_REFUGIO\",\n  \"barrioId\": {{barrioId}}\n}"
+                            "raw": "{\n  \"nombre\": \"Fundación Huellas de Amor\",\n  \"correo\": \"{{fundacion_correo}}\",\n  \"contrasena\": \"{{fundacion_contrasena}}\",\n  \"telefono\": \"3123456789\",\n  \"rol\": \"FUNDACION_REFUGIO\",\n  \"nombreEntidad\": \"Fundación Huellas de Amor\",\n  \"nit\": \"{{fundacion_nit}}\",\n  \"municipioOperacion\": \"Armenia\",\n  \"barrioId\": {{barrioId}}\n}"
                         },
                         "url": "{{baseUrl}}/v1/auth/registro"
                     }
@@ -289,7 +294,10 @@ collection = {
                             "exec": [
                                 "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
                                 "var json = pm.response.json();",
-                                "pm.test('Entidad verificada', function () { pm.expect(json.estadoVerificacion).to.eql('VERIFICADA'); });"
+                                "pm.test('Fundación queda verificada', function () {",
+                                "    pm.expect(json.estado).to.eql('VERIFICADA');",
+                                "    pm.expect(json.verificado).to.be.true;",
+                                "});"
                             ]
                         }
                     }]
@@ -361,8 +369,11 @@ collection = {
                                 "exec": [
                                     "const randomId = Math.floor(Math.random() * 900000) + 100000;",
                                     "const email = 'veterinaria_' + randomId + '@huellitas.co';",
+                                    "const nit = '901' + randomId + '-1';",
                                     "pm.environment.set('vet_correo', email);",
-                                    "pm.collectionVariables.set('vet_correo', email);"
+                                    "pm.collectionVariables.set('vet_correo', email);",
+                                    "pm.environment.set('vet_nit', nit);",
+                                    "pm.collectionVariables.set('vet_nit', nit);"
                                 ]
                             }
                         },
@@ -385,7 +396,7 @@ collection = {
                         "header": [{"key": "Content-Type", "value": "application/json"}],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n  \"nombre\": \"Clínica Veterinaria Los Andes\",\n  \"correo\": \"{{vet_correo}}\",\n  \"contrasena\": \"Veterinaria12345!\",\n  \"telefono\": \"3117778899\",\n  \"rol\": \"VETERINARIA\",\n  \"barrioId\": 1\n}"
+                            "raw": "{\n  \"nombre\": \"Clínica Veterinaria Los Andes\",\n  \"correo\": \"{{vet_correo}}\",\n  \"contrasena\": \"{{vet_contrasena}}\",\n  \"telefono\": \"3117778899\",\n  \"rol\": \"VETERINARIA\",\n  \"nombreEntidad\": \"Clínica Veterinaria Los Andes\",\n  \"nit\": \"{{vet_nit}}\",\n  \"municipioOperacion\": \"Armenia\",\n  \"barrioId\": 1\n}"
                         },
                         "url": "{{baseUrl}}/v1/auth/registro"
                     }
@@ -430,7 +441,35 @@ collection = {
                             "exec": [
                                 "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
                                 "var json = pm.response.json();",
-                                "pm.test('Entidad aprobada y verificada', function () { pm.expect(json.verificado).to.be.true; });"
+                                "pm.test('Veterinaria queda verificada', function () {",
+                                "    pm.expect(json.estado).to.eql('VERIFICADA');",
+                                "    pm.expect(json.verificado).to.be.true;",
+                                "});"
+                            ]
+                        }
+                    }]
+                },
+                {
+                    "name": "POST /v1/auth/login (Veterinaria verificada)",
+                    "request": {
+                        "method": "POST",
+                        "header": [{"key": "Content-Type", "value": "application/json"}],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"correo\": \"{{vet_correo}}\",\n  \"contrasena\": \"{{vet_contrasena}}\"\n}"
+                        },
+                        "url": "{{baseUrl}}/v1/auth/login"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
+                                "var json = pm.response.json();",
+                                "pm.test('Rol es VETERINARIA', function () { pm.expect(json.usuario.rol).to.eql('VETERINARIA'); });",
+                                "pm.environment.set('vet_token', json.token);",
+                                "pm.collectionVariables.set('vet_token', json.token);"
                             ]
                         }
                     }]
@@ -547,6 +586,7 @@ collection = {
                         "body": {
                             "mode": "formdata",
                             "formdata": [
+                                {"key": "archivo", "type": "file", "src": "huellitas-cafeteras-icono.png"},
                                 {"key": "casoId", "value": "{{casoId}}", "type": "text"}
                             ]
                         },
@@ -560,8 +600,8 @@ collection = {
                                 "pm.test('Status code es 201 Created', function () { pm.response.to.have.status(201); });",
                                 "var json = pm.response.json();",
                                 "pm.test('Retorna URL y publicId de imagen', function () {",
-                                "    pm.expect(json.url).to.not.be.empty;",
-                                "    pm.expect(json.publicId).to.not.be.empty;",
+                                "    pm.expect(json.url).to.be.a('string').and.not.empty;",
+                                "    pm.expect(json.publicId).to.be.a('string').and.not.empty;",
                                 "});"
                             ]
                         }
@@ -641,7 +681,7 @@ collection = {
             "name": "Módulo 07 - Gestión del Caso (/v1/casos/{id})",
             "item": [
                 {
-                    "name": "PATCH /v1/casos/{id}/estado (Actualizar Estado)",
+                    "name": "PATCH /v1/casos/{id}/estado (Actualizar Estado - Administrador)",
                     "request": {
                         "method": "PATCH",
                         "header": [
@@ -685,6 +725,27 @@ collection = {
                         }
                     }]
                 },
+                {
+                    "name": "PATCH /v1/casos/{id}/estado (Repetir EN_ATENCION - Administrador)",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [{"key": "Content-Type", "value": "application/json"}],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"estado\": \"EN_ATENCION\",\n  \"observacion\": \"La prueba valida que no se permita repetir la transición\"\n}"
+                        },
+                        "url": "{{baseUrl}}/v1/casos/{{casoId}}/estado"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('La transición repetida responde 409 Conflict', function () { pm.response.to.have.status(409); });"
+                            ]
+                        }
+                    }]
+                },
                 # HU-13.3: Gestionar custodia (asumir o liberar)
                 {
                     "name": "PATCH /v1/casos/{id}/custodia (Asumir Custodia)",
@@ -707,7 +768,31 @@ collection = {
                             "exec": [
                                 "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
                                 "var json = pm.response.json();",
-                                "pm.test('Caso tiene custodia asignada', function () { pm.expect(json).to.have.property('fundacionCustodia'); });"
+                                "pm.test('La respuesta corresponde al caso puesto en custodia', function () {",
+                                "    pm.expect(Number(json.id)).to.eql(Number(pm.collectionVariables.get('casoId')));",
+                                "    pm.expect(json.estado).to.eql('EN_ATENCION');",
+                                "});"
+                            ]
+                        }
+                    }]
+                },
+                {
+                    "name": "GET /v1/casos/en-custodia (Verificar custodia asumida)",
+                    "request": {
+                        "method": "GET",
+                        "header": [{"key": "Authorization", "value": "******"}],
+                        "url": "{{baseUrl}}/v1/casos/en-custodia?page=0&size=10"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
+                                "var json = pm.response.json();",
+                                "pm.test('Incluye el caso cuya custodia se acaba de asumir', function () {",
+                                "    pm.expect(json.content.some(function (caso) { return Number(caso.id) === Number(pm.collectionVariables.get('casoId')); })).to.be.true;",
+                                "});"
                             ]
                         }
                     }]
@@ -751,7 +836,7 @@ collection = {
                             "exec": [
                                 "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
                                 "var json = pm.response.json();",
-                                "pm.test('Retorna estructura paginada con content', function () { pm.expect(json).to.have.property('content'); });"
+                                "pm.test('Retorna estructura paginada con content', function () { pm.expect(json).to.have.property('content'); });",
                             ]
                         }
                     }]
@@ -838,6 +923,58 @@ collection = {
             "name": "Módulo 09 - Bitácora Médica (/v1/casos/{id}/bitacora)",
             "item": [
                 {
+                    "name": "PATCH /v1/casos/{id}/estado (Asegurar EN_ATENCION para bitácora)",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {"key": "Authorization", "value": "******"},
+                            {"key": "Content-Type", "value": "application/json"}
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"estado\": \"EN_ATENCION\",\n  \"observacion\": \"Preparación del caso para pruebas de bitácora veterinaria\"\n}"
+                        },
+                        "url": "{{baseUrl}}/v1/casos/{{casoId}}/estado"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('Caso pasa a EN_ATENCION o ya estaba en ese estado', function () {",
+                                "    pm.expect(pm.response.code).to.be.oneOf([200, 409]);",
+                                "});",
+                                "if (![200, 409].includes(pm.response.code)) {",
+                                "    pm.execution.setNextRequest(null);",
+                                "}"
+                            ]
+                        }
+                    }]
+                },
+                {
+                    "name": "GET /v1/casos/{id} (Verificar precondición de bitácora)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": "{{baseUrl}}/v1/casos/{{casoId}}"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('Estado del caso permite abrir bitácora', function () {",
+                                "    pm.response.to.have.status(200);",
+                                "    pm.expect(pm.response.json().estado).to.eql('EN_ATENCION');",
+                                "});",
+                                "if (pm.response.code !== 200 || pm.response.json().estado !== 'EN_ATENCION') {",
+                                "    pm.execution.setNextRequest(null);",
+                                "}"
+                            ]
+                        }
+                    }]
+                },
+                {
                     "name": "POST /v1/casos/{id}/bitacora (Apertura)",
                     "request": {
                         "method": "POST",
@@ -856,9 +993,14 @@ collection = {
                         "script": {
                             "type": "text/javascript",
                             "exec": [
-                                "pm.test('Status code es 201 Created o 409 si ya abierta', function () {",
-                                "    pm.expect(pm.response.code).to.be.oneOf([201, 409]);",
-                                "});"
+                                "pm.test('Status code es 201 Created', function () { pm.response.to.have.status(201); });",
+                                "if (pm.response.code === 201) {",
+                                "    var json = pm.response.json();",
+                                "    pm.test('Bitácora abierta para el caso de esta ejecución', function () {",
+                                "        pm.expect(Number(json.casoId)).to.eql(Number(pm.collectionVariables.get('casoId')));",
+                                "        pm.expect(json.estado).to.eql('ABIERTA');",
+                                "    });",
+                                "}"
                             ]
                         }
                     }]
@@ -884,7 +1026,8 @@ collection = {
                             "exec": [
                                 "pm.test('Status code es 201 Created', function () { pm.response.to.have.status(201); });",
                                 "var json = pm.response.json();",
-                                "pm.test('Evolución médica registrada con ID', function () { pm.expect(json.id).to.be.a('number'); });"
+                                "pm.test('Evolución médica registrada con ID', function () { pm.expect(json.id).to.be.a('number'); });",
+                                "pm.test('Respuesta incluye el ID de la bitácora', function () { pm.expect(json.bitacoraId).to.be.a('number'); });"
                             ]
                         }
                     }]
@@ -904,6 +1047,26 @@ collection = {
                                 "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
                                 "var json = pm.response.json();",
                                 "pm.test('Bitácora contiene las evoluciones registradas', function () { pm.expect(json.evoluciones.length).to.be.at.least(1); });"
+                            ]
+                        }
+                    }]
+                },
+                {
+                    "name": "GET /v1/bitacoras/mis-pacientes (Panel Mis Pacientes)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": "{{baseUrl}}/v1/bitacoras/mis-pacientes"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
+                                "var json = pm.response.json();",
+                                "pm.test('Retorna lista de pacientes atendidos', function () { pm.expect(Array.isArray(json)).to.be.true; });",
+                                "pm.test('Contiene al menos un paciente registrado', function () { pm.expect(json.some(function (paciente) { return Number(paciente.casoId) === Number(pm.collectionVariables.get('casoId')); })).to.be.true; });"
                             ]
                         }
                     }]
@@ -929,7 +1092,7 @@ collection = {
                             "exec": [
                                 "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
                                 "var json = pm.response.json();",
-                                "pm.test('Estado de bitácora es ALTA_REGISTRADA', function () { pm.expect(json.estadoBitacora).to.eql('ALTA_REGISTRADA'); });"
+                                "pm.test('Estado de bitácora es ALTA_REGISTRADA', function () { pm.expect(json.estadoBitacora).to.eql('ALTA_REGISTRADA'); });",
                             ]
                         }
                     }]
@@ -976,7 +1139,7 @@ collection = {
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n  \"motivoCierre\": \"REENCUENTRO\",\n  \"observacion\": \"El animal fue entregado recuperado a su familia\"\n}"
+                            "raw": "{\n  \"motivoCierre\": \"RECUPERADO\",\n  \"observacion\": \"El animal fue dado de alta médica y recuperado satisfactoriamente\",\n  \"entregadoA\": \"Persona responsable verificada\"\n}"
                         },
                         "url": "{{baseUrl}}/v1/casos/{{casoId}}/cierre"
                     },
@@ -985,7 +1148,28 @@ collection = {
                         "script": {
                             "type": "text/javascript",
                             "exec": [
-                                "pm.test('Status code es 200 OK o 409 si ya cerrado', function () { pm.expect(pm.response.code).to.be.oneOf([200, 409]); });"
+                                "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
+                                "var json = pm.response.json();",
+                                "pm.test('El caso queda en estado RESUELTO', function () { pm.expect(json.estado).to.eql('RESUELTO'); });"
+                            ]
+                        }
+                    }]
+                },
+                {
+                    "name": "GET /v1/casos/mis-reportes?estado=RESUELTO (Caso recién cerrado)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": "{{baseUrl}}/v1/casos/mis-reportes?estado=RESUELTO&page=0&size=10"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
+                                "var json = pm.response.json();",
+                                "pm.test('El filtro incluye el caso recién cerrado en RESUELTO', function () { pm.expect(json.content.some(function (caso) { return Number(caso.id) === Number(pm.collectionVariables.get('casoId')) && caso.estado === 'RESUELTO'; })).to.be.true; });"
                             ]
                         }
                     }]
@@ -1153,7 +1337,116 @@ collection = {
                             "exec": [
                                 "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
                                 "var json = pm.response.json();",
-                                "pm.test('Aporte oculto correctamente', function () { pm.expect(json).to.have.property('oculto'); });"
+                                "pm.test('Aporte oculto correctamente', function () { pm.expect(json.decision).to.eql('OCULTADO'); });"
+                            ]
+                        }
+                    }]
+                }
+            ]
+        },
+        # Módulo 17 - HU-17: Historial y Archivado Automático
+        {
+            "name": "Módulo 17 - HU-17: Historial y Archivado Automático",
+            "item": [
+                {
+                    "name": "GET /v1/casos/historial (Todos los casos archivados y resueltos)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": "{{baseUrl}}/v1/casos/historial?page=0&size=10"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
+                                "var json = pm.response.json();",
+                                "pm.test('Retorna lista paginada de casos históricos', function () { pm.expect(json).to.have.property('content'); pm.expect(Array.isArray(json.content)).to.be.true; });"
+                            ]
+                        }
+                    }]
+                },
+                {
+                    "name": "GET /v1/casos/historial?estado=RESUELTO (Solo casos resueltos)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": "{{baseUrl}}/v1/casos/historial?estado=RESUELTO&page=0&size=10"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
+                                "var json = pm.response.json();",
+                                "pm.test('Retorna solo casos RESUELTO', function () {",
+                                "    pm.expect(json.content).to.satisfy(function(items) {",
+                                "        return items.every(item => item.estado === 'RESUELTO');",
+                                "    });",
+                                "});"
+                            ]
+                        }
+                    }]
+                },
+                {
+                    "name": "GET /v1/casos/historial?estado=ARCHIVADO (Solo casos archivados)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": "{{baseUrl}}/v1/casos/historial?estado=ARCHIVADO&page=0&size=10"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
+                                "var json = pm.response.json();",
+                                "pm.test('Retorna solo casos ARCHIVADO', function () {",
+                                "    pm.expect(json.content).to.satisfy(function(items) {",
+                                "        return items.every(item => item.estado === 'ARCHIVADO');",
+                                "    });",
+                                "});"
+                            ]
+                        }
+                    }]
+                },
+                {
+                    "name": "GET /v1/casos/mis-reportes?estado=REGISTRADO (Filtro por estado)",
+                    "request": {
+                        "method": "GET",
+                        "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+                        "url": "{{baseUrl}}/v1/casos/mis-reportes?estado=REGISTRADO&page=0&size=10"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
+                                "var json = pm.response.json();",
+                                "pm.test('Retorna mis reportes con estado REGISTRADO', function () { pm.expect(json).to.have.property('content'); });"
+                            ]
+                        }
+                    }]
+                },
+                {
+                    "name": "GET /v1/casos/mis-reportes (Sin filtro - comportamiento original)",
+                    "request": {
+                        "method": "GET",
+                        "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+                        "url": "{{baseUrl}}/v1/casos/mis-reportes?page=0&size=10"
+                    },
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "type": "text/javascript",
+                            "exec": [
+                                "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
+                                "var json = pm.response.json();",
+                                "pm.test('Retorna todos mis reportes sin filtro', function () { pm.expect(json).to.have.property('content'); });"
                             ]
                         }
                     }]
@@ -1162,6 +1455,56 @@ collection = {
         }
     ]
 }
+
+def configure_authorization(items):
+    for item in items:
+        if "item" in item:
+            configure_authorization(item["item"])
+            continue
+
+        request = item.get("request")
+        if request is None:
+            continue
+
+        url = request.get("url", "")
+        headers = request.setdefault("header", [])
+        headers[:] = [header for header in headers if header.get("key", "").lower() != "authorization"]
+
+        if "/v1/casos/historial" in url or "/v1/casos/{{casoId}}/historial" in url:
+            continue
+
+        role_token = None
+        method = request.get("method", "").upper()
+        if any(path in url for path in ("/v1/verificaciones/", "/v1/moderacion/")):
+            role_token = "admin_token"
+        elif method == "PATCH" and (
+            url.endswith("/estado") or url.endswith("/archivar")
+        ):
+            role_token = "admin_token"
+        elif "/v1/casos/" in url and (
+            url.endswith("/custodia") or "/v1/casos/en-custodia" in url
+        ):
+            role_token = "fundacion_token"
+        elif "/bitacora" in url:
+            role_token = "vet_token"
+        elif (
+            url.endswith("/v1/auth/me")
+            or url.endswith("/v1/usuarios/me")
+            or "/v1/casos/mis-reportes" in url
+            or "/v1/casos/sin-custodia" in url
+            or "/v1/casos/{{casoId}}/aportes" in url and method == "POST"
+            or url.endswith("/v1/casos") and method == "POST"
+            or "/v1/imagenes" in url
+            or "/v1/notificaciones" in url
+            or "/v1/casos/{{casoId}}/cierre" in url
+        ):
+            role_token = "token"
+
+        if role_token is not None:
+            headers.append({"key": "Authorization", "value": "Bearer " + "{{" + role_token + "}}"})
+
+
+configure_authorization(collection["item"])
 
 out_path = os.path.join(os.path.dirname(__file__), "postman_collection.json")
 with open(out_path, "w", encoding="utf-8") as f:
