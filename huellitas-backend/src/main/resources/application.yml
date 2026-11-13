@@ -93,6 +93,16 @@ cloudinary:
   # El SDK aplica este límite en segundos a conexión y lectura.
   timeout: ${CLOUDINARY_TIMEOUT:30}
 
+# ── Worker W-04 - Limpieza de Casos ───────────────────────────
+# Configuración del job de archivado automático y recordatorios
+limpieza:
+  # Días sin actividad para archivar casos RESUELTOS
+  dias-archivar-resuelto: ${DIAS_ARCHIVAR_RESUELTO}
+  # Días sin actividad para enviar recordatorio al reportante
+  dias-recordatorio-inactividad: ${DIAS_RECORDATORIO_INACTIVIDAD}
+  # Expresión cron para la ejecución del job (por defecto: 02:00 AM diariamente)
+  cron: ${LIMPIEZA_CRON}
+
 # ── Actuator ───────────────────────────────────────────────────
 management:
   endpoints:

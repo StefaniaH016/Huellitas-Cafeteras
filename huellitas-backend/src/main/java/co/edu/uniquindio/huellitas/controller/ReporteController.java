@@ -1,6 +1,7 @@
 package co.edu.uniquindio.huellitas.controller;
 
 import co.edu.uniquindio.huellitas.dto.reporte.*;
+import co.edu.uniquindio.huellitas.entity.enums.EstadoCaso;
 import co.edu.uniquindio.huellitas.service.CasoService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -87,14 +88,26 @@ public class ReporteController {
 
     @GetMapping("/mis-reportes")
     @PreAuthorize("hasRole('CIUDADANO_VOLUNTARIO')")
+    @Operation(summary = "Mis reportes", description = "Lista los casos reportados por el usuario autenticado. Acepta filtro opcional por estado.")
     public ResponseEntity<Page<CasoListItemDTO>> misReportes(
+            @Parameter(description = "Estado del caso (opcional)") @RequestParam(required = false) EstadoCaso estado,
             @AuthenticationPrincipal UserDetails userDetails,
             Pageable pageable) {
         if (userDetails == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-        Page<CasoListItemDTO> list = casoService.misReportes(userDetails.getUsername(), pageable);
+        Page<CasoListItemDTO> list = casoService.misReportes(userDetails.getUsername(), estado, pageable);
         return ResponseEntity.ok(list);
+    }
+
+    @GetMapping("/historial")
+    @Operation(summary = "Historial de casos", description = "Lista casos resueltos y archivados. Acepta filtro opcional por estado (RESUELTO o ARCHIVADO).")
+    public ResponseEntity<Page<CasoListItemDTO>> obtenerHistorial(
+            @Parameter(description = "Estado del caso: RESUELTO o ARCHIVADO (opcional, por defecto muestra ambos)") 
+            @RequestParam(required = false) EstadoCaso estado,
+            Pageable pageable) {
+        Page<CasoListItemDTO> historial = casoService.obtenerHistorialCasos(estado, pageable);
+        return ResponseEntity.ok(historial);
     }
 
     @GetMapping("/feed")

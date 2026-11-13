@@ -119,8 +119,8 @@ export class CasosComponent implements OnInit {
     if (this.tipos().length < 4) {
       params['tiposCaso'] = this.tipos().join(',');
     }
-    if (this.estados().length < 2) {
-      // Si hay menos de 2 estados (no están todos)
+    if (this.estados().length < 3) {
+      // Si hay menos de 3 estados (no están todos)
       params['estados'] = this.estados().join(',');
     }
 

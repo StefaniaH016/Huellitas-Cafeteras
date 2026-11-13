@@ -346,6 +346,37 @@ public class CasoServiceImpl implements CasoService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public Page<CasoListItemDTO> misReportes(String correoUsuario, EstadoCaso estado, Pageable pageable) {
+        if (estado == null) {
+            // Si no se proporciona estado, conservar comportamiento original
+            return misReportes(correoUsuario, pageable);
+        }
+        return casoRepository.findByReportanteCorreoAndEstadoOrderByFechaRegistroDesc(
+                correoUsuario.trim().toLowerCase(), estado, pageable)
+                .map(casoMapper::toListItemDTO);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<CasoListItemDTO> obtenerHistorialCasos(EstadoCaso estado, Pageable pageable) {
+        List<EstadoCaso> estadosHistorial;
+        
+        if (estado == null) {
+            // Por defecto, mostrar RESUELTO y ARCHIVADO
+            estadosHistorial = List.of(EstadoCaso.RESUELTO, EstadoCaso.ARCHIVADO);
+        } else if (estado == EstadoCaso.RESUELTO || estado == EstadoCaso.ARCHIVADO) {
+            estadosHistorial = List.of(estado);
+        } else {
+            // Solo permitir RESUELTO y ARCHIVADO en el historial
+            throw new IllegalArgumentException("El historial solo admite casos RESUELTO o ARCHIVADO");
+        }
+
+        return casoRepository.findByEstadoInOrderByFechaArchivadoDesc(estadosHistorial, pageable)
+                .map(casoMapper::toListItemDTO);
+    }
+
+    @Override
     public CasoResponseDTO cerrarCaso(Long id, CierreCasoRequestDTO dto, String correoUsuario) {
         Caso caso = casoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Caso", id));

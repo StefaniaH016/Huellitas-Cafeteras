@@ -1,5 +1,6 @@
 package co.edu.uniquindio.huellitas;
 
+import co.edu.uniquindio.huellitas.config.TestCloudinaryConfig;
 import co.edu.uniquindio.huellitas.dto.aporte.CrearAporteDTO;
 import co.edu.uniquindio.huellitas.dto.auth.LoginRequestDTO;
 import co.edu.uniquindio.huellitas.dto.auth.RegistroUsuarioDTO;
@@ -45,6 +46,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
 @ActiveProfiles("test")
+@org.springframework.context.annotation.Import(TestCloudinaryConfig.class)
 class Fase2IntegrationTests {
 
     private MockMvc mockMvc;
