@@ -28,24 +28,14 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      # Ejecutar pruebas + Checkstyle + Generar cobertura JaCoCo
-      # Los tests se ejecutan SOLO si hay credenciales de Railway configuradas
+      # Ejecutar pruebas con H2 + Checkstyle + Generar cobertura JaCoCo
       - name: Run backend tests + Checkstyle + JaCoCo
         working-directory: huellitas-backend
         env:
-          # Variables de Railway PostgreSQL (configuradas en GitHub Secrets)
-          DATABASE_URL: ${{ secrets.RAILWAY_DATABASE_URL }}
-          DATABASE_USER: ${{ secrets.RAILWAY_DATABASE_USER }}
-          DATABASE_PASSWORD: ${{ secrets.RAILWAY_DATABASE_PASSWORD }}
+          SPRING_PROFILES_ACTIVE: test
         run: |
-          if [ -z "$DATABASE_URL" ]; then
-            echo "⚠️  DATABASE_URL no configurado. Saltando tests de BD."
-            echo "Una vez que configures los secretos, los tests se ejecutarán automáticamente."
-            mvn -B clean compile jacoco:report
-          else
-            echo "✅ Ejecutando tests con PostgreSQL de Railway..."
-            mvn -B clean verify
-          fi
+          mvn -B clean verify
+          mvn -B checkstyle:check
 
       # Análisis SonarCloud
       - name: SonarCloud scan (Backend)
