@@ -63,7 +63,6 @@ export class CasosComponent implements OnInit {
   total = signal(0);
   page = signal(0);
   pageSize = 10;
-  mostrarFiltros = signal(false);
 
   filtroDeptoId = signal<number | null>(null);
   filtroMunId = signal<number | null>(null);
