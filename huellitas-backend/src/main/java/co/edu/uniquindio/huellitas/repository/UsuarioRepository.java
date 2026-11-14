@@ -13,6 +13,7 @@ import java.util.Optional;
 public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
     Optional<Usuario> findByCorreo(String correo);
     boolean existsByCorreo(String correo);
+    List<Usuario> findAllByRol(Rol rol);
 
     @Query("SELECT u FROM Usuario u WHERE u.verificado = false AND u.rol IN (:roles)")
     List<Usuario> findByVerificadoFalseAndRolIn(List<Rol> roles);

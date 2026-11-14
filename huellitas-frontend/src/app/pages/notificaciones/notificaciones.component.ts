@@ -15,8 +15,11 @@ const ICONOS: Record<string, string> = {
   CIERRE: '✅',
   RECORDATORIO: '⏰',
   CUSTODIA: '🏠',
+  SOLICITUD_REVISION: '📝',
+  ATENCION_MEDICA: '🩺',
   EVOLUCION_MEDICA: '🩺',
   ALTA_MEDICA: '🎉',
+  ARCHIVO: '🗄️',
   VERIFICACION: '✅',
   CUENTAS: '🏢',
   MODERACION: '⚑',
@@ -166,7 +169,7 @@ export class NotificacionesComponent implements OnInit {
         return lista.filter((notificacion) => notificacion.tipo === 'RECORDATORIO');
       case 'cuentas':
         return lista.filter((notificacion) =>
-          ['VERIFICACION', 'CUENTAS'].includes(notificacion.tipo),
+          ['VERIFICACION', 'SOLICITUD_REVISION', 'CUENTAS'].includes(notificacion.tipo),
         );
       case 'moderacion':
         return lista.filter((notificacion) => {

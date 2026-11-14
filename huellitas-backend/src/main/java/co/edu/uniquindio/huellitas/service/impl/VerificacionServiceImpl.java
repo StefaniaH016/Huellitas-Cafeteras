@@ -60,6 +60,9 @@ public class VerificacionServiceImpl implements VerificacionService {
     public VerificacionResponseDTO resolverVerificacion(Long usuarioId, DecisionVerificacionDTO dto, String correoAdmin) {
         Usuario usuario = usuarioRepository.findById(usuarioId)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario", usuarioId));
+        if (usuario.getRol() != Rol.FUNDACION_REFUGIO && usuario.getRol() != Rol.VETERINARIA) {
+            throw new ConflictException("Solo se pueden resolver verificaciones de fundaciones y veterinarias.");
+        }
 
         Usuario admin = usuarioRepository.findByCorreo(correoAdmin.trim().toLowerCase())
                 .orElseThrow(() -> new ResourceNotFoundException("Administrador no encontrado con correo: " + correoAdmin));
@@ -134,6 +137,7 @@ public class VerificacionServiceImpl implements VerificacionService {
         Organizacion guardada = organizacionRepository.save(organizacion);
         usuario.setOrganizacion(guardada);
         usuarioRepository.save(usuario);
+        notificarSolicitudRevisionDespuesDeGuardar(usuario, guardada.getNombre());
         return new VerificacionResponseDTO(usuario.getId(), EstadoVerificacion.PENDIENTE.name(), false);
     }
 
@@ -196,6 +200,21 @@ public class VerificacionServiceImpl implements VerificacionService {
 
     private void notificarDespuesDeGuardar(Usuario usuario, boolean aprobada) {
         Runnable notificar = () -> notificacionWorker.notificarVerificacionOrganizacion(usuario, aprobada);
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    notificar.run();
+                }
+            });
+        } else {
+            notificar.run();
+        }
+    }
+
+    private void notificarSolicitudRevisionDespuesDeGuardar(Usuario usuario, String nombreOrganizacion) {
+        Runnable notificar = () ->
+                notificacionWorker.notificarSolicitudRevisionOrganizacion(usuario, nombreOrganizacion);
         if (TransactionSynchronizationManager.isSynchronizationActive()) {
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override

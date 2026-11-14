@@ -204,6 +204,7 @@ class BitacoraServiceTest {
             assertEquals("ABIERTA", response.estado());
             verify(registroMedicoRepository, times(1)).save(any(RegistroMedico.class));
             verify(casoRepository, times(1)).save(casoEnAtencion);
+            verify(notificacionWorker).notificarInicioAtencionMedica(any(BitacoraMedica.class), eq(veterinariaVerificada));
         }
 
         @Test

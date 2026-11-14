@@ -114,15 +114,34 @@ class NotificacionWorkerTest {
     @Test
     @DisplayName("Notifica a la organización cuando se aprueba o rechaza su verificación")
     void debeNotificarResultadoDeVerificacionAOrganizacion() {
-        notificacionWorker.notificarVerificacionOrganizacion(reportante, true);
+        Usuario contacto = Usuario.builder()
+                .id(5L)
+                .correo("fundacion@huellitas.com")
+                .rol(Rol.FUNDACION_REFUGIO)
+                .build();
+        notificacionWorker.notificarVerificacionOrganizacion(contacto, true);
 
         org.mockito.ArgumentCaptor<Notificacion> captor = org.mockito.ArgumentCaptor.forClass(Notificacion.class);
         verify(notificacionRepository).save(captor.capture());
-        assertEquals(reportante, captor.getValue().getUsuario());
+        assertEquals(contacto, captor.getValue().getUsuario());
         assertEquals(TipoNotificacion.VERIFICACION, captor.getValue().getTipo());
         assertNull(captor.getValue().getCaso());
         assertTrue(captor.getValue().getMensaje().contains("fue verificada"));
     }
+
+        @Test
+        @DisplayName("No envía resultados de verificación a cuentas administradoras")
+        void noNotificaResultadoVerificacionAlAdministrador() {
+                Usuario admin = Usuario.builder()
+                                .id(6L)
+                                .correo("admin@huellitas.com")
+                                .rol(Rol.ADMINISTRADOR)
+                                .build();
+
+                notificacionWorker.notificarVerificacionOrganizacion(admin, true);
+
+                verify(notificacionRepository, never()).save(any(Notificacion.class));
+        }
 
     // === Pruebas 13.5: Notificaciones de aportes ===
 
@@ -279,5 +298,56 @@ class NotificacionWorkerTest {
 
         // Assert
         verify(notificacionRepository, times(1)).save(any(Notificacion.class));
+    }
+
+    @Test
+    @DisplayName("Notifica una solicitud de revisión a la organización y a los administradores")
+    void debeNotificarSolicitudDeRevision() {
+        Usuario admin = Usuario.builder()
+                .id(4L)
+                .correo("admin@huellitas.com")
+                .rol(Rol.ADMINISTRADOR)
+                .build();
+        when(usuarioRepository.findAllByRol(Rol.ADMINISTRADOR)).thenReturn(List.of(admin));
+
+        notificacionWorker.notificarSolicitudRevisionOrganizacion(reportante, "Fundación Patitas");
+
+        org.mockito.ArgumentCaptor<Notificacion> captor = org.mockito.ArgumentCaptor.forClass(Notificacion.class);
+        verify(notificacionRepository, times(2)).save(captor.capture());
+        assertEquals(List.of(reportante, admin), captor.getAllValues().stream()
+                .map(Notificacion::getUsuario)
+                .toList());
+        assertTrue(captor.getAllValues().stream()
+                .allMatch(n -> n.getTipo() == TipoNotificacion.SOLICITUD_REVISION));
+    }
+
+    @Test
+    @DisplayName("Notifica el inicio de la atención médica al reportante")
+    void debeNotificarInicioAtencionMedica() {
+        BitacoraMedica bitacora = BitacoraMedica.builder().caso(casoUrgente).build();
+
+        notificacionWorker.notificarInicioAtencionMedica(bitacora, autor);
+
+        org.mockito.ArgumentCaptor<Notificacion> captor = org.mockito.ArgumentCaptor.forClass(Notificacion.class);
+        verify(notificacionRepository).save(captor.capture());
+        assertEquals(reportante, captor.getValue().getUsuario());
+        assertEquals(TipoNotificacion.ATENCION_MEDICA, captor.getValue().getTipo());
+        assertTrue(captor.getValue().getMensaje().contains("fue iniciada"));
+    }
+
+    @Test
+    @DisplayName("Notifica al reportante la liberación de custodia, archivo y ocultamiento")
+    void debeNotificarAccionesAdministrativasYDeCustodia() {
+        notificacionWorker.notificarLiberacionCustodia(casoUrgente, "Traslado coordinado");
+        notificacionWorker.notificarArchivadoCaso(casoUrgente, "Caso resuelto");
+        notificacionWorker.notificarOcultamientoCaso(casoUrgente, "Información duplicada");
+
+        org.mockito.ArgumentCaptor<Notificacion> captor = org.mockito.ArgumentCaptor.forClass(Notificacion.class);
+        verify(notificacionRepository, times(3)).save(captor.capture());
+        assertEquals(List.of(
+                        TipoNotificacion.CUSTODIA,
+                        TipoNotificacion.ARCHIVO,
+                        TipoNotificacion.MODERACION),
+                captor.getAllValues().stream().map(Notificacion::getTipo).toList());
     }
 }

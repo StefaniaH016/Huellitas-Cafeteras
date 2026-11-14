@@ -111,6 +111,24 @@ it('loads all notifications and can filter the unread ones', () => {
   expect(component.icono('OTRA')).toBe('🔔');
 });
 
+it('filters organization review requests under accounts and assigns their icon', () => {
+  const component = crear(true);
+  const request: Notificacion = {
+    id: 5,
+    tipo: 'SOLICITUD_REVISION',
+    mensaje: 'Nueva solicitud de revisión para Fundación Patitas.',
+    leida: false,
+    fecha: '',
+    casoId: null,
+  };
+  component.notificaciones.set([request]);
+
+  component.filtrar('cuentas');
+
+  expect(component.notificacionesFiltradas()).toEqual([request]);
+  expect(component.icono(request.tipo)).toBe('📝');
+});
+
 it('shows notification skeleton rows while the initial request is pending', () => {
   servicio['listar'] = vi.fn().mockReturnValue(NEVER);
   const fixture = crearFixture();

@@ -415,6 +415,32 @@ class CasoServiceTest {
         verify(casoRepository, never()).save(any(Caso.class));
     }
 
+        @Test
+        @DisplayName("El archivo administrativo notifica al reportante")
+        void archivarCasoNotificaAlReportante() {
+        Caso caso = Caso.builder()
+            .id(12L)
+            .estado(EstadoCaso.RESUELTO)
+            .reportante(usuarioMock)
+            .build();
+        Usuario admin = Usuario.builder()
+            .id(2L)
+            .correo("admin@test.com")
+            .rol(Rol.ADMINISTRADOR)
+            .build();
+        when(casoRepository.findById(12L)).thenReturn(Optional.of(caso));
+        when(usuarioRepository.findByCorreo("admin@test.com")).thenReturn(Optional.of(admin));
+        when(casoRepository.save(any(Caso.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(historialEstadoRepository.save(any(HistorialEstado.class)))
+            .thenAnswer(invocation -> invocation.getArgument(0));
+        when(seguimientoRepository.save(any(Seguimiento.class)))
+            .thenAnswer(invocation -> invocation.getArgument(0));
+
+        casoService.archivarCaso(12L, new ArchivarCasoDTO("Caso resuelto"), "admin@test.com");
+
+        verify(notificacionWorker).notificarArchivadoCaso(caso, "Caso resuelto");
+        }
+
     @Test
     @DisplayName("El reportante puede eliminar físicamente un caso registrado")
     void debeEliminarCasoRegistradoYDesvincularHistorial() {

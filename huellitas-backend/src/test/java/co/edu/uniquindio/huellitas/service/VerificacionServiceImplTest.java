@@ -28,6 +28,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -154,6 +155,24 @@ class VerificacionServiceImplTest {
         verifyNoInteractions(organizacionRepository, notificacionWorker);
     }
 
+        @Test
+        void cannotResolveVerificationForAnAdminAccount() {
+                Usuario admin = Usuario.builder()
+                                .id(1L)
+                                .correo("admin@test.com")
+                                .rol(Rol.ADMINISTRADOR)
+                                .build();
+                when(usuarioRepository.findById(1L)).thenReturn(java.util.Optional.of(admin));
+
+                assertThrows(ConflictException.class, () -> verificacionService.resolverVerificacion(
+                                1L,
+                                new DecisionVerificacionDTO("APROBAR", null),
+                                "admin@test.com"));
+
+                verify(usuarioRepository, never()).save(admin);
+                verifyNoInteractions(organizacionRepository, notificacionWorker);
+        }
+
     @Test
     void rejectedOrganizationCanSubmitNewSupportForReview() {
         Fundacion fundacion = Fundacion.builder()
@@ -191,6 +210,7 @@ class VerificacionServiceImplTest {
                 .isEqualTo("%PDF-1.7 soporte".getBytes(java.nio.charset.StandardCharsets.UTF_8));
         verify(organizacionRepository).save(fundacion);
         verify(usuarioRepository).save(contacto);
+        verify(notificacionWorker).notificarSolicitudRevisionOrganizacion(contacto, "Fundación Huellitas");
     }
 
     @Test

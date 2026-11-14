@@ -10,6 +10,7 @@ import co.edu.uniquindio.huellitas.mapper.ModeracionMapper;
 import co.edu.uniquindio.huellitas.repository.CasoRepository;
 import co.edu.uniquindio.huellitas.repository.SeguimientoRepository;
 import co.edu.uniquindio.huellitas.service.ModeracionService;
+import co.edu.uniquindio.huellitas.worker.NotificacionWorker;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +26,7 @@ public class ModeracionServiceImpl implements ModeracionService {
     private final CasoRepository casoRepository;
     private final SeguimientoRepository seguimientoRepository;
     private final ModeracionMapper moderacionMapper;
+    private final NotificacionWorker notificacionWorker;
 
     @Override
     @Transactional(readOnly = true)
@@ -41,12 +43,17 @@ public class ModeracionServiceImpl implements ModeracionService {
                 .orElseThrow(() -> new ResourceNotFoundException("Caso", casoId));
 
         boolean mantener = "MANTENER".equalsIgnoreCase(dto.decision());
+        boolean ocultamientoNuevo = !mantener && caso.isVisible();
         caso.setVisible(mantener);
         caso.setModeracionPendiente(false);
         caso.setMotivoModeracion(dto.motivo());
         caso.setFechaUltimaActividad(Instant.now());
 
         casoRepository.save(caso);
+
+        if (ocultamientoNuevo) {
+            notificacionWorker.notificarOcultamientoCaso(caso, dto.motivo());
+        }
 
         return moderacionMapper.toModeracionResponseDTO(caso.getId(), mantener);
     }

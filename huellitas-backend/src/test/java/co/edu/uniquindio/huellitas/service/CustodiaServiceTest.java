@@ -281,6 +281,7 @@ class CustodiaServiceTest {
         // Assert
         assertNotNull(result);
         assertNull(casoConCustodia.getFundacionCustodio());
+        verify(notificacionWorker).notificarLiberacionCustodia(casoConCustodia, "El animal fue adoptado");
     }
 
     @Test
