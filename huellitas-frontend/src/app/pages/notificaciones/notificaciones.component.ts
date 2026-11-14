@@ -49,6 +49,7 @@ export class NotificacionesComponent implements OnInit {
   readonly carga = new EstadoCarga();
   readonly perfilCarga = new EstadoCarga();
   readonly guardandoPreferencia = signal(false);
+  readonly skeletonNotifications = [1, 2, 3, 4];
   readonly filtroActivo = signal<FiltroNotificaciones>('todas');
   readonly notificaciones = signal<Notificacion[]>([]);
   readonly notificacionesFiltradas = computed(() =>

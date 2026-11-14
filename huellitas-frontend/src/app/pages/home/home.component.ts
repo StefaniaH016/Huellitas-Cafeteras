@@ -98,6 +98,7 @@ export class HomeComponent implements OnInit {
   };
 
   // Feed data
+  readonly skeletonCards = [1, 2, 3, 4];
   casos = signal<Caso[]>([]);
   cargando = signal(false);
   errorMensaje = signal('');

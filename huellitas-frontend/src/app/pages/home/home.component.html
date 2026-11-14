@@ -302,11 +302,23 @@
           <h2>{{ isAdmin() ? 'Feed de casos' : 'Casos urgentes cerca de ti' }}</h2>
           <a routerLink="/casos">Ver todos</a>
         </div>
-        <div class="case-grid">
-          @if (cargando()) {
-            <p style="text-align: center; color: var(--ink-soft); grid-column: 1/-1">
-              Cargando casos...
-            </p>
+        <div
+          class="case-grid"
+          [attr.aria-busy]="cargando()"
+          [attr.role]="cargando() && casos().length === 0 ? 'status' : null"
+          [attr.aria-label]="cargando() && casos().length === 0 ? 'Cargando casos' : null"
+        >
+          @if (cargando() && casos().length === 0) {
+            @for (skeleton of skeletonCards; track skeleton) {
+              <article class="case-card case-skeleton" aria-hidden="true">
+                <div class="case-photo skeleton"></div>
+                <div class="case-body">
+                  <span class="skeleton skeleton-pill"></span>
+                  <span class="skeleton skeleton-line"></span>
+                  <span class="skeleton skeleton-line is-short"></span>
+                </div>
+              </article>
+            }
           }
           @if (errorMensaje()) {
             <p style="text-align: center; color: var(--coral-600); grid-column: 1/-1">
@@ -314,11 +326,7 @@
             </p>
           }
           @for (caso of casos().slice(0, 3); track caso.id) {
-            <article
-              class="case-card"
-              [routerLink]="['/caso-detalle', caso.id]"
-              style="cursor: pointer"
-            >
+            <article class="case-card">
               <div class="case-photo">
                 @if (caso.foto) {
                   <img [src]="caso.foto" [alt]="caso.titulo" (error)="caso.foto = ''" />
@@ -327,18 +335,26 @@
                 }
               </div>
               <div class="case-body">
-                <span class="badge" [ngClass]="getBadgeClass(caso.urgencia)">
+                <span class="badge case-urgency" [ngClass]="getBadgeClass(caso.urgencia)">
                   <span class="badge-dot"></span>
                   {{ getBadgeLabel(caso.urgencia) }}
                 </span>
                 <p class="case-title">{{ caso.titulo || caso.descripcion }}</p>
                 <p class="case-meta">{{ caso.municipio }} · {{ caso.barrio }}</p>
+                <a
+                  class="btn btn-secondary btn-sm case-view"
+                  [routerLink]="['/caso-detalle', caso.id]"
+                >
+                  Ver caso
+                </a>
               </div>
             </article>
           } @empty {
-            <p style="text-align: center; color: var(--ink-soft); grid-column: 1/-1">
-              No hay casos disponibles.
-            </p>
+            @if (!cargando()) {
+              <p style="text-align: center; color: var(--ink-soft); grid-column: 1/-1">
+                No hay casos disponibles.
+              </p>
+            }
           }
         </div>
       </section>

@@ -82,14 +82,17 @@ it('loads and maps the cases feed on initialization', () => {
   });
 });
 
-it('shows the filters heading and makes the location selector responsive inside the sidebar', () => {
+it('shows case filters in a horizontal toolbar with a responsive location selector', () => {
   const fixture = TestBed.createComponent(CasosComponent);
   fixture.detectChanges();
 
-  expect(fixture.nativeElement.querySelector('.filters-title')?.textContent.trim()).toBe('Filtros');
-  expect(
-    fixture.nativeElement.querySelector('#filtros app-ubicacion-selector fieldset')?.classList,
-  ).toContain('stacked');
+  const filtersBar = fixture.nativeElement.querySelector('.filters-bar') as HTMLElement;
+  expect(filtersBar).not.toBeNull();
+  expect(filtersBar.querySelectorAll('details.filter-dropdown')).toHaveLength(4);
+  expect(filtersBar.querySelector('#check-estado-resuelto')).toBeNull();
+  expect(filtersBar.querySelector('app-ubicacion-selector fieldset')?.classList).toContain(
+    'stacked',
+  );
 });
 
 it('shows each case primary photo and falls back to the paw icon when it fails', () => {

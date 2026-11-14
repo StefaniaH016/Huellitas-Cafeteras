@@ -1,5 +1,5 @@
 import { Component, DestroyRef, OnInit, inject, computed, signal } from '@angular/core';
-import { NavigationEnd, Router, RouterLink } from '@angular/router';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { filter, fromEvent, interval } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService } from '../../../core/services/auth.service';
@@ -9,7 +9,7 @@ import { normalizeRole } from '../../../core/utils/role.utils';
 
 @Component({
   selector: 'app-header',
-  imports: [RouterLink],
+  imports: [RouterLink, RouterLinkActive],
   templateUrl: './header.component.html',
   styleUrl: './header.component.css',
 })
@@ -28,15 +28,18 @@ export class HeaderComponent implements OnInit {
   // Normalize role for role checks
   private rol = computed(() => normalizeRole(this.rawRol()));
 
-  userName = computed(() => {
+  private fullName = computed(() => {
     const p = this.payload();
-    return (p?.['nombre'] ?? p?.['name'] ?? p?.['sub'] ?? 'Usuario') as string;
+    const name = p?.['nombre'] ?? p?.['name'] ?? p?.['sub'];
+    return typeof name === 'string' && name.trim() ? name.trim() : 'Usuario';
   });
 
+  userName = computed(() => this.fullName().split(/\s+/)[0]);
+
   initials = computed(() => {
-    const name = this.userName();
+    const name = this.fullName();
     return name
-      .split(' ')
+      .split(/\s+/)
       .map((n) => n[0])
       .slice(0, 2)
       .join('')

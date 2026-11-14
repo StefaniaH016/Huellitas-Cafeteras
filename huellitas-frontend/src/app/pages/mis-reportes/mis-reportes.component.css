@@ -1,5 +1,5 @@
 .my-reports {
-  max-width: 1080px;
+  max-width: 1440px;
   margin: 0 auto;
   padding: 2.4rem 2rem 3rem;
 }
@@ -95,7 +95,7 @@
   padding: 1rem;
   overflow: hidden;
   border: 1px solid var(--line);
-  border-radius: 22px;
+  border-radius: 16px;
   background: var(--card-bg);
   box-shadow: var(--shadow);
   transition: all 0.15s ease;
@@ -112,6 +112,21 @@
   min-height: 160px;
   border-radius: 16px;
   background: linear-gradient(135deg, var(--mint-100), var(--sky-100));
+}
+
+.report-photo.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--skeleton-base) 25%,
+    var(--skeleton-highlight) 37%,
+    var(--skeleton-base) 63%
+  );
+  background-size: 400% 100%;
+}
+
+.report-skeleton .report-content {
+  justify-content: center;
+  gap: 0.75rem;
 }
 
 .report-photo.placeholder {
@@ -169,7 +184,7 @@
   justify-content: center;
   gap: 0.4rem;
   border: 1px solid transparent;
-  border-radius: 999px;
+  border-radius: 12px;
   padding: 0.65rem 1.1rem;
   font-family: inherit;
   font-size: 0.86rem;

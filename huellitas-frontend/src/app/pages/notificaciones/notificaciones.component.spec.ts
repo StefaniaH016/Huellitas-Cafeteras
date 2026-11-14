@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
-import { of } from 'rxjs';
+import { NEVER, of } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
 import { Notificacion, NotificacionService } from '../../core/services/notificacion.service';
 import { UsuarioPerfil, UsuarioService } from '../../core/services/usuario.service';
@@ -109,6 +109,19 @@ it('loads all notifications and can filter the unread ones', () => {
   expect(component.icono('ALTA_MEDICA')).toBe('🎉');
   expect(component.icono('VERIFICACION')).toBe('✅');
   expect(component.icono('OTRA')).toBe('🔔');
+});
+
+it('shows notification skeleton rows while the initial request is pending', () => {
+  servicio['listar'] = vi.fn().mockReturnValue(NEVER);
+  const fixture = crearFixture();
+
+  expect(fixture.nativeElement.querySelectorAll('.notif-skeleton')).toHaveLength(4);
+  expect(fixture.nativeElement.querySelector('output')?.textContent).toContain(
+    'Cargando notificaciones',
+  );
+  expect(
+    fixture.nativeElement.querySelector('.notification-skeletons').getAttribute('aria-hidden'),
+  ).toBe('true');
 });
 
 it('filters case, area and reminder notifications from the loaded list', () => {

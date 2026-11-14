@@ -15,7 +15,9 @@
   --brown-700: #6c5fd6;
   --brown-500: #8b7fe8;
   --paper: #ffffff;
-  --paper-2: #f6f3fe;
+  --paper-2: #f8f9fa;
+  --skeleton-base: #e5e7eb;
+  --skeleton-highlight: #f3f4f6;
   --pine-700: #6c5fd6;
   --pine-700-rgb: 108, 95, 214;
   --pine-500: #8b7fe8;
@@ -40,6 +42,8 @@
   :root:not([data-theme='light']) {
     --paper: #1c1830;
     --paper-2: #221d3b;
+    --skeleton-base: #3a3363;
+    --skeleton-highlight: #4b4472;
     --card-bg: #282249;
     --ink: #efebff;
     --ink-soft: #b4acd9;
@@ -50,6 +54,8 @@
 :root[data-theme='dark'] {
   --paper: #1c1830;
   --paper-2: #221d3b;
+  --skeleton-base: #3a3363;
+  --skeleton-highlight: #4b4472;
   --card-bg: #282249;
   --ink: #efebff;
   --ink-soft: #b4acd9;

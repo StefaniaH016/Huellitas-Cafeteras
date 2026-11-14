@@ -81,9 +81,7 @@
           <p class="feedback-error" role="alert">{{ envio.error() }}</p>
         }
         @if (publicado()) {
-          <p class="feedback-success" role="status">
-            Tu aporte quedó publicado. Gracias por ayudar.
-          </p>
+          <output class="feedback-success"> Tu aporte quedó publicado. Gracias por ayudar. </output>
         }
         <button
           class="btn btn-primary btn-sm"
@@ -106,7 +104,7 @@
 
     <div class="panel-head mt-sm"><h3>Actividad del caso</h3></div>
     @if (moderacionAporte.exito()) {
-      <p class="feedback-success" role="status">{{ moderacionAporte.exito() }}</p>
+      <output class="feedback-success">{{ moderacionAporte.exito() }}</output>
     }
     @if (moderacionAporte.error()) {
       <p class="feedback-error" role="alert">{{ moderacionAporte.error() }}</p>
@@ -134,7 +132,15 @@
           @if (item.fotografias?.length) {
             <div class="timeline-photos" aria-label="Fotografías del aporte">
               @for (foto of item.fotografias; track foto; let i = $index) {
-                <img [src]="foto" [alt]="'Foto del aporte ' + (i + 1)" />
+                @if (!fotosRotas().has(foto)) {
+                  <img
+                    [src]="foto"
+                    [alt]="'Foto del aporte ' + (i + 1)"
+                    (error)="onFotoError(foto)"
+                  />
+                } @else {
+                  <span class="timeline-photo-fallback" aria-hidden="true">🐾</span>
+                }
               }
             </div>
           }

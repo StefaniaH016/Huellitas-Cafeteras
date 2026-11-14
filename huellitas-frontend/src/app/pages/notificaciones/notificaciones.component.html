@@ -12,7 +12,8 @@
 
     <div class="two-col">
       <div>
-        <div class="chip-row" role="group" aria-label="Filtrar notificaciones">
+        <fieldset class="chip-row">
+          <legend class="sr-only">Filtrar notificaciones</legend>
           <button
             class="chip"
             type="button"
@@ -88,10 +89,23 @@
               Sin actividad<span class="count-pill">{{ contadores().sinActividad }}</span>
             </button>
           }
-        </div>
+        </fieldset>
 
-        @if (carga.cargando()) {
-          <p class="list-empty">Cargando notificaciones...</p>
+        @if (carga.cargando() && notificacionesFiltradas().length === 0) {
+          <output class="sr-only">Cargando notificaciones</output>
+          <div class="notification-skeletons" aria-hidden="true">
+            @for (skeleton of skeletonNotifications; track skeleton) {
+              <article class="notif notif-skeleton" aria-hidden="true">
+                <span class="notif-dot skeleton"></span>
+                <span class="list-thumb skeleton skeleton-thumb"></span>
+                <span class="list-info skeleton-text-stack">
+                  <span class="skeleton skeleton-line"></span>
+                  <span class="skeleton skeleton-line is-short"></span>
+                </span>
+                <span class="list-actions"><span class="skeleton skeleton-button"></span></span>
+              </article>
+            }
+          </div>
         } @else if (carga.error()) {
           <p class="feedback-error" role="alert">{{ carga.error() }}</p>
         }
@@ -183,7 +197,7 @@
               <p class="feedback-error" role="alert">{{ errorPreferencia() }}</p>
             }
             @if (mensajePreferencia()) {
-              <p class="feedback-success" role="status">{{ mensajePreferencia() }}</p>
+              <output class="feedback-success">{{ mensajePreferencia() }}</output>
             }
             <p class="note">
               De tus casos siempre te avisamos: aportes, custodia, atención médica, cierre y

@@ -10,7 +10,7 @@
 
     <!-- Desktop navigation (hidden on mobile) -->
     <nav class="header-nav" aria-label="Navegación principal">
-      <a routerLink="/home" class="nav-link">
+      <a routerLink="/home" class="nav-link" routerLinkActive="active">
         <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">
           <path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-6v-7h-4v7H4a1 1 0 0 1-1-1z" />
         </svg>
@@ -19,7 +19,11 @@
 
       <!-- Show "Mi panel" for non-ciudadano roles -->
       @if (isFundacion() || isVeterinaria()) {
-        <a [routerLink]="isVeterinaria() ? '/veterinaria' : '/fundacion'" class="nav-link">
+        <a
+          [routerLink]="isVeterinaria() ? '/veterinaria' : '/fundacion'"
+          class="nav-link"
+          routerLinkActive="active"
+        >
           <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">
             <rect x="3" y="3" width="7" height="7" rx="1.5" />
             <rect x="14" y="3" width="7" height="7" rx="1.5" />
@@ -30,7 +34,7 @@
         </a>
       }
       @if (isAdmin()) {
-        <a routerLink="/admin" class="nav-link">
+        <a routerLink="/admin" class="nav-link" routerLinkActive="active">
           <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">
             <rect x="3" y="3" width="7" height="7" rx="1.5" />
             <rect x="14" y="3" width="7" height="7" rx="1.5" />
@@ -41,7 +45,7 @@
         </a>
       }
 
-      <a routerLink="/casos" class="nav-link">
+      <a routerLink="/casos" class="nav-link" routerLinkActive="active">
         <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">
           <circle cx="11" cy="11" r="7" />
           <path d="m20 20-3.5-3.5" />
@@ -51,7 +55,7 @@
 
       <!-- Show "Mis reportes" for ciudadano -->
       @if (isCiudadano()) {
-        <a routerLink="/mis-reportes" class="nav-link">
+        <a routerLink="/mis-reportes" class="nav-link" routerLinkActive="active">
           <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">
             <rect x="5" y="4" width="14" height="17" rx="2.5" />
             <path d="M9 4.5V3.5h6v1M9 11h6M9 15h4" />
@@ -63,12 +67,12 @@
 
     <!-- User area -->
     <div class="user-area">
-      <a routerLink="/notificaciones" class="nav-link" aria-label="Notificaciones">
+      <a routerLink="/notificaciones" class="nav-link" routerLinkActive="active">
         <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">
           <path d="M6 9a6 6 0 1 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9z" />
           <path d="M10 20a2 2 0 0 0 4 0" />
         </svg>
-        Notificaciones
+        <span class="nav-label">Notificaciones</span>
         @if (sinLeer() > 0) {
           <span class="badge" [attr.aria-label]="sinLeer() + ' notificaciones sin leer'">
             {{ sinLeer() > 99 ? '99+' : sinLeer() }}

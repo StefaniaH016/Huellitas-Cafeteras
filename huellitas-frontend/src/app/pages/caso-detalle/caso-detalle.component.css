@@ -5,7 +5,7 @@
 }
 
 .wrap-1080 {
-  max-width: 1080px;
+  max-width: 1440px;
   margin: 0 auto;
   padding: 2rem 1.5rem;
   width: 100%;
@@ -439,11 +439,82 @@
 }
 
 @media (max-width: 768px) {
-  .two-col {
-    grid-template-columns: 1fr;
+  .main-area {
+    min-height: 0;
+    min-width: 0;
   }
 
   .wrap-1080 {
-    padding: 1rem;
+    min-width: 0;
+  }
+
+  .two-col {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .two-col > * {
+    min-width: 0;
+  }
+
+  .gallery-container,
+  .gallery-main {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .back-row {
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr);
+    align-items: start;
+    gap: 0.75rem;
+  }
+
+  .back-row > .flex-1 {
+    min-width: 0;
+  }
+
+  .back-row h1 {
+    font-size: 1.5rem;
+    overflow-wrap: anywhere;
+  }
+
+  .back-row .lead {
+    overflow-wrap: anywhere;
+  }
+
+  .back-row .badge-row {
+    grid-column: 2;
+    min-width: 0;
+  }
+
+  .tabs {
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tab {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  .data-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .data-grid > div {
+    min-width: 0;
+  }
+
+  .data-grid .v {
+    overflow-wrap: anywhere;
+  }
+
+  .wrap-1080 {
+    padding: 1rem 1rem calc(2rem + env(safe-area-inset-bottom, 0px));
   }
 }
