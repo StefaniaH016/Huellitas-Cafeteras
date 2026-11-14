@@ -6,7 +6,7 @@
   font-weight: 700;
   cursor: pointer;
   padding: 0.7rem 1.4rem;
-  border-radius: 999px;
+  border-radius: 12px;
   border: 1px solid transparent;
   text-decoration: none;
   display: inline-flex;
@@ -164,11 +164,14 @@
   align-items: flex-start;
   position: relative;
   z-index: 1;
-  width: 322px;
+  width: 100%;
+  max-width: 322px;
+  min-width: 0;
 }
 
 .login-intro-copy h1 {
-  width: 322px;
+  width: 100%;
+  max-width: 322px;
   margin: 0;
   color: #fff;
   font-family: 'Baloo 2', sans-serif;
@@ -179,7 +182,8 @@
 }
 
 .login-intro-copy p {
-  width: 322px;
+  width: 100%;
+  max-width: 322px;
   /* Figma: h1-container 87px + paragraph:margin padding-top 68px = 155px desde top del h1.
      En browser h1 natural ≈ 120px → margin-top = 155 - 120 = 35px */
   margin: 35px 0 0;

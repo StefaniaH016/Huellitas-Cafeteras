@@ -8,6 +8,7 @@ import co.edu.uniquindio.huellitas.entity.RegistroMedico;
 import co.edu.uniquindio.huellitas.entity.Seguimiento;
 import co.edu.uniquindio.huellitas.entity.Usuario;
 import co.edu.uniquindio.huellitas.entity.enums.EstadoCaso;
+import co.edu.uniquindio.huellitas.entity.enums.Rol;
 import co.edu.uniquindio.huellitas.entity.enums.TipoNotificacion;
 import co.edu.uniquindio.huellitas.entity.enums.Urgencia;
 import co.edu.uniquindio.huellitas.repository.MunicipioRepository;
@@ -146,16 +147,94 @@ public class NotificacionWorker {
         }
     }
 
+        @Async
+        @Transactional
+        public void notificarLiberacionCustodia(Caso caso, String motivo) {
+        if (caso == null || caso.getReportante() == null) return;
+
+        String mensaje = String.format(
+            "🏠 La fundación liberó la custodia de tu caso #%d. Motivo: %s",
+            caso.getId(), motivo
+        );
+        guardar(caso.getReportante(), caso, TipoNotificacion.CUSTODIA, mensaje);
+        }
+
+        @Async
+        @Transactional
+        public void notificarSolicitudRevisionOrganizacion(Usuario contacto, String nombreOrganizacion) {
+        if (contacto == null) return;
+
+        String mensajeContacto = String.format(
+            "Recibimos la solicitud de revisión de %s. Te avisaremos cuando sea resuelta.",
+            nombreOrganizacion
+        );
+        guardar(contacto, null, TipoNotificacion.SOLICITUD_REVISION, mensajeContacto);
+
+        String mensajeAdmin = String.format(
+            "Nueva solicitud de revisión para %s, enviada por %s.",
+            nombreOrganizacion, contacto.getNombre()
+        );
+        usuarioRepository.findAllByRol(Rol.ADMINISTRADOR).forEach(admin ->
+            guardar(admin, null, TipoNotificacion.SOLICITUD_REVISION, mensajeAdmin));
+        }
+
     @Async
     @Transactional
     public void notificarVerificacionOrganizacion(Usuario usuario, boolean aprobada) {
-        if (usuario == null) {
+        if (usuario == null
+                || (usuario.getRol() != Rol.FUNDACION_REFUGIO && usuario.getRol() != Rol.VETERINARIA)) {
             return;
         }
         String mensaje = aprobada
                 ? "Tu organización fue verificada. La fundación ya puede asumir casos hasta su capacidad habilitada."
                 : "La verificación de tu organización fue rechazada. Comunícate con soporte para conocer los pasos a seguir.";
         guardar(usuario, null, TipoNotificacion.VERIFICACION, mensaje);
+    }
+
+    @Async
+    @Transactional
+    public void notificarInicioAtencionMedica(BitacoraMedica bitacora, Usuario veterinaria) {
+        if (bitacora == null || bitacora.getCaso() == null) return;
+        Caso caso = bitacora.getCaso();
+        Long veterinariaId = veterinaria != null ? veterinaria.getId() : null;
+        String mensaje = String.format(
+                "🩺 La atención médica de tu caso #%d fue iniciada por una veterinaria.",
+                caso.getId()
+        );
+
+        if (caso.getReportante() != null && !caso.getReportante().getId().equals(veterinariaId)) {
+            guardar(caso.getReportante(), caso, TipoNotificacion.ATENCION_MEDICA, mensaje);
+        }
+
+        if (caso.getFundacionCustodio() != null) {
+            usuarioRepository.findByOrganizacionId(caso.getFundacionCustodio().getId())
+                    .filter(contacto -> !contacto.getId().equals(veterinariaId))
+                    .ifPresent(contacto -> guardar(contacto, caso, TipoNotificacion.ATENCION_MEDICA, mensaje));
+        }
+    }
+
+    @Async
+    @Transactional
+    public void notificarArchivadoCaso(Caso caso, String motivo) {
+        if (caso == null || caso.getReportante() == null) return;
+
+        String mensaje = String.format(
+                "El caso #%d fue archivado. Motivo: %s",
+                caso.getId(), motivo
+        );
+        guardar(caso.getReportante(), caso, TipoNotificacion.ARCHIVO, mensaje);
+    }
+
+    @Async
+    @Transactional
+    public void notificarOcultamientoCaso(Caso caso, String motivo) {
+        if (caso == null || caso.getReportante() == null) return;
+
+        String mensaje = String.format(
+                "Tu caso #%d fue ocultado del listado público durante una revisión de moderación. Motivo: %s",
+                caso.getId(), motivo
+        );
+        guardar(caso.getReportante(), caso, TipoNotificacion.MODERACION, mensaje);
     }
 
     /**

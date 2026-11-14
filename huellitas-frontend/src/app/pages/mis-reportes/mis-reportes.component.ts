@@ -27,6 +27,8 @@ export class MisReportesComponent implements OnInit {
   private casoService = inject(CasoService);
 
   reportes = signal<CasoReporte[]>([]);
+  readonly skeletonCards = [1, 2, 3];
+  readonly fotosRotas = signal(new Set<number>());
   pestanaActiva = signal<'activos' | 'historial'>('activos');
   cargando = signal(false);
   error = signal('');
@@ -51,6 +53,7 @@ export class MisReportesComponent implements OnInit {
           ? response
           : (response as { content?: unknown[] } | null)?.content;
         this.reportes.set(Array.isArray(items) ? (items as CasoReporte[]) : []);
+        this.fotosRotas.set(new Set());
         this.cargando.set(false);
       },
       error: (err: unknown): void => {
@@ -63,6 +66,10 @@ export class MisReportesComponent implements OnInit {
 
   seleccionarPestana(pestana: 'activos' | 'historial'): void {
     this.pestanaActiva.set(pestana);
+  }
+
+  onFotoError(casoId: number): void {
+    this.fotosRotas.update((ids) => new Set(ids).add(casoId));
   }
 
   eliminar(caso: CasoReporte): void {

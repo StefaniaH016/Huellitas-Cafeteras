@@ -15,8 +15,11 @@ const ICONOS: Record<string, string> = {
   CIERRE: '✅',
   RECORDATORIO: '⏰',
   CUSTODIA: '🏠',
+  SOLICITUD_REVISION: '📝',
+  ATENCION_MEDICA: '🩺',
   EVOLUCION_MEDICA: '🩺',
   ALTA_MEDICA: '🎉',
+  ARCHIVO: '🗄️',
   VERIFICACION: '✅',
   CUENTAS: '🏢',
   MODERACION: '⚑',
@@ -49,6 +52,7 @@ export class NotificacionesComponent implements OnInit {
   readonly carga = new EstadoCarga();
   readonly perfilCarga = new EstadoCarga();
   readonly guardandoPreferencia = signal(false);
+  readonly skeletonNotifications = [1, 2, 3, 4];
   readonly filtroActivo = signal<FiltroNotificaciones>('todas');
   readonly notificaciones = signal<Notificacion[]>([]);
   readonly notificacionesFiltradas = computed(() =>
@@ -165,7 +169,7 @@ export class NotificacionesComponent implements OnInit {
         return lista.filter((notificacion) => notificacion.tipo === 'RECORDATORIO');
       case 'cuentas':
         return lista.filter((notificacion) =>
-          ['VERIFICACION', 'CUENTAS'].includes(notificacion.tipo),
+          ['VERIFICACION', 'SOLICITUD_REVISION', 'CUENTAS'].includes(notificacion.tipo),
         );
       case 'moderacion':
         return lista.filter((notificacion) => {
@@ -230,6 +234,6 @@ export class NotificacionesComponent implements OnInit {
   }
 
   goBack(): void {
-    void this.router.navigate(['/']);
+    void this.router.navigate(['/home']);
   }
 }

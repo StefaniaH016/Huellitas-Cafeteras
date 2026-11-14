@@ -69,8 +69,9 @@ public class AporteServiceImpl implements AporteService {
                 .orElseThrow(() -> new ResourceNotFoundException("Caso", casoId));
 
         if (caso.getEstado() != EstadoCaso.REGISTRADO && caso.getEstado() != EstadoCaso.EN_ATENCION) {
-            throw new ConflictException("No se pueden agregar aportes a un caso " + caso.getEstado().name().toLowerCase() 
-                    + ". Los casos archivados o resueltos son de solo lectura.");
+            throw new ConflictException("No se pueden agregar aportes a un caso "
+                    + caso.getEstado().name().toLowerCase()
+                    + ". Los casos cerrados o archivados son de solo lectura.");
         }
 
         Usuario autor = usuarioRepository.findByCorreo(correoUsuario.trim().toLowerCase())

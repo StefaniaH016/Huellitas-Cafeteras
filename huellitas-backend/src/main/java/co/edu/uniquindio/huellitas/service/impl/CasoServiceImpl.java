@@ -512,6 +512,8 @@ public class CasoServiceImpl implements CasoService {
                 .build();
         seguimientoRepository.save(seguimiento);
 
+        notificacionWorker.notificarArchivadoCaso(caso, dto.motivo());
+
         return casoMapper.toResponseDTO(caso);
     }
 
@@ -737,6 +739,8 @@ public class CasoServiceImpl implements CasoService {
                     .visible(true)
                     .build();
             seguimientoRepository.save(seguimiento);
+
+            notificacionWorker.notificarLiberacionCustodia(caso, motivo);
 
         } else {
             throw new IllegalArgumentException("Acción inválida. Use ASUMIR o LIBERAR");
