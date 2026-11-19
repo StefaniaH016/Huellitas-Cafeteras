@@ -11,6 +11,7 @@ import co.edu.uniquindio.huellitas.entity.enums.EstadoCaso;
 import co.edu.uniquindio.huellitas.entity.enums.Rol;
 import co.edu.uniquindio.huellitas.entity.enums.TipoNotificacion;
 import co.edu.uniquindio.huellitas.entity.enums.Urgencia;
+import co.edu.uniquindio.huellitas.repository.CasoRepository;
 import co.edu.uniquindio.huellitas.repository.MunicipioRepository;
 import co.edu.uniquindio.huellitas.repository.NotificacionRepository;
 import co.edu.uniquindio.huellitas.repository.UsuarioRepository;
@@ -42,6 +43,7 @@ import java.util.List;
 public class NotificacionWorker {
 
     private final NotificacionRepository notificacionRepository;
+    private final CasoRepository casoRepository;
     private final UsuarioRepository usuarioRepository;
     private final MunicipioRepository municipioRepository;
     private final EmailService emailService;
@@ -161,14 +163,10 @@ public class NotificacionWorker {
 
         @Async
         @Transactional
-        public void notificarSolicitudRevisionOrganizacion(Usuario contacto, String nombreOrganizacion) {
-        if (contacto == null) return;
-
-        String mensajeContacto = String.format(
-            "Recibimos la solicitud de revisión de %s. Te avisaremos cuando sea resuelta.",
-            nombreOrganizacion
-        );
-        guardar(contacto, null, TipoNotificacion.SOLICITUD_REVISION, mensajeContacto);
+        public void notificarSolicitudRevisionOrganizacion(Long contactoId, String nombreOrganizacion) {
+        Usuario contacto = usuarioRepository.findById(contactoId)
+                .orElseThrow(() -> new IllegalStateException(
+                        "No se encontró el usuario que solicitó la revisión: " + contactoId));
 
         String mensajeAdmin = String.format(
             "Nueva solicitud de revisión para %s, enviada por %s.",
@@ -227,14 +225,17 @@ public class NotificacionWorker {
 
     @Async
     @Transactional
-    public void notificarOcultamientoCaso(Caso caso, String motivo) {
-        if (caso == null || caso.getReportante() == null) return;
+    public void notificarOcultamientoCaso(Long casoId, Long reportanteId, String motivo) {
+        Usuario reportante = usuarioRepository.findById(reportanteId)
+                .orElseThrow(() -> new IllegalStateException(
+                        "No se encontró el reportante del caso: " + reportanteId));
+        Caso caso = casoRepository.getReferenceById(casoId);
 
         String mensaje = String.format(
                 "Tu caso #%d fue ocultado del listado público durante una revisión de moderación. Motivo: %s",
                 caso.getId(), motivo
         );
-        guardar(caso.getReportante(), caso, TipoNotificacion.MODERACION, mensaje);
+        guardar(reportante, caso, TipoNotificacion.MODERACION, mensaje);
     }
 
     /**
@@ -325,11 +326,7 @@ public class NotificacionWorker {
         Caso caso = bitacora.getCaso();
         Long firmanteId = firmante != null ? firmante.getId() : null;
 
-        String diagnostico = (evolucion != null && evolucion.getDiagnostico() != null)
-                ? (evolucion.getDiagnostico().length() > 50
-                    ? evolucion.getDiagnostico().substring(0, 50) + "..."
-                    : evolucion.getDiagnostico())
-                : "Nueva evolución clínica";
+        String diagnostico = obtenerDiagnostico(evolucion);
 
         String mensajeReportante = String.format(
                 "🩺 Nueva evolución médica registrada en tu caso #%d: %s",
@@ -385,6 +382,18 @@ public class NotificacionWorker {
     }
 
     // ── helper interno ────────────────────────────────────────────
+
+    private String obtenerDiagnostico(RegistroMedico evolucion) {
+        if (evolucion == null || evolucion.getDiagnostico() == null) {
+            return "Nueva evolución clínica";
+        }
+
+        String diagnostico = evolucion.getDiagnostico();
+        if (diagnostico.length() > 50) {
+            return diagnostico.substring(0, 50) + "...";
+        }
+        return diagnostico;
+    }
 
     private void guardar(Usuario destinatario, Caso caso, TipoNotificacion tipo, String mensaje) {
         try {

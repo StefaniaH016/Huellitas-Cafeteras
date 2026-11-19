@@ -54,10 +54,16 @@ main {
   flex-direction: column;
   gap: 0.2rem;
   padding: 1.1rem 1.4rem;
+  width: 100%;
   color: inherit;
+  font: inherit;
+  text-align: left;
   text-decoration: none;
+  background: transparent;
+  border: 0;
   border-right: 1px solid var(--line);
   transition: background 0.12s ease;
+  cursor: pointer;
 }
 
 .figure:last-child {
@@ -150,6 +156,9 @@ progress::-moz-progress-bar {
   flex-wrap: wrap;
   justify-content: flex-start;
   min-width: 0;
+  position: sticky;
+  right: 0;
+  top: auto;
 }
 
 #custodia .form-field {

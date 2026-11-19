@@ -213,7 +213,7 @@
             <p class="feedback-error" role="alert">{{ errorAccion() }}</p>
           }
           @if (mensajeAccion()) {
-            <p class="feedback-success" role="status">{{ mensajeAccion() }}</p>
+            <output class="feedback-success">{{ mensajeAccion() }}</output>
           }
 
           <!-- CIUDADANO: Reportante -->
@@ -330,6 +330,48 @@
               </button>
               <p class="note">El caso pasará a En atención.</p>
             }
+            <!-- En custodia: Liberar custodia -->
+            @if (puedeLiberarCustodia()) {
+              <button
+                class="btn btn-secondary btn-block"
+                type="button"
+                (click)="iniciarLiberacionCustodia()"
+                [disabled]="liberandoCustodia()"
+              >
+                {{ liberandoCustodia() ? 'Liberando...' : 'Liberar custodia' }}
+              </button>
+              <p class="note">Libera el caso para que otros puedan asumir su custodia.</p>
+              @if (mostrandoLiberacion()) {
+                <form class="form-field" (ngSubmit)="liberarCustodia()">
+                  <label for="motivo-liberacion">Motivo de la liberación</label>
+                  <textarea
+                    id="motivo-liberacion"
+                    name="motivoLiberacion"
+                    [(ngModel)]="motivoLiberacion"
+                    required
+                    maxlength="500"
+                    placeholder="Explica por qué liberas la custodia"
+                  ></textarea>
+                  <div class="step-actions">
+                    <button
+                      class="btn btn-primary"
+                      type="submit"
+                      [disabled]="liberandoCustodia() || !motivoLiberacion.trim()"
+                    >
+                      Confirmar liberación
+                    </button>
+                    <button
+                      class="btn btn-secondary"
+                      type="button"
+                      [disabled]="liberandoCustodia()"
+                      (click)="cancelarLiberacionCustodia()"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </form>
+              }
+            }
             <!-- Extraviado: Sin acciones (reportante cierra) -->
             @if (caso()?.tipo === 'EXTRAVIADO') {
               <p class="note">
@@ -361,8 +403,8 @@
                 {{ tomandoAtencion() ? 'Tomando...' : 'Tomar atención médica' }}
               </button>
               <p class="note">
-                El caso debe estar en atención. Al abrir la bitácora quedas como veterinaria
-                responsable.
+                Al abrir la bitácora quedas como veterinaria responsable. El caso pasará a En
+                atención si está en Registrado.
               </p>
             }
             <!-- Bitácora: Registrar evolución -->
@@ -417,10 +459,10 @@
               <p class="feedback-error" role="alert">{{ errorModeracion() }}</p>
             }
             @if (mensajeModeracion()) {
-              <p class="feedback-success" role="status">{{ mensajeModeracion() }}</p>
+              <output class="feedback-success">{{ mensajeModeracion() }}</output>
             }
             @if (cargandoModeracion()) {
-              <p class="panel-message" role="status">Cargando estado de moderación...</p>
+              <output class="panel-message">Cargando estado de moderación...</output>
             } @else if (!errorModeracion()) {
               @if (moderacionFinalizada()) {
                 <p class="note">La decisión de moderación quedó registrada.</p>
@@ -434,18 +476,33 @@
                     required
                   >
                     <option value="" disabled>Selecciona un motivo</option>
-                    <option value="Duplicado de otro reporte">Duplicado de otro reporte</option>
-                    <option value="Contenido inapropiado">Contenido inapropiado</option>
-                    <option value="Información posiblemente falsa">
-                      Información posiblemente falsa
-                    </option>
+                    @for (motivo of motivosModeracion; track motivo) {
+                      <option [value]="motivo">{{ motivo }}</option>
+                    }
                   </select>
                 </div>
+                @if (motivoMarcaModeracion === 'Otro motivo') {
+                  <div class="form-field">
+                    <label for="mod-motivo-marcar-otro">Describe el motivo</label>
+                    <textarea
+                      id="mod-motivo-marcar-otro"
+                      [(ngModel)]="detalleMotivoMarcaModeracion"
+                      name="detalleMotivoMarcaModeracion"
+                      rows="3"
+                      required
+                    ></textarea>
+                  </div>
+                }
                 <button
                   class="btn btn-primary btn-block"
                   type="button"
                   (click)="marcarParaModeracion()"
-                  [disabled]="moderacionEnCurso() || !motivoMarcaModeracion"
+                  [disabled]="
+                    moderacionEnCurso() ||
+                    !motivoMarcaModeracion ||
+                    (motivoMarcaModeracion === 'Otro motivo' &&
+                      !detalleMotivoMarcaModeracion.trim())
+                  "
                 >
                   {{ moderacionEnCurso() ? 'Marcando...' : 'Marcar para moderación' }}
                 </button>
@@ -462,18 +519,33 @@
                     name="motivoDecisionModeracion"
                     required
                   >
-                    <option value="Duplicado de otro reporte">Duplicado de otro reporte</option>
-                    <option value="Contenido inapropiado">Contenido inapropiado</option>
-                    <option value="Información posiblemente falsa">
-                      Información posiblemente falsa
-                    </option>
+                    @for (motivo of motivosModeracion; track motivo) {
+                      <option [value]="motivo">{{ motivo }}</option>
+                    }
                   </select>
                 </div>
+                @if (motivoDecisionModeracion === 'Otro motivo') {
+                  <div class="form-field">
+                    <label for="mod-motivo-decision-otro">Describe el motivo de la decisión</label>
+                    <textarea
+                      id="mod-motivo-decision-otro"
+                      [(ngModel)]="detalleMotivoDecisionModeracion"
+                      name="detalleMotivoDecisionModeracion"
+                      rows="3"
+                      required
+                    ></textarea>
+                  </div>
+                }
                 <button
                   class="btn btn-secondary btn-block mb-sm"
                   type="button"
                   (click)="resolverModeracion('MANTENER')"
-                  [disabled]="moderacionEnCurso() || !motivoDecisionModeracion"
+                  [disabled]="
+                    moderacionEnCurso() ||
+                    !motivoDecisionModeracion ||
+                    (motivoDecisionModeracion === 'Otro motivo' &&
+                      !detalleMotivoDecisionModeracion.trim())
+                  "
                 >
                   Mantener publicado
                 </button>
@@ -481,7 +553,12 @@
                   class="btn btn-primary btn-block"
                   type="button"
                   (click)="resolverModeracion('OCULTAR')"
-                  [disabled]="moderacionEnCurso() || !motivoDecisionModeracion"
+                  [disabled]="
+                    moderacionEnCurso() ||
+                    !motivoDecisionModeracion ||
+                    (motivoDecisionModeracion === 'Otro motivo' &&
+                      !detalleMotivoDecisionModeracion.trim())
+                  "
                 >
                   Ocultar del feed
                 </button>

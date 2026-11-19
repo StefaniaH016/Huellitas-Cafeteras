@@ -740,4 +740,19 @@ class CasoServiceTest {
         verify(notificacionWorker).notificarCasoUrgente(any(Caso.class));
         verify(notificacionWorker).notificarEmergenciaARescuatistas(any(Caso.class));
     }
+
+    @Test
+    @DisplayName("No debe mostrar al reportante los casos ocultos")
+    void misReportesSoloIncluyeCasosVisibles() {
+        var pageable = org.springframework.data.domain.PageRequest.of(0, 10);
+        when(casoRepository.findByReportanteCorreoAndVisibleTrueOrderByFechaRegistroDesc(
+                "usuario@test.com", pageable))
+                .thenReturn(org.springframework.data.domain.Page.empty(pageable));
+
+        var reportes = casoService.misReportes("  USUARIO@TEST.COM ", pageable);
+
+        assertTrue(reportes.isEmpty());
+        verify(casoRepository).findByReportanteCorreoAndVisibleTrueOrderByFechaRegistroDesc(
+                "usuario@test.com", pageable);
+    }
 }

@@ -19,7 +19,7 @@
   </section>
 
   <section class="dash-figures" aria-label="Resumen de tu fundación">
-    <a href="#custodia" class="figure">
+    <button type="button" class="figure" (click)="scrollToSection('custodia')">
       <span class="figure-num">{{ fundacionStats().enCustodia }}</span>
       <span class="figure-label">En custodia, de {{ capacidadAlbergue() }} cupos</span>
       <progress
@@ -30,15 +30,15 @@
       >
         {{ fundacionStats().enCustodia }} de {{ capacidadAlbergue() }}
       </progress>
-    </a>
-    <a href="#zona" class="figure">
+    </button>
+    <button type="button" class="figure" (click)="scrollToSection('zona')">
       <span class="figure-num">{{ fundacionStats().casosSinCustodia }}</span>
       <span class="figure-label">Casos sin custodia en tu municipio</span>
-    </a>
-    <a href="#custodia" class="figure">
+    </button>
+    <button type="button" class="figure" (click)="scrollToSection('custodia')">
       <span class="figure-num">{{ cuposDisponibles() }}</span>
       <span class="figure-label">Cupos disponibles</span>
-    </a>
+    </button>
   </section>
 
   <div class="dash-grid">
@@ -90,6 +90,14 @@
     <section class="panel" id="custodia">
       <div class="panel-head">
         <h3>En custodia</h3>
+        <button
+          class="btn btn-secondary btn-sm"
+          type="button"
+          [disabled]="cargando()"
+          (click)="cargarDatos()"
+        >
+          {{ cargando() ? 'Actualizando...' : 'Actualizar' }}
+        </button>
       </div>
       @if (cargando()) {
         <p class="list-empty">Cargando casos...</p>
@@ -109,16 +117,21 @@
               </p>
               <p class="list-meta">{{ animal.municipio }} · {{ animal.estado }}</p>
             </div>
-            <span class="badge badge-atencion">
+            <span class="badge" [ngClass]="getEstadoBadgeClass(animal.estado)">
               <span class="badge-dot"></span>
-              En atención
+              {{ getEstadoLabel(animal.estado) }}
             </span>
             <div class="list-actions">
               <button
                 class="btn btn-secondary btn-sm"
                 type="button"
-                disabled
-                title="El cierre de casos por fundaciones permanece bloqueado."
+                [disabled]="custodiaEnCursoId() !== null || esCasoFinalizado(animal)"
+                [title]="
+                  esCasoFinalizado(animal)
+                    ? 'El caso ya está cerrado.'
+                    : 'Registrar el resultado del caso.'
+                "
+                (click)="cerrarDesdePanel(animal.id)"
               >
                 Cerrar caso
               </button>
@@ -178,7 +191,7 @@
       }
       <p class="note">
         Al llegar a {{ capacidadAlbergue() }} animales en custodia no podrás asumir más casos hasta
-        liberar cupos. El cierre de casos está bloqueado para las fundaciones.
+        liberar cupos. Para cerrar un caso, registra su resultado desde el detalle.
       </p>
     </section>
   </div>

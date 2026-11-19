@@ -241,6 +241,12 @@ progress::-moz-progress-bar {
   font-weight: 700;
 }
 
+.panel-divider {
+  height: 1px;
+  background: var(--line);
+  margin: 1.4rem 0;
+}
+
 .panel-link {
   color: var(--pine-700);
   font-size: 0.82rem;
@@ -456,7 +462,29 @@ progress::-moz-progress-bar {
     grid-template-columns: 1fr;
   }
 
+  .tabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.35rem 0.65rem;
+  }
+
+  .tab {
+    min-width: 0;
+    padding: 0.55rem 0.25rem;
+    line-height: 1.25;
+  }
+
   .list-row {
     flex-wrap: wrap;
+  }
+
+  .list-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .list-actions > .btn {
+    flex: 1 1 7rem;
+    min-width: 0;
   }
 }

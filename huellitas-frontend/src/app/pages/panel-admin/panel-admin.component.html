@@ -248,6 +248,46 @@
           </button>
         </div>
       }
+
+      <!-- Subsección: Casos ocultos -->
+      <div class="panel-divider"></div>
+      <div class="panel-head">
+        <h3>Casos ocultos</h3>
+        <span class="panel-count">{{ casosOcultos().length }}</span>
+      </div>
+      @if (casosOcultos().length === 0) {
+        <p class="list-empty">No hay casos ocultos.</p>
+      } @else {
+        @for (caso of casosOcultos(); track caso.id) {
+          <div class="list-row">
+            <app-caso-miniatura
+              [fotoPrincipal]="caso.fotoPrincipal"
+              [foto]="caso.foto"
+              [alt]="'Foto principal de ' + (caso.titulo || caso.descripcion)"
+            />
+            <div class="list-info">
+              <p class="list-title">{{ caso.titulo || caso.descripcion }} · Caso #{{ caso.id }}</p>
+              <p class="list-meta">{{ caso.estado }} · {{ caso.municipio }} · {{ caso.barrio }}</p>
+            </div>
+            <span class="badge" [ngClass]="getBadgeClass(caso.urgencia)">
+              <span class="badge-dot"></span>{{ getBadgeLabel(caso.urgencia) }}
+            </span>
+            <div class="list-actions">
+              <a class="btn btn-secondary btn-sm" [routerLink]="['/caso-detalle', caso.id]">
+                Ver caso
+              </a>
+              <button
+                class="btn btn-primary btn-sm"
+                type="button"
+                [disabled]="accionEnCurso() === caso.id"
+                (click)="restaurarCaso(caso.id)"
+              >
+                {{ accionEnCurso() === caso.id ? 'Restaurando...' : 'Mantener publicado' }}
+              </button>
+            </div>
+          </div>
+        }
+      }
     </section>
   </div>
 </main>

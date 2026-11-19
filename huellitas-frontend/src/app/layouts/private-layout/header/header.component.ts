@@ -30,7 +30,7 @@ export class HeaderComponent implements OnInit {
 
   private fullName = computed(() => {
     const p = this.payload();
-    const name = p?.['nombre'] ?? p?.['name'] ?? p?.['sub'];
+    const name = this.authService.getNombre() ?? p?.['name'] ?? p?.['sub'];
     return typeof name === 'string' && name.trim() ? name.trim() : 'Usuario';
   });
 
@@ -56,7 +56,7 @@ export class HeaderComponent implements OnInit {
 
   ngOnInit(): void {
     this.notificacionService.actualizarContador();
-    interval(60_000)
+    interval(this.isAdmin() ? 10_000 : 60_000)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.notificacionService.actualizarContador());
     this.router.events

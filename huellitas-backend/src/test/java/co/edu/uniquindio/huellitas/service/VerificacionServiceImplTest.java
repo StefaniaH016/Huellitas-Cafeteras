@@ -147,10 +147,9 @@ class VerificacionServiceImplTest {
         when(usuarioRepository.findById(2L)).thenReturn(java.util.Optional.of(contacto));
         when(usuarioRepository.findByCorreo("admin@test.com")).thenReturn(java.util.Optional.of(admin));
 
-        assertThrows(ConflictException.class, () -> verificacionService.resolverVerificacion(
-                2L,
-                new DecisionVerificacionDTO("APROBAR", null),
-                "admin@test.com"));
+        DecisionVerificacionDTO decision = new DecisionVerificacionDTO("APROBAR", null);
+        assertThrows(ConflictException.class,
+                () -> verificacionService.resolverVerificacion(2L, decision, "admin@test.com"));
 
         verifyNoInteractions(organizacionRepository, notificacionWorker);
     }
@@ -164,10 +163,9 @@ class VerificacionServiceImplTest {
                                 .build();
                 when(usuarioRepository.findById(1L)).thenReturn(java.util.Optional.of(admin));
 
-                assertThrows(ConflictException.class, () -> verificacionService.resolverVerificacion(
-                                1L,
-                                new DecisionVerificacionDTO("APROBAR", null),
-                                "admin@test.com"));
+                DecisionVerificacionDTO decision = new DecisionVerificacionDTO("APROBAR", null);
+                assertThrows(ConflictException.class,
+                                () -> verificacionService.resolverVerificacion(1L, decision, "admin@test.com"));
 
                 verify(usuarioRepository, never()).save(admin);
                 verifyNoInteractions(organizacionRepository, notificacionWorker);
@@ -210,7 +208,8 @@ class VerificacionServiceImplTest {
                 .isEqualTo("%PDF-1.7 soporte".getBytes(java.nio.charset.StandardCharsets.UTF_8));
         verify(organizacionRepository).save(fundacion);
         verify(usuarioRepository).save(contacto);
-        verify(notificacionWorker).notificarSolicitudRevisionOrganizacion(contacto, "Fundación Huellitas");
+        verify(notificacionWorker).notificarSolicitudRevisionOrganizacion(
+                contacto.getId(), "Fundación Huellitas");
     }
 
     @Test

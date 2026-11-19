@@ -17,6 +17,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -65,7 +66,32 @@ class ModeracionServiceTest {
         assertFalse(caso.isModeracionPendiente());
         assertEquals("Contenido duplicado", caso.getMotivoModeracion());
         verify(casoRepository).save(caso);
-        verify(notificacionWorker).notificarOcultamientoCaso(caso, "Contenido duplicado");
+        verify(notificacionWorker).notificarOcultamientoCaso(
+            caso.getId(), reportante.getId(), "Contenido duplicado");
+    }
+
+    @Test
+    void marcaCasoComoPendienteYGuardaElMotivoAntesDeLaDecision() {
+        when(casoRepository.findById(5L)).thenReturn(Optional.of(caso));
+        when(casoRepository.save(caso)).thenReturn(caso);
+
+        moderacionService.marcarCasoParaModeracion(5L, "  Contenido inapropiado  ");
+
+        assertTrue(caso.isModeracionPendiente());
+        assertEquals("Contenido inapropiado", caso.getMotivoModeracion());
+        verify(casoRepository).save(caso);
+        verifyNoInteractions(notificacionWorker);
+    }
+
+    @Test
+    void listarModeracionIncluyePendientesPeroNoCasosYaOcultos() {
+        when(casoRepository.findByModeracionPendienteTrue()).thenReturn(List.of(caso));
+
+        var pendientes = moderacionService.listarCasosReportados();
+
+        assertEquals(1, pendientes.size());
+        assertEquals("PENDIENTE", pendientes.get(0).estadoRevision());
+        verify(casoRepository).findByModeracionPendienteTrue();
     }
 
     @Test

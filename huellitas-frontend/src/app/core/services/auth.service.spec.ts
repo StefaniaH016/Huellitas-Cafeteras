@@ -200,3 +200,14 @@ it('navigates to home after login and reads the name from the token', () => {
   expect(router.navigate).toHaveBeenCalledWith(['/home']);
   expect(service.getNombre()).toBe('Luna');
 });
+
+it('uses an updated profile name immediately and clears it on logout', () => {
+  tokenService.decodePayload.mockReturnValue({ nombre: 'Nombre anterior' });
+
+  service.actualizarNombreUsuario('Nombre actualizado');
+  expect(service.getNombre()).toBe('Nombre actualizado');
+
+  service.logout();
+  tokenService.decodePayload.mockReturnValue(null);
+  expect(service.getNombre()).toBeNull();
+});
