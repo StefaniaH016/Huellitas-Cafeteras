@@ -21,6 +21,7 @@ import co.edu.uniquindio.huellitas.repository.UsuarioRepository;
 import co.edu.uniquindio.huellitas.security.JwtUtils;
 import co.edu.uniquindio.huellitas.service.AuthService;
 import co.edu.uniquindio.huellitas.util.DocumentoSoporteUtils;
+import co.edu.uniquindio.huellitas.worker.NotificacionWorker;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -48,6 +49,7 @@ public class AuthServiceImpl implements AuthService {
     private final JwtUtils jwtUtils;
     private final UserDetailsService userDetailsService;
     private final UsuarioMapper usuarioMapper;
+    private final NotificacionWorker notificacionWorker;
 
     @Override
     public RegistroResponseDTO registro(RegistroUsuarioDTO dto) {
@@ -107,6 +109,11 @@ public class AuthServiceImpl implements AuthService {
                 .build();
 
         Usuario guardado = usuarioRepository.save(usuario);
+
+        // Notificar a admins cuando se registra una cuenta institucional
+        if (cuentaInstitucional && organizacion != null) {
+            notificacionWorker.notificarSolicitudRevisionOrganizacion(guardado.getId(), organizacion.getNombre());
+        }
 
         return usuarioMapper.toRegistroResponseDTO(guardado);
     }
