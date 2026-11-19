@@ -21,7 +21,10 @@ function configureCuentaTest(usuario: unknown, verificacion: unknown): void {
     imports: [CuentaComponent],
     providers: [
       { provide: UsuarioService, useValue: usuario },
-      { provide: AuthService, useValue: { logout: vi.fn() } },
+      {
+        provide: AuthService,
+        useValue: { logout: vi.fn(), actualizarNombreUsuario: vi.fn() },
+      },
       { provide: VerificacionService, useValue: verificacion },
       UBICACION_VACIA,
     ],
@@ -39,7 +42,10 @@ it('loads the profile and saves the changes', () => {
     imports: [CuentaComponent],
     providers: [
       { provide: UsuarioService, useValue: usuario },
-      { provide: AuthService, useValue: { logout: vi.fn() } },
+      {
+        provide: AuthService,
+        useValue: { logout: vi.fn(), actualizarNombreUsuario: vi.fn() },
+      },
       {
         provide: VerificacionService,
         useValue: { solicitarRevision: vi.fn().mockReturnValue(of({ estado: 'PENDIENTE' })) },
@@ -64,8 +70,36 @@ it('loads the profile and saves the changes', () => {
     disponibleRescate: true,
   });
   expect(component.perfil()?.nombre).toBe('Juli');
+  expect(TestBed.inject(AuthService).actualizarNombreUsuario).toHaveBeenCalledWith('Juli');
   expect(component.perfil()?.disponibleRescate).toBe(true);
   expect(component.guardado.exito()).toContain('guardados');
+});
+
+it('omits the unimplemented password action and logs out from the account page', () => {
+  const auth = {
+    logout: vi.fn(),
+    actualizarNombreUsuario: vi.fn(),
+  };
+  TestBed.configureTestingModule({
+    imports: [CuentaComponent],
+    providers: [
+      { provide: UsuarioService, useValue: { getMiPerfil: vi.fn().mockReturnValue(of(perfil)) } },
+      { provide: AuthService, useValue: auth },
+      { provide: VerificacionService, useValue: { solicitarRevision: vi.fn() } },
+      UBICACION_VACIA,
+    ],
+  });
+  const fixture = TestBed.createComponent(CuentaComponent);
+  fixture.detectChanges();
+
+  expect(fixture.nativeElement.textContent).not.toContain('Cambiar contraseña');
+  const logoutButton = fixture.nativeElement.querySelector(
+    '.row-gap-md button',
+  ) as HTMLButtonElement;
+  expect(logoutButton.textContent.trim()).toBe('Cerrar sesión');
+  logoutButton.click();
+
+  expect(auth.logout).toHaveBeenCalledOnce();
 });
 
 it('allows an institutional account to request a new review with support', () => {
@@ -96,7 +130,7 @@ it('allows an institutional account to request a new review with support', () =>
 
   expect(verificacion.solicitarRevision).toHaveBeenCalledWith(documento, undefined);
   expect(component.perfil()?.estadoVerificacionOrganizacion).toBe('PENDIENTE');
-  expect(component.mensajeSolicitud()).toContain('enviada');
+  expect(component.mensajeSolicitud()).toContain('se envió correctamente');
 });
 
 it('collects organization data when an institutional account has no organization association', () => {

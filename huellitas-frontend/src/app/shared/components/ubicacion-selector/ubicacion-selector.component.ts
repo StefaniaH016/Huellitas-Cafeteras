@@ -1,5 +1,6 @@
 import {
   Component,
+  ChangeDetectorRef,
   Input,
   Output,
   EventEmitter,
@@ -28,6 +29,7 @@ import {
 })
 export class UbicacionSelectorComponent implements OnInit, OnChanges {
   private ubicacionService = inject(UbicacionService);
+  private changeDetectorRef = inject(ChangeDetectorRef);
 
   @Input() deptoId: number | null = null;
   @Input() munId: number | null = null;
@@ -49,8 +51,18 @@ export class UbicacionSelectorComponent implements OnInit, OnChanges {
   municipios: Municipio[] = [];
   barrios: Barrio[] = [];
 
-  loading = false;
-  error: string | null = null;
+  cargandoDepartamentos = false;
+  cargandoMunicipios = false;
+  cargandoBarrios = false;
+  errorDepartamentos: string | null = null;
+  errorMunicipios: string | null = null;
+  errorBarrios: string | null = null;
+
+  private readonly solicitudes = { departamentos: 0, municipios: 0, barrios: 0 };
+
+  get loading(): boolean {
+    return this.cargandoDepartamentos || this.cargandoMunicipios || this.cargandoBarrios;
+  }
 
   ngOnInit(): void {
     this.loadDepartamentos();
@@ -71,11 +83,15 @@ export class UbicacionSelectorComponent implements OnInit, OnChanges {
     if (changes['deptoId'] && !changes['deptoId'].firstChange) {
       const deptoId = changes['deptoId'].currentValue as number | null;
       this.selectedDeptoId.set(deptoId);
+      this.municipios = [];
+      this.barrios = [];
+      this.invalidarSolicitud('municipios');
+      this.invalidarSolicitud('barrios');
       if (deptoId) {
         this.loadMunicipios(deptoId);
       } else {
-        this.municipios = [];
-        this.barrios = [];
+        this.selectedMunId.set(null);
+        this.selectedBarrioId.set(null);
       }
     }
     if (changes['munId'] && !changes['munId'].firstChange) {
@@ -85,6 +101,7 @@ export class UbicacionSelectorComponent implements OnInit, OnChanges {
         this.loadBarrios(munId);
       } else {
         this.barrios = [];
+        this.invalidarSolicitud('barrios');
       }
     }
     if (changes['barrioId'] && !changes['barrioId'].firstChange) {
@@ -110,20 +127,59 @@ export class UbicacionSelectorComponent implements OnInit, OnChanges {
     });
   }
 
-  private cargar<T>(fuente: Observable<T[]>, nivel: string, asignar: (data: T[]) => void): void {
-    this.loading = true;
-    this.error = null;
+  private cargar<T>(
+    fuente: Observable<T[]>,
+    nivel: 'departamentos' | 'municipios' | 'barrios',
+    asignar: (data: T[]) => void,
+  ): void {
+    const solicitud = ++this.solicitudes[nivel];
+    this.setCargando(nivel, true);
+    this.setError(nivel, null);
     fuente.subscribe({
       next: (data) => {
+        if (solicitud !== this.solicitudes[nivel]) {
+          return;
+        }
         asignar(data);
-        this.loading = false;
+        this.setCargando(nivel, false);
+        this.changeDetectorRef.markForCheck();
       },
       error: (err: unknown) => {
+        if (solicitud !== this.solicitudes[nivel]) {
+          return;
+        }
         console.error(`Error loading ${nivel}:`, err);
-        this.error = `Error al cargar ${nivel}`;
-        this.loading = false;
+        this.setError(nivel, `Error al cargar ${nivel}`);
+        this.setCargando(nivel, false);
+        this.changeDetectorRef.markForCheck();
       },
     });
+  }
+
+  private invalidarSolicitud(nivel: 'municipios' | 'barrios'): void {
+    this.solicitudes[nivel]++;
+    this.setCargando(nivel, false);
+    this.setError(nivel, null);
+  }
+
+  private setCargando(nivel: 'departamentos' | 'municipios' | 'barrios', cargando: boolean): void {
+    if (nivel === 'departamentos') {
+      this.cargandoDepartamentos = cargando;
+    } else if (nivel === 'municipios') {
+      this.cargandoMunicipios = cargando;
+    } else {
+      this.cargandoBarrios = cargando;
+    }
+  }
+
+  private setError(nivel: 'departamentos' | 'municipios' | 'barrios', error: string | null): void {
+    if (nivel === 'departamentos') {
+      this.errorDepartamentos = error;
+    } else if (nivel === 'municipios') {
+      this.errorMunicipios = error;
+    } else {
+      this.errorBarrios = error;
+    }
   }
 
   onDeptoChange(deptoId: string): void {
@@ -133,6 +189,8 @@ export class UbicacionSelectorComponent implements OnInit, OnChanges {
 
     this.municipios = [];
     this.barrios = [];
+    this.invalidarSolicitud('municipios');
+    this.invalidarSolicitud('barrios');
     this.selectedMunId.set(null);
     this.selectedBarrioId.set(null);
     this.munChange.emit(null);
@@ -149,6 +207,7 @@ export class UbicacionSelectorComponent implements OnInit, OnChanges {
     this.munChange.emit(id);
 
     this.barrios = [];
+    this.invalidarSolicitud('barrios');
     this.selectedBarrioId.set(null);
     this.barrioChange.emit(null);
 
@@ -161,5 +220,19 @@ export class UbicacionSelectorComponent implements OnInit, OnChanges {
     const id = barrioId ? Number(barrioId) : null;
     this.selectedBarrioId.set(id);
     this.barrioChange.emit(id);
+  }
+
+  reintentarMunicipios(): void {
+    const departamentoId = this.selectedDeptoId();
+    if (departamentoId !== null) {
+      this.loadMunicipios(departamentoId);
+    }
+  }
+
+  reintentarBarrios(): void {
+    const municipioId = this.selectedMunId();
+    if (municipioId !== null) {
+      this.loadBarrios(municipioId);
+    }
   }
 }

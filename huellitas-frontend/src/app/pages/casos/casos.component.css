@@ -414,3 +414,33 @@ app-ubicacion-selector {
     grid-column: 1 / -1;
   }
 }
+
+@media (max-width: 760px) {
+  .dash-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.75rem;
+  }
+
+  .main-area {
+    grid-column: 1 / -1;
+  }
+
+  .filter-options,
+  .location-filter .filter-options {
+    position: static;
+    width: auto;
+    min-width: 0;
+    max-width: none;
+    margin-top: 0.4rem;
+    box-shadow: none;
+  }
+
+  .filters-bar > .btn {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .main-area {
+    grid-column: 1 / -1;
+  }
+}

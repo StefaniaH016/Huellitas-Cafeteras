@@ -2,6 +2,7 @@ package co.edu.uniquindio.huellitas.controller;
 
 import co.edu.uniquindio.huellitas.dto.moderacion.CasoModeracionDTO;
 import co.edu.uniquindio.huellitas.dto.moderacion.DecisionModeracionDTO;
+import co.edu.uniquindio.huellitas.dto.moderacion.MarcarCasoModeracionDTO;
 import co.edu.uniquindio.huellitas.dto.moderacion.ModeracionResponseDTO;
 import co.edu.uniquindio.huellitas.dto.moderacion.OcultarAporteDTO;
 import co.edu.uniquindio.huellitas.service.ModeracionService;
@@ -26,6 +27,15 @@ public class ModeracionController {
     @PreAuthorize("hasRole('ADMINISTRADOR')")
     public ResponseEntity<List<CasoModeracionDTO>> listarCasosReportados() {
         return ResponseEntity.ok(moderacionService.listarCasosReportados());
+    }
+
+    @PatchMapping("/casos/{id}/marcar")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    public ResponseEntity<Void> marcarCasoParaModeracion(
+            @PathVariable Long id,
+            @Valid @RequestBody MarcarCasoModeracionDTO dto) {
+        moderacionService.marcarCasoParaModeracion(id, dto.motivo());
+        return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/casos/{id}")

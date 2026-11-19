@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable } from 'rxjs';
@@ -10,9 +10,11 @@ import { normalizeRole } from '../utils/role.utils';
 interface LoginResponse {
   token: string;
   usuario?: {
+    nombre?: string;
     rol?: string;
     role?: string;
   };
+  nombre?: string;
   rol?: string;
   role?: string;
 }
@@ -32,29 +34,48 @@ export class AuthService {
   private tokenService = inject(TokenService);
   private router = inject(Router);
   private readonly rolKey = 'hc_rol';
+  private readonly nombreUsuario = signal<string | null>(null);
 
   login(email: string, password: string): Observable<string> {
     const body = { correo: email, contrasena: password };
-    return this.httpClient.post<LoginResponse>(`${environment.apiUrl}/auth/login`, body).pipe(
-      map((response) => {
-        this.tokenService.setToken(response.token);
-        const rol =
-          response.usuario?.rol ??
-          response.usuario?.role ??
-          response.rol ??
-          response.role ??
-          this.tokenService.decodePayload()?.['rol'] ??
-          null;
-        if (rol) {
-          localStorage.setItem(this.rolKey, rol as string);
-        }
-        return rol as string;
-      }),
-    );
+    return this.httpClient
+      .post<LoginResponse>(`${environment.apiUrl}/auth/login`, body)
+      .pipe(map((response) => this.procesarRespuestaLogin(response)));
+  }
+
+  private procesarRespuestaLogin(response: LoginResponse): string {
+    this.tokenService.setToken(response.token);
+    this.actualizarNombreDesdeLogin(response);
+    const rol = this.obtenerRolLogin(response);
+    if (rol) {
+      localStorage.setItem(this.rolKey, rol as string);
+    }
+    return rol as string;
+  }
+
+  private actualizarNombreDesdeLogin(response: LoginResponse): void {
+    const nombreToken = this.tokenService.decodePayload()?.['nombre'];
+    const nombre =
+      response.usuario?.nombre ??
+      response.nombre ??
+      (typeof nombreToken === 'string' ? nombreToken : null);
+    this.actualizarNombreUsuario(nombre);
+  }
+
+  private obtenerRolLogin(response: LoginResponse): string {
+    const rol =
+      response.usuario?.rol ??
+      response.usuario?.role ??
+      response.rol ??
+      response.role ??
+      this.tokenService.decodePayload()?.['rol'] ??
+      null;
+    return rol as string;
   }
 
   logout(): void {
     this.tokenService.removeToken();
+    this.actualizarNombreUsuario(null);
     localStorage.removeItem(this.rolKey);
     void this.router.navigate(['/login']);
   }
@@ -134,7 +155,16 @@ export class AuthService {
 
   getNombre(): string | null {
     const payload = this.tokenService.decodePayload();
-    return (payload?.['nombre'] ?? null) as string | null;
+    const nombre = this.nombreUsuario();
+    if (nombre) {
+      return nombre;
+    }
+    const nombreToken = payload?.['nombre'];
+    return typeof nombreToken === 'string' ? nombreToken : null;
+  }
+
+  actualizarNombreUsuario(nombre: string | null): void {
+    this.nombreUsuario.set(nombre?.trim() || null);
   }
 
   tieneRol(rol: string): boolean {

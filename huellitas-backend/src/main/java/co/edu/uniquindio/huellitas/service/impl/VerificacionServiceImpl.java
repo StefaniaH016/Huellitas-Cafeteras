@@ -58,49 +58,71 @@ public class VerificacionServiceImpl implements VerificacionService {
 
     @Override
     public VerificacionResponseDTO resolverVerificacion(Long usuarioId, DecisionVerificacionDTO dto, String correoAdmin) {
-        Usuario usuario = usuarioRepository.findById(usuarioId)
-                .orElseThrow(() -> new ResourceNotFoundException("Usuario", usuarioId));
-        if (usuario.getRol() != Rol.FUNDACION_REFUGIO && usuario.getRol() != Rol.VETERINARIA) {
-            throw new ConflictException("Solo se pueden resolver verificaciones de fundaciones y veterinarias.");
-        }
-
-        Usuario admin = usuarioRepository.findByCorreo(correoAdmin.trim().toLowerCase())
-                .orElseThrow(() -> new ResourceNotFoundException("Administrador no encontrado con correo: " + correoAdmin));
-
-        Organizacion organizacion = usuario.getOrganizacion() == null
-                ? null
-                : (Organizacion) Hibernate.unproxy(usuario.getOrganizacion());
-        if (usuario.getRol() == Rol.FUNDACION_REFUGIO || usuario.getRol() == Rol.VETERINARIA) {
-            if (organizacion == null) {
-                throw new ConflictException(
-                        "La cuenta institucional no tiene una organización asociada. Debe completar nuevamente su registro.");
-            }
-            if ((usuario.getRol() == Rol.FUNDACION_REFUGIO
-                    && !(organizacion instanceof co.edu.uniquindio.huellitas.entity.Fundacion))
-                    || (usuario.getRol() == Rol.VETERINARIA
-                    && !(organizacion instanceof co.edu.uniquindio.huellitas.entity.Veterinaria))) {
-                throw new ConflictException("El tipo de organización no coincide con el rol de la cuenta.");
-            }
-        }
+        Usuario usuario = buscarUsuario(usuarioId);
+        validarRolInstitucional(usuario);
+        Usuario admin = buscarAdministrador(correoAdmin);
+        Organizacion organizacion = obtenerOrganizacionVerificable(usuario);
 
         boolean aprobada = "APROBAR".equalsIgnoreCase(dto.decision());
         usuario.setVerificado(aprobada);
 
         if (organizacion != null) {
-            organizacion.setEstadoVerificacion(aprobada ? EstadoVerificacion.VERIFICADA : EstadoVerificacion.RECHAZADA);
-            organizacion.setFechaVerificacion(Instant.now());
-            organizacion.setVerificador(admin);
-            if (organizacion instanceof co.edu.uniquindio.huellitas.entity.Fundacion fundacion) {
-                fundacion.setAceptaCustodia(aprobada);
-                fundacion.setCapacidadAlbergue(aprobada ? 10 : 0);
-            }
-            organizacionRepository.save(organizacion);
+            actualizarOrganizacion(organizacion, admin, aprobada);
         }
 
         usuarioRepository.save(usuario);
         notificarDespuesDeGuardar(usuario, aprobada);
 
         return verificacionMapper.toResponseDTO(usuario, aprobada);
+    }
+
+    private Usuario buscarUsuario(Long usuarioId) {
+        return usuarioRepository.findById(usuarioId)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario", usuarioId));
+    }
+
+    private void validarRolInstitucional(Usuario usuario) {
+        if (usuario.getRol() != Rol.FUNDACION_REFUGIO && usuario.getRol() != Rol.VETERINARIA) {
+            throw new ConflictException("Solo se pueden resolver verificaciones de fundaciones y veterinarias.");
+        }
+    }
+
+    private Usuario buscarAdministrador(String correoAdmin) {
+        return usuarioRepository.findByCorreo(correoAdmin.trim().toLowerCase())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Administrador no encontrado con correo: " + correoAdmin));
+    }
+
+    private Organizacion obtenerOrganizacionVerificable(Usuario usuario) {
+        if (usuario.getOrganizacion() == null) {
+            throw new ConflictException(
+                    "La cuenta institucional no tiene una organización asociada. Debe completar nuevamente su registro.");
+        }
+
+        Organizacion organizacion = (Organizacion) Hibernate.unproxy(usuario.getOrganizacion());
+        validarTipoOrganizacion(usuario, organizacion);
+        return organizacion;
+    }
+
+    private void validarTipoOrganizacion(Usuario usuario, Organizacion organizacion) {
+        boolean fundacionInvalida = usuario.getRol() == Rol.FUNDACION_REFUGIO
+                && !(organizacion instanceof Fundacion);
+        boolean veterinariaInvalida = usuario.getRol() == Rol.VETERINARIA
+                && !(organizacion instanceof Veterinaria);
+        if (fundacionInvalida || veterinariaInvalida) {
+            throw new ConflictException("El tipo de organización no coincide con el rol de la cuenta.");
+        }
+    }
+
+    private void actualizarOrganizacion(Organizacion organizacion, Usuario admin, boolean aprobada) {
+        organizacion.setEstadoVerificacion(aprobada ? EstadoVerificacion.VERIFICADA : EstadoVerificacion.RECHAZADA);
+        organizacion.setFechaVerificacion(Instant.now());
+        organizacion.setVerificador(admin);
+        if (organizacion instanceof Fundacion fundacion) {
+            fundacion.setAceptaCustodia(aprobada);
+            fundacion.setCapacidadAlbergue(aprobada ? 10 : 0);
+        }
+        organizacionRepository.save(organizacion);
     }
 
     @Override
@@ -137,7 +159,7 @@ public class VerificacionServiceImpl implements VerificacionService {
         Organizacion guardada = organizacionRepository.save(organizacion);
         usuario.setOrganizacion(guardada);
         usuarioRepository.save(usuario);
-        notificarSolicitudRevisionDespuesDeGuardar(usuario, guardada.getNombre());
+        notificarSolicitudRevisionDespuesDeGuardar(usuario.getId(), guardada.getNombre());
         return new VerificacionResponseDTO(usuario.getId(), EstadoVerificacion.PENDIENTE.name(), false);
     }
 
@@ -212,9 +234,9 @@ public class VerificacionServiceImpl implements VerificacionService {
         }
     }
 
-    private void notificarSolicitudRevisionDespuesDeGuardar(Usuario usuario, String nombreOrganizacion) {
+    private void notificarSolicitudRevisionDespuesDeGuardar(Long usuarioId, String nombreOrganizacion) {
         Runnable notificar = () ->
-                notificacionWorker.notificarSolicitudRevisionOrganizacion(usuario, nombreOrganizacion);
+                notificacionWorker.notificarSolicitudRevisionOrganizacion(usuarioId, nombreOrganizacion);
         if (TransactionSynchronizationManager.isSynchronizationActive()) {
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override
@@ -226,4 +248,5 @@ public class VerificacionServiceImpl implements VerificacionService {
             notificar.run();
         }
     }
+
 }

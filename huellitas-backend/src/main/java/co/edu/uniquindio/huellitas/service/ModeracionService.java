@@ -8,6 +8,7 @@ import java.util.List;
 
 public interface ModeracionService {
     List<CasoModeracionDTO> listarCasosReportados();
+    void marcarCasoParaModeracion(Long casoId, String motivo);
     ModeracionResponseDTO moderarCaso(Long casoId, DecisionModeracionDTO dto, String correoAdmin);
 
     /**
