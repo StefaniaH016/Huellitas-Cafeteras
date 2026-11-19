@@ -20,6 +20,7 @@ import co.edu.uniquindio.huellitas.repository.OrganizacionRepository;
 import co.edu.uniquindio.huellitas.repository.UsuarioRepository;
 import co.edu.uniquindio.huellitas.security.JwtUtils;
 import co.edu.uniquindio.huellitas.service.impl.AuthServiceImpl;
+import co.edu.uniquindio.huellitas.worker.NotificacionWorker;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -61,6 +62,8 @@ class AuthServiceImplCoverageTest {
     private JwtUtils jwtUtils;
     @Mock
     private UserDetailsService userDetailsService;
+    @Mock
+    private NotificacionWorker notificacionWorker;
 
     private AuthServiceImpl authService;
     private Municipio armenia;
@@ -77,7 +80,8 @@ class AuthServiceImplCoverageTest {
                 authenticationManager,
                 jwtUtils,
                 userDetailsService,
-                new UsuarioMapper());
+                new UsuarioMapper(),
+                notificacionWorker);
 
         armenia = Municipio.builder()
                 .id(1L)

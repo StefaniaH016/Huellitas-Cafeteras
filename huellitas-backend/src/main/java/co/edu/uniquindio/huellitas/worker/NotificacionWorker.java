@@ -70,6 +70,7 @@ public class NotificacionWorker {
      * Notifica al reportante cuando el estado de su caso cambia.
      */
     @Async
+    @Transactional
     public void notificarCambioEstado(Caso caso, EstadoCaso estadoAnterior, EstadoCaso estadoNuevo, Usuario actor) {
         if (caso.getReportante() == null) return;
 
@@ -93,6 +94,7 @@ public class NotificacionWorker {
      * Notifica al reportante cuando su caso es cerrado/resuelto.
      */
     @Async
+    @Transactional
     public void notificarCierreCaso(Caso caso, String resultado) {
         if (caso.getReportante() == null) return;
 
@@ -108,6 +110,7 @@ public class NotificacionWorker {
      * Subtarea 17.3: También envía correo electrónico.
      */
     @Async
+    @Transactional
     public void notificarRecordatorio(Caso caso, long diasInactividad) {
         if (caso.getReportante() == null) return;
 
@@ -131,6 +134,7 @@ public class NotificacionWorker {
      * 13.7: También envía correo electrónico.
      */
     @Async
+    @Transactional
     public void notificarAsuncionCustodia(Caso caso, Fundacion fundacion) {
         if (caso.getReportante() == null) return;
 
@@ -243,6 +247,7 @@ public class NotificacionWorker {
      * Incluye al reportante y a la fundación si tiene custodia.
      */
     @Async
+    @Transactional
     public void notificarAporte(Seguimiento aporte) {
         if (aporte.getAutor() == null || aporte.getCaso() == null) return;
 
@@ -321,6 +326,7 @@ public class NotificacionWorker {
      * Notifica al reportante y a la fundación custodia (si no son el firmante).
      */
     @Async
+    @Transactional
     public void notificarEvolucionMedica(BitacoraMedica bitacora, RegistroMedico evolucion, Usuario firmante) {
         if (bitacora == null || bitacora.getCaso() == null) return;
         Caso caso = bitacora.getCaso();
@@ -356,6 +362,7 @@ public class NotificacionWorker {
      * Notifica al reportante y a la fundación custodia (si no son el firmante).
      */
     @Async
+    @Transactional
     public void notificarAltaMedica(BitacoraMedica bitacora, Usuario firmante) {
         if (bitacora == null || bitacora.getCaso() == null) return;
         Caso caso = bitacora.getCaso();
