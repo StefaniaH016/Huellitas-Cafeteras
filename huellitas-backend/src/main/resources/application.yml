@@ -5,6 +5,10 @@
 spring:
   application:
     name: huellitas
+  config:
+    import:
+      - optional:file:.env[.properties]
+      - optional:file:../.env[.properties]
 
   # ── Base de datos PostgreSQL (Railway / Local) ─────────────────
   datasource:
@@ -97,11 +101,11 @@ cloudinary:
 # Configuración del job de archivado automático y recordatorios
 limpieza:
   # Días sin actividad para archivar casos RESUELTOS
-  dias-archivar-resuelto: ${DIAS_ARCHIVAR_RESUELTO}
+  dias-archivar-resuelto: ${DIAS_ARCHIVAR_RESUELTO:90}
   # Días sin actividad para enviar recordatorio al reportante
-  dias-recordatorio-inactividad: ${DIAS_RECORDATORIO_INACTIVIDAD}
+  dias-recordatorio-inactividad: ${DIAS_RECORDATORIO_INACTIVIDAD:14}
   # Expresión cron para la ejecución del job (por defecto: 02:00 AM diariamente)
-  cron: ${LIMPIEZA_CRON}
+  cron: ${LIMPIEZA_CRON:0 0 2 * * *}
 
 # ── Actuator ───────────────────────────────────────────────────
 management:
