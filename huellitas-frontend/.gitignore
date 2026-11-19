@@ -40,6 +40,12 @@ testem.log
 /typings
 __screenshots__/
 
+# Cypress
+cypress.env.json
+cypress/videos/
+cypress/screenshots/
+
 # System files
 .DS_Store
 Thumbs.db
+
