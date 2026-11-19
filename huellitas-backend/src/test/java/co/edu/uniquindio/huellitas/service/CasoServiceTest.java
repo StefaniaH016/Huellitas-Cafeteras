@@ -61,9 +61,6 @@ class CasoServiceTest {
     private SeguimientoRepository seguimientoRepository;
 
     @Mock
-    private FotoRepository fotoRepository;
-
-    @Mock
     private NotificacionRepository notificacionRepository;
 
     @Mock
@@ -184,8 +181,10 @@ class CasoServiceTest {
         assertEquals(TipoCaso.EXTRAVIADO, resultado.tipoCaso());
         assertEquals(EstadoCaso.REGISTRADO, resultado.estado());
         assertEquals(Urgencia.MEDIA, resultado.urgencia());
+        ArgumentCaptor<Caso> casoCaptor = ArgumentCaptor.forClass(Caso.class);
         verify(animalRepository, times(1)).save(any(Animal.class));
-        verify(casoRepository, times(1)).save(any(Caso.class));
+        verify(casoRepository, times(1)).save(casoCaptor.capture());
+        assertTrue(casoCaptor.getValue().isVisible());
         verify(historialEstadoRepository, times(1)).save(any(HistorialEstado.class));
     }
 
@@ -415,6 +414,32 @@ class CasoServiceTest {
 
         verify(casoRepository, never()).save(any(Caso.class));
     }
+
+        @Test
+        @DisplayName("El archivo administrativo notifica al reportante")
+        void archivarCasoNotificaAlReportante() {
+        Caso caso = Caso.builder()
+            .id(12L)
+            .estado(EstadoCaso.RESUELTO)
+            .reportante(usuarioMock)
+            .build();
+        Usuario admin = Usuario.builder()
+            .id(2L)
+            .correo("admin@test.com")
+            .rol(Rol.ADMINISTRADOR)
+            .build();
+        when(casoRepository.findById(12L)).thenReturn(Optional.of(caso));
+        when(usuarioRepository.findByCorreo("admin@test.com")).thenReturn(Optional.of(admin));
+        when(casoRepository.save(any(Caso.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(historialEstadoRepository.save(any(HistorialEstado.class)))
+            .thenAnswer(invocation -> invocation.getArgument(0));
+        when(seguimientoRepository.save(any(Seguimiento.class)))
+            .thenAnswer(invocation -> invocation.getArgument(0));
+
+        casoService.archivarCaso(12L, new ArchivarCasoDTO("Caso resuelto"), "admin@test.com");
+
+        verify(notificacionWorker).notificarArchivadoCaso(caso, "Caso resuelto");
+        }
 
     @Test
     @DisplayName("El reportante puede eliminar físicamente un caso registrado")
@@ -712,5 +737,7 @@ class CasoServiceTest {
         // Assert
         assertEquals(Urgencia.ALTA, resultado.urgencia());
         assertEquals(TipoCaso.VULNERABLE, resultado.tipoCaso());
+        verify(notificacionWorker).notificarCasoUrgente(any(Caso.class));
+        verify(notificacionWorker).notificarEmergenciaARescuatistas(any(Caso.class));
     }
 }

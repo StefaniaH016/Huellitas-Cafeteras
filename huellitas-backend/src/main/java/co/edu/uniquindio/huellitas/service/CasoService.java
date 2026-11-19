@@ -1,6 +1,7 @@
 package co.edu.uniquindio.huellitas.service;
 
 import co.edu.uniquindio.huellitas.dto.reporte.*;
+import co.edu.uniquindio.huellitas.entity.enums.EstadoCaso;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -25,6 +26,12 @@ public interface CasoService {
     List<HistorialEstadoDTO> obtenerHistorial(Long id);
 
     Page<CasoListItemDTO> misReportes(String correoUsuario, Pageable pageable);
+
+    // 17.5: Mis reportes con filtro de estado opcional
+    Page<CasoListItemDTO> misReportes(String correoUsuario, EstadoCaso estado, Pageable pageable);
+
+    // 17.5: Historial de casos resueltos y archivados
+    Page<CasoListItemDTO> obtenerHistorialCasos(EstadoCaso estado, Pageable pageable);
 
     CasoResponseDTO cerrarCaso(Long id, CierreCasoRequestDTO dto, String correoUsuario);
 

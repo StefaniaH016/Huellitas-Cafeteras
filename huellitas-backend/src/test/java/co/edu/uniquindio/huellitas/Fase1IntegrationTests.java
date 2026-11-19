@@ -121,7 +121,8 @@ class Fase1IntegrationTests {
         ActualizarPerfilDTO actualizarDTO = new ActualizarPerfilDTO(
                 "Super Admin Huellitas",
                 "3129998877",
-                barrioPruebaId
+                barrioPruebaId,
+                true
         );
 
         mockMvc.perform(put("/v1/usuarios/me")
@@ -131,7 +132,8 @@ class Fase1IntegrationTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.nombre").value("Super Admin Huellitas"))
                 .andExpect(jsonPath("$.telefono").value("3129998877"))
-                .andExpect(jsonPath("$.barrioId").value(barrioPruebaId));
+                .andExpect(jsonPath("$.barrioId").value(barrioPruebaId))
+                .andExpect(jsonPath("$.disponibleRescate").value(true));
     }
 
     @Test

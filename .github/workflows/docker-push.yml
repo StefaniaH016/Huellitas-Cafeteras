@@ -104,11 +104,19 @@ jobs:
             echo "⚠️ AZURE_BACKEND_URL no configurado. Saltando healthcheck."
             exit 0
           fi
-          STATUS=$(curl --silent --max-time 15 --write-out "%{http_code}" --output /dev/null \
-            "${{ secrets.AZURE_BACKEND_URL }}/actuator/health" || echo "000")
+          STATUS="000"
+          for i in {1..8}; do
+            STATUS=$(curl --silent --max-time 15 --write-out "%{http_code}" --output /dev/null \
+              "${{ secrets.AZURE_BACKEND_URL }}/actuator/health" || echo "000")
+            echo "Intento $i: HTTP $STATUS"
+            if [ "$STATUS" = "200" ]; then
+              break
+            fi
+            sleep 10
+          done
           echo "status=$STATUS" >> $GITHUB_OUTPUT
           if [ "$STATUS" != "200" ]; then
-            echo "❌ Healthcheck falló con HTTP $STATUS"
+            echo "❌ Healthcheck falló con HTTP $STATUS tras varios intentos"
             exit 1
           fi
           echo "✅ Healthcheck OK (HTTP $STATUS)"

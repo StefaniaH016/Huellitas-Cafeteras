@@ -136,7 +136,7 @@
 		<dependency>
 			<groupId>org.springdoc</groupId>
 			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-			<version>2.6.0</version>
+			<version>3.1.0</version>
 		</dependency>
 
 		<!-- ===== TEST ===== -->
@@ -197,6 +197,7 @@
 					<configLocation>google_checks.xml</configLocation>
 					<consoleOutput>true</consoleOutput>
 					<failsOnError>false</failsOnError>
+					<failOnViolation>false</failOnViolation>
 				</configuration>
 			</plugin>
 

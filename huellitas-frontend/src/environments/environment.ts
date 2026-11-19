@@ -1,4 +1,6 @@
+import { resolveApiUrl } from './api-url';
+
 export const environment = {
   production: false,
-  apiUrl: 'http://localhost:8080/v1',
+  apiUrl: resolveApiUrl(typeof window === 'undefined' ? '' : window.location.hostname),
 };

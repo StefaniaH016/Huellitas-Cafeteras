@@ -2,11 +2,14 @@ package co.edu.uniquindio.huellitas.entity;
 
 import co.edu.uniquindio.huellitas.entity.enums.TipoAporte;
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
 import co.edu.uniquindio.huellitas.entity.Barrio;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "seguimientos")
@@ -26,6 +29,9 @@ public class Seguimiento {
 
     @Column(columnDefinition = "TEXT")
     private String comentario;
+
+    @Column(length = 300)
+    private String ubicacionTexto;
 
     @Column(nullable = false)
     private Instant fecha;
@@ -50,4 +56,12 @@ public class Seguimiento {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "autor_id")
     private Usuario autor;
+
+    @OneToMany(mappedBy = "seguimiento")
+    @OrderBy("id ASC")
+    @JsonManagedReference("seguimiento-fotos")
+    @Builder.Default
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private List<Foto> fotografias = new ArrayList<>();
 }

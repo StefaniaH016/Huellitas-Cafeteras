@@ -80,7 +80,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     public ResponseEntity<Object> handleAccessDenied(
             AccessDeniedException ex, WebRequest request) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                .body(buildBody(HttpStatus.FORBIDDEN, "Acceso denegado", request));
+                .body(buildBody(HttpStatus.FORBIDDEN, ex.getMessage(), request));
     }
 
     // ── 404 Recurso no encontrado ─────────────────────────────────

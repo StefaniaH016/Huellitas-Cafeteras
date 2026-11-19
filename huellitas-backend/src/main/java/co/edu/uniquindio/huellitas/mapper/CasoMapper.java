@@ -66,10 +66,15 @@ public class CasoMapper {
             return null;
         }
         return caso.getFotos().stream()
+                .filter(foto -> foto.getSeguimiento() == null)
                 .filter(Foto::isPrincipal)
                 .map(Foto::getUrl)
                 .findFirst()
-                .orElseGet(() -> caso.getFotos().get(0).getUrl());
+                .orElseGet(() -> caso.getFotos().stream()
+                        .filter(foto -> foto.getSeguimiento() == null)
+                        .map(Foto::getUrl)
+                        .findFirst()
+                        .orElse(null));
     }
 
     public Animal toAnimalEntity(AnimalReporteDTO dto, Usuario propietario) {
@@ -138,7 +143,10 @@ public class CasoMapper {
         if (fotos == null) {
             return Collections.emptyList();
         }
-        return fotos.stream().map(this::toFotoDetalleDTO).toList();
+        return fotos.stream()
+                .filter(foto -> foto.getSeguimiento() == null)
+                .map(this::toFotoDetalleDTO)
+                .toList();
     }
 
     public HistorialEstadoDTO toHistorialEstadoDTO(HistorialEstado h) {
@@ -170,8 +178,21 @@ public class CasoMapper {
                 .fechaApertura(FechaUtils.formatear(bm.getFechaApertura()))
                 .altaMedica(bm.isAltaMedica())
                 .fechaAlta(FechaUtils.formatear(bm.getFechaAlta()))
-                .veterinariaNombre(bm.getVeterinaria() != null ? bm.getVeterinaria().getNombre() : null)
+                .veterinariaNombre(nombreVeterinariaResponsable(bm))
+                .responsableId(bm.getVeterinario() != null ? bm.getVeterinario().getId() : null)
                 .build();
+    }
+
+    private String nombreVeterinariaResponsable(BitacoraMedica bitacora) {
+        if (bitacora.getVeterinaria() != null) {
+            return bitacora.getVeterinaria().getNombre();
+        }
+        if (bitacora.getVeterinario() == null) {
+            return null;
+        }
+        return bitacora.getVeterinario().getOrganizacion() instanceof Veterinaria veterinaria
+                ? veterinaria.getNombre()
+                : bitacora.getVeterinario().getNombre();
     }
 
     public CasoDetalleDTO toCasoDetalleDTO(
@@ -200,7 +221,8 @@ public class CasoMapper {
                 .fechaCreacion(FechaUtils.formatear(caso.getFechaRegistro()))
                 .autorId(caso.getReportante() != null ? caso.getReportante().getId() : null)
                 .autorNombre(caso.getReportante() != null ? caso.getReportante().getNombre() : null)
+                .fundacionCustodioId(caso.getFundacionCustodio() != null ? caso.getFundacionCustodio().getId() : null)
+                .fundacionCustodioNombre(caso.getFundacionCustodio() != null ? caso.getFundacionCustodio().getNombre() : null)
                 .build();
     }
 }
-

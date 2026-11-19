@@ -2,13 +2,17 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable } from 'rxjs';
-import { tap, map } from 'rxjs/operators';
+import { map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { TokenService } from './token.service';
 import { normalizeRole } from '../utils/role.utils';
 
 interface LoginResponse {
   token: string;
+  usuario?: {
+    rol?: string;
+    role?: string;
+  };
   rol?: string;
   role?: string;
 }
@@ -32,20 +36,19 @@ export class AuthService {
   login(email: string, password: string): Observable<string> {
     const body = { correo: email, contrasena: password };
     return this.httpClient.post<LoginResponse>(`${environment.apiUrl}/auth/login`, body).pipe(
-      tap((response) => {
+      map((response) => {
         this.tokenService.setToken(response.token);
-        // Store rol from response, fallback to token payload
         const rol =
-          response.rol ?? response.role ?? this.tokenService.decodePayload()?.['rol'] ?? null;
+          response.usuario?.rol ??
+          response.usuario?.role ??
+          response.rol ??
+          response.role ??
+          this.tokenService.decodePayload()?.['rol'] ??
+          null;
         if (rol) {
           localStorage.setItem(this.rolKey, rol as string);
         }
-      }),
-      map((response) => {
-        return (response.rol ??
-          response.role ??
-          this.tokenService.decodePayload()?.['rol'] ??
-          null) as string;
+        return rol as string;
       }),
     );
   }
@@ -56,8 +59,42 @@ export class AuthService {
     void this.router.navigate(['/login']);
   }
 
-  registro(correo: string, contrasena: string, nombre: string): Observable<RegistroResponse> {
-    const body = { correo, contrasena, nombre };
+  registro(request: {
+    nombre: string;
+    correo: string;
+    contrasena: string;
+    telefono: string;
+    barrioId?: number;
+    rol: string;
+    nombreEntidad?: string;
+    nit?: string;
+    documentoLegal?: string;
+    municipioOperacion?: string;
+    documentoSoporte?: File;
+    aceptoTratamientoDatos: boolean;
+  }): Observable<RegistroResponse> {
+    const body = {
+      correo: request.correo,
+      contrasena: request.contrasena,
+      nombre: request.nombre,
+      rol: request.rol,
+      aceptoTratamientoDatos: request.aceptoTratamientoDatos,
+      ...(request.telefono && { telefono: request.telefono }),
+      ...(request.barrioId && { barrioId: request.barrioId }),
+      ...(request.nombreEntidad && { nombreEntidad: request.nombreEntidad }),
+      ...(request.nit && { nit: request.nit }),
+      ...(request.documentoLegal && { documentoLegal: request.documentoLegal }),
+      ...(request.municipioOperacion && { municipioOperacion: request.municipioOperacion }),
+    };
+    if (request.documentoSoporte) {
+      const formData = new FormData();
+      formData.append('datos', new Blob([JSON.stringify(body)], { type: 'application/json' }));
+      formData.append('documentoSoporte', request.documentoSoporte, request.documentoSoporte.name);
+      return this.httpClient.post<RegistroResponse>(
+        `${environment.apiUrl}/auth/registro/institucional`,
+        formData,
+      );
+    }
     return this.httpClient.post<RegistroResponse>(`${environment.apiUrl}/auth/registro`, body);
   }
 
@@ -98,5 +135,10 @@ export class AuthService {
   getNombre(): string | null {
     const payload = this.tokenService.decodePayload();
     return (payload?.['nombre'] ?? null) as string | null;
+  }
+
+  tieneRol(rol: string): boolean {
+    const rolActual = this.getRol();
+    return rolActual === rol || rolActual === normalizeRole(rol);
   }
 }

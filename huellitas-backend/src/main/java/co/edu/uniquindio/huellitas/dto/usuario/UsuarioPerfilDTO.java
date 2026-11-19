@@ -13,5 +13,11 @@ public record UsuarioPerfilDTO(
         boolean verificado,
         Long departamentoId,
         Long municipioId,
-        Long barrioId
+        Long barrioId,
+        Long organizacionId,
+        String organizacionNombre,
+        String estadoVerificacionOrganizacion,
+        Boolean aceptaCustodia,
+        Integer capacidadAlbergue,
+        boolean disponibleRescate
 ) {}

@@ -1,0 +1,39 @@
+<label
+  class="dropzone"
+  [for]="campoId()"
+  [class.has-file]="archivos().length > 0"
+  (dragover)="onDragOver($event)"
+  (drop)="onDrop($event)"
+>
+  <span class="dropzone-title">Toca para elegir fotos o arrástralas aquí</span>
+  <span class="dropzone-hint">{{ ayuda }}</span>
+  <input
+    class="sr-only"
+    [id]="campoId()"
+    type="file"
+    [accept]="accept"
+    multiple
+    (change)="onFilesSelected($event)"
+  />
+</label>
+<p class="field-hint">{{ archivos().length }} de {{ maximo }} fotos</p>
+@if (error()) {
+  <p class="field-error" role="alert">{{ error() }}</p>
+}
+@if (previews().length > 0) {
+  <div class="preview-grid">
+    @for (url of previews(); track url) {
+      <div class="preview-card">
+        <img [src]="url" [alt]="'Foto ' + ($index + 1)" />
+        <button
+          type="button"
+          class="preview-remove"
+          (click)="quitar($index)"
+          aria-label="Quitar foto"
+        >
+          ✕
+        </button>
+      </div>
+    }
+  </div>
+}

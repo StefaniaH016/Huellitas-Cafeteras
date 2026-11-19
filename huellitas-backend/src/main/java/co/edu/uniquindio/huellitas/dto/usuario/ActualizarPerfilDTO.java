@@ -12,5 +12,7 @@ public record ActualizarPerfilDTO(
         @Pattern(regexp = "^[0-9+\\-\\s]{7,20}$", message = "Teléfono inválido")
         String telefono,
 
-        Long barrioId
+        Long barrioId,
+
+        Boolean disponibleRescate
 ) {}

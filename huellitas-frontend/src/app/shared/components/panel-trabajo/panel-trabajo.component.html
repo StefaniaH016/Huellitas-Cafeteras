@@ -1,0 +1,34 @@
+<section class="page">
+  <app-page-hero [titulo]="config().titulo" [resumen]="config().resumen">
+    <a class="btn btn-primary" [routerLink]="config().cta.ruta">{{ config().cta.texto }}</a>
+  </app-page-hero>
+  <app-dash-figures [figuras]="figuras()" [attr.aria-label]="'Resumen: ' + config().titulo" />
+  @if (carga.cargando()) {
+    <p class="list-empty">Cargando casos de tu zona...</p>
+  } @else if (carga.error()) {
+    <p class="feedback-error" role="alert">{{ carga.error() }}</p>
+  }
+  <div class="dash-grid">
+    @for (lista of listas(); track lista.titulo) {
+      <section class="panel">
+        <div class="panel-head">
+          <h2>{{ lista.titulo }}</h2>
+          <span class="panel-count">{{ lista.pendiente ? '—' : lista.casos.length }}</span>
+        </div>
+        @if (lista.pendiente) {
+          <p class="note m-0">{{ lista.pendiente }}</p>
+        } @else {
+          @for (caso of lista.casos; track caso.id) {
+            <app-caso-row [caso]="caso" [mostrarEstado]="true">
+              <a class="btn btn-primary btn-sm" [routerLink]="['/caso-detalle', caso.id]">
+                {{ lista.accion }}
+              </a>
+            </app-caso-row>
+          } @empty {
+            <p class="list-empty">{{ lista.vacio }}</p>
+          }
+        }
+      </section>
+    }
+  </div>
+</section>

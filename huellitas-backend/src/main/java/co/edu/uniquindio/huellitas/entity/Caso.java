@@ -49,12 +49,17 @@ public class Caso {
     private Instant fechaUltimaActividad;
     private Instant fechaCustodia;
     private Instant fechaArchivado;
+    private Instant fechaUltimoRecordatorio;
 
     @Builder.Default
     private boolean visible = true;
 
     @Column(columnDefinition = "TEXT")
     private String motivoModeracion;
+
+    @Builder.Default
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private boolean moderacionPendiente = false;
 
     /** Control de concurrencia optimista. */
     @Version

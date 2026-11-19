@@ -111,7 +111,6 @@ public class PdfWorker {
             tableInfo.addCell(new Phrase("Tipo de Caso: " + caso.getTipoCaso().name(), fontNormal));
             tableInfo.addCell(new Phrase("Urgencia: " + caso.getUrgencia().name(), fontNormal));
             tableInfo.addCell(new Phrase("Estado del Caso: " + caso.getEstado().name(), fontNormal));
-
             String ubicacion = "No especificada";
             if (caso.getBarrio() != null) {
                 ubicacion = caso.getBarrio().getNombre();
@@ -123,14 +122,14 @@ public class PdfWorker {
             tableInfo.addCell(new Phrase(
                     "Fecha de Apertura: " + FechaUtils.formatear(bitacora.getFechaApertura()),
                     fontNormal));
-
             String responsable = "Clínica Veterinaria";
             if (bitacora.getVeterinario() != null) {
                 responsable = bitacora.getVeterinario().getNombre();
             } else if (bitacora.getVeterinaria() != null) {
                 responsable = bitacora.getVeterinaria().getNombre();
             }
-            PdfPCell cellResp = new PdfPCell(new Phrase("Profesional / Veterinaria a Cargo: " + responsable, fontNormal));
+            PdfPCell cellResp = new PdfPCell(new Phrase(
+                    "Profesional / Veterinaria a Cargo: " + responsable, fontNormal));
             cellResp.setColspan(2);
             tableInfo.addCell(cellResp);
 
@@ -210,7 +209,6 @@ public class PdfWorker {
             if (duracion > 5000) {
                 log.warn("La generación del PDF clínico excedió el límite de 5 segundos: {} ms", duracion);
             }
-
             return baos.toByteArray();
 
         } catch (Exception e) {

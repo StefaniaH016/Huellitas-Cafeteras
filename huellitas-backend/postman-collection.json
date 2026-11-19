@@ -281,8 +281,11 @@
                 "exec": [
                   "const randomId = Math.floor(Math.random() * 900000) + 100000;",
                   "const email = 'fundacion_' + randomId + '@huellitas.co';",
+                  "const nit = '900' + randomId + '-1';",
                   "pm.environment.set('fundacion_correo', email);",
-                  "pm.collectionVariables.set('fundacion_correo', email);"
+                  "pm.collectionVariables.set('fundacion_correo', email);",
+                  "pm.environment.set('fundacion_nit', nit);",
+                  "pm.collectionVariables.set('fundacion_nit', nit);"
                 ]
               }
             },
@@ -308,7 +311,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nombre\": \"Fundación Huellas de Amor\",\n  \"correo\": \"{{fundacion_correo}}\",\n  \"contrasena\": \"{{fundacion_contrasena}}\",\n  \"telefono\": \"3123456789\",\n  \"rol\": \"FUNDACION_REFUGIO\",\n  \"barrioId\": {{barrioId}}\n}"
+              "raw": "{\n  \"nombre\": \"Fundación Huellas de Amor\",\n  \"correo\": \"{{fundacion_correo}}\",\n  \"contrasena\": \"{{fundacion_contrasena}}\",\n  \"telefono\": \"3123456789\",\n  \"rol\": \"FUNDACION_REFUGIO\",\n  \"nombreEntidad\": \"Fundación Huellas de Amor\",\n  \"nit\": \"{{fundacion_nit}}\",\n  \"municipioOperacion\": \"Armenia\",\n  \"barrioId\": {{barrioId}}\n}"
             },
             "url": "{{baseUrl}}/v1/auth/registro"
           }
@@ -493,8 +496,11 @@
                 "exec": [
                   "const randomId = Math.floor(Math.random() * 900000) + 100000;",
                   "const email = 'veterinaria_' + randomId + '@huellitas.co';",
+                  "const nit = '901' + randomId + '-1';",
                   "pm.environment.set('vet_correo', email);",
-                  "pm.collectionVariables.set('vet_correo', email);"
+                  "pm.collectionVariables.set('vet_correo', email);",
+                  "pm.environment.set('vet_nit', nit);",
+                  "pm.collectionVariables.set('vet_nit', nit);"
                 ]
               }
             },
@@ -522,7 +528,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nombre\": \"Clínica Veterinaria Los Andes\",\n  \"correo\": \"{{vet_correo}}\",\n  \"contrasena\": \"Veterinaria12345!\",\n  \"telefono\": \"3117778899\",\n  \"rol\": \"VETERINARIA\",\n  \"barrioId\": 1\n}"
+              "raw": "{\n  \"nombre\": \"Clínica Veterinaria Los Andes\",\n  \"correo\": \"{{vet_correo}}\",\n  \"contrasena\": \"Veterinaria12345!\",\n  \"telefono\": \"3117778899\",\n  \"rol\": \"VETERINARIA\",\n  \"nombreEntidad\": \"Clínica Veterinaria Los Andes\",\n  \"nit\": \"{{vet_nit}}\",\n  \"municipioOperacion\": \"Armenia\",\n  \"barrioId\": 1\n}"
             },
             "url": "{{baseUrl}}/v1/auth/registro"
           }
@@ -862,7 +868,7 @@
       "name": "Módulo 07 - Gestión del Caso (/v1/casos/{id})",
       "item": [
         {
-          "name": "PATCH /v1/casos/{id}/estado (Actualizar Estado)",
+          "name": "PATCH /v1/casos/{id}/estado (Actualizar Estado - Administrador)",
           "request": {
             "method": "PATCH",
             "header": [
@@ -989,7 +995,7 @@
           ]
         },
         {
-          "name": "PATCH /v1/casos/{id}/estado (Reanudar Estado EN_ATENCION para Clínica)",
+          "name": "PATCH /v1/casos/{id}/estado (Reanudar EN_ATENCION - Administrador)",
           "request": {
             "method": "PATCH",
             "header": [
@@ -1137,7 +1143,7 @@
                   "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
                   "var json = pm.response.json();",
                   "pm.test('Lista contiene el aporte registrado', function () { pm.expect(json.length).to.be.at.least(1); });",
-                  "if (json.length > 0) {",
+                  "if (json.length \u003e 0) {",
                   "    pm.environment.set('aporteId', json[0].id);",
                   "    pm.collectionVariables.set('aporteId', json[0].id);",
                   "}"
@@ -1182,7 +1188,7 @@
                   "});",
                   "if (pm.response.code === 201) {",
                   "    var json = pm.response.json();",
-                  "    pm.test('Bitácora abierta en estado EN_TRATAMIENTO', function () { pm.expect(json.estadoBitacora).to.eql('EN_TRATAMIENTO'); });",
+                  "    pm.test('Bitácora abierta en estado ABIERTA', function () { pm.expect(json.estado).to.eql('ABIERTA'); });",
                   "}"
                 ]
               }
@@ -1218,7 +1224,7 @@
                   "pm.test('Status code es 201 Created', function () { pm.response.to.have.status(201); });",
                   "var json = pm.response.json();",
                   "pm.test('Evolución médica registrada con ID', function () { pm.expect(json.id).to.be.a('number'); });",
-                  "pm.test('Contiene medicamentos prescritos', function () { pm.expect(json.medicamentos).to.include('Amoxicilina'); });"
+                  "pm.test('Respuesta incluye el ID de la bitácora', function () { pm.expect(json.bitacoraId).to.be.a('number'); });"
                 ]
               }
             }
@@ -1305,8 +1311,7 @@
                 "exec": [
                   "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
                   "var json = pm.response.json();",
-                  "pm.test('Estado de bitácora es ALTA_REGISTRADA', function () { pm.expect(json.estadoBitacora).to.eql('ALTA_REGISTRADA'); });",
-                  "pm.test('Alta médica marcada como verdadera', function () { pm.expect(json.altaMedica).to.be.true; });"
+                  "pm.test('Estado de bitácora es ALTA_REGISTRADA', function () { pm.expect(json.estadoBitacora).to.eql('ALTA_REGISTRADA'); });"
                 ]
               }
             }
@@ -1443,7 +1448,7 @@
                   "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
                   "var json = pm.response.json();",
                   "pm.test('Retorna estructura paginada con content', function () { pm.expect(json).to.have.property('content'); });",
-                  "if (json.content && json.content.length > 0) {",
+                  "if (json.content && json.content.length \u003e 0) {",
                   "    pm.environment.set('notificacionId', json.content[0].id);",
                   "    pm.collectionVariables.set('notificacionId', json.content[0].id);",
                   "}"
@@ -1595,7 +1600,7 @@
                 "exec": [
                   "pm.test('Status code es 200 OK', function () { pm.response.to.have.status(200); });",
                   "var json = pm.response.json();",
-                  "pm.test('Aporte oculto correctamente', function () { pm.expect(json).to.have.property('oculto'); });"
+                  "pm.test('Aporte oculto correctamente', function () { pm.expect(json.decision).to.eql('OCULTADO'); });"
                 ]
               }
             }

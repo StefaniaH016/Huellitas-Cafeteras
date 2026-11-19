@@ -417,13 +417,13 @@ textarea {
 }
 
 .btn-secondary {
-  background: var(--paper-2);
+  background: var(--sky-100);
   color: var(--ink);
   border-color: transparent;
 }
 
 .btn-secondary:hover:not(:disabled) {
-  background: var(--paper-2);
+  background: var(--pine-100);
 }
 
 @media (max-width: 640px) {

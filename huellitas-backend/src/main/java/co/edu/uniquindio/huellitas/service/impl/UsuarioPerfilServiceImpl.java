@@ -44,6 +44,10 @@ public class UsuarioPerfilServiceImpl implements UsuarioPerfilService {
             usuario.setTelefono(dto.telefono().trim());
         }
 
+        if (dto.disponibleRescate() != null) {
+            usuario.setDisponibleRescate(dto.disponibleRescate());
+        }
+
         if (dto.barrioId() != null) {
             Barrio barrio = barrioRepository.findById(dto.barrioId())
                     .orElseThrow(() -> new ResourceNotFoundException("Barrio", dto.barrioId()));

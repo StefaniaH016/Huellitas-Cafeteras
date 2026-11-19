@@ -9,8 +9,8 @@ describe('panel utilities', () => {
     ['critica', 'badge-emergencia'],
     ['EMERGENCIA', 'badge-emergencia'],
     ['alta', 'badge-alta'],
-    ['extraviado', 'badge-alta'],
     ['media', 'badge-atencion'],
+    ['BAJA', 'badge-media'],
   ])('maps urgency %s to badge class %s', (urgency, expected) => {
     expect(getPanelBadgeClass(urgency)).toBe(expected);
   });
@@ -18,9 +18,9 @@ describe('panel utilities', () => {
   it.each([
     ['CRITICA', 'Emergencia'],
     ['emergencia', 'Emergencia'],
-    ['ALTA', 'Extraviado'],
-    ['extraviado', 'Extraviado'],
-    ['MEDIA', 'En atención'],
+    ['ALTA', 'Alta'],
+    ['MEDIA', 'Media'],
+    ['BAJA', 'Baja'],
   ])('maps urgency %s to badge label %s', (urgency, expected) => {
     expect(getPanelBadgeLabel(urgency)).toBe(expected);
   });

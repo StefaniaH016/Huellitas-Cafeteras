@@ -1,80 +1,150 @@
-<main>
+<main class="private-main">
+  @if (errorMensaje()) {
+    <div class="feedback-error" role="alert">
+      <span>{{ errorMensaje() }}</span>
+      <button class="btn btn-secondary btn-sm" type="button" (click)="cargarDatos()">
+        Reintentar
+      </button>
+    </div>
+  }
   <section class="dash-hello">
     <div>
-      <h1>Hola, Veterinaria {{ authService.getNombre() }}</h1>
+      <h1>Mi panel · {{ nombreOrganizacion() || authService.getNombre() }}</h1>
       <p class="dash-summary">
-        Tienes solicitudes de atención por responder. Atiende a los pacientes activos.
+        Tienes {{ veterinariaStats().pacientesActivos }} pacientes con bitácora abierta y
+        {{ veterinariaStats().solicitudes }} casos registrados en tu municipio esperan atención.
       </p>
     </div>
     <div class="dash-ctas">
-      <button class="btn btn-primary" (click)="scrollToPanel()">Ir a mi panel</button>
-      <button class="btn btn-secondary" routerLink="/casos">Ver casos activos</button>
+      <button class="btn btn-primary" type="button" routerLink="/casos">Ver casos activos</button>
     </div>
   </section>
-
   <section class="dash-figures" aria-label="Resumen de tu consulta">
-    <a href="#" class="figure is-urgent">
-      <span class="figure-num">{{ veterinariaStats().solicitudes }}</span>
-      <span class="figure-label">Solicitud por responder</span>
-    </a>
-    <a href="#" class="figure">
-      <span class="figure-num">{{ veterinariaStats().pacientesActivos }}</span>
-      <span class="figure-label">Pacientes activos</span>
-    </a>
-    <a href="#" class="figure">
-      <span class="figure-num">1</span>
-      <span class="figure-label">Control programado</span>
-    </a>
+    <a class="figure" href="#pacientes"
+      ><span class="figure-num">{{ veterinariaStats().pacientesActivos }}</span
+      ><span class="figure-label">Pacientes con bitácora abierta</span></a
+    >
+    <a class="figure is-urgent" href="#sin-atencion"
+      ><span class="figure-num">{{ veterinariaStats().solicitudes }}</span
+      ><span class="figure-label">Casos sin atención médica en tu zona</span></a
+    >
+    <a class="figure" href="#altas"
+      ><span class="figure-num">{{ veterinariaStats().altasEstesMes || 0 }}</span
+      ><span class="figure-label">Altas este mes</span></a
+    >
   </section>
-
-  <div class="dash-grid" id="mi-panel">
-    <section class="panel">
-      <div class="panel-head">
-        <h3>Solicitudes de atención</h3>
-        <a class="panel-link" href="#">Ver mi panel</a>
-      </div>
-      @if (veterinariaSolicitudes().length === 0) {
-        <p style="padding: 1rem; color: var(--ink-soft)">No hay solicitudes pendientes.</p>
+  <div class="dash-grid">
+    <section class="panel" id="pacientes">
+      <div class="panel-head"><h3>Tus pacientes</h3></div>
+      @if (cargando()) {
+        <p style="padding: 1rem; color: var(--ink-soft)" role="status">Cargando pacientes...</p>
+      } @else if (veterinariaPacientes().length === 0) {
+        <p class="list-empty">No hay pacientes activos en atención.</p>
       } @else {
-        @for (solicitud of veterinariaSolicitudes(); track solicitud.id) {
+        @for (paciente of veterinariaPacientes().slice(0, 2); track paciente.id) {
           <div class="list-row">
-            <div class="list-thumb">🐾</div>
+            <app-caso-miniatura
+              [foto]="paciente.foto"
+              [alt]="'Foto principal de ' + (paciente.nombre || paciente.descripcion || 'paciente')"
+            />
             <div class="list-info">
-              <p class="list-title">Caso #{{ solicitud.id }} · {{ solicitud.tipo }}</p>
+              <p class="list-title">
+                {{ paciente.nombre || paciente.descripcion || 'Paciente' }} · Caso #{{
+                  paciente.casoId
+                }}
+              </p>
               <p class="list-meta">
-                Solicitado por {{ solicitud.solicitadoPor }} · {{ solicitud.municipio }}
+                @if (paciente.proximoControl) {
+                  Próximo control: {{ paciente.proximoControl | date: 'dd/MM' }}
+                } @else {
+                  Atención iniciada el {{ paciente.fechaApertura | date: 'dd/MM' }}
+                }
               </p>
             </div>
-            <span class="badge badge-alta"><span class="badge-dot"></span>Alta</span>
+            <span class="badge badge-atencion"><span class="badge-dot"></span>En tratamiento</span>
             <div class="list-actions">
-              <button class="btn btn-secondary btn-sm">Ver solicitud</button>
+              <button
+                class="btn btn-primary btn-sm"
+                type="button"
+                (click)="abrirBitacora(paciente.casoId)"
+              >
+                Nueva entrada
+              </button>
             </div>
           </div>
         }
       }
     </section>
 
-    <section class="panel">
+    <section class="panel" id="sin-atencion">
       <div class="panel-head">
-        <h3>Pacientes activos</h3>
-        <a class="panel-link" href="#">Ver mi panel</a>
+        <h3>Casos sin atención médica</h3>
+        <a class="panel-link" routerLink="/casos">Ver todos</a>
       </div>
-      @if (veterinariaPacientes().length === 0) {
-        <p style="padding: 1rem; color: var(--ink-soft)">No hay pacientes activos.</p>
+      @if (cargando()) {
+        <p style="padding: 1rem; color: var(--ink-soft)" role="status">Cargando casos...</p>
+      } @else if (veterinariaSolicitudes().length === 0) {
+        <p class="list-empty">No hay solicitudes de atención pendientes.</p>
       } @else {
-        @for (paciente of veterinariaPacientes(); track paciente.id) {
+        @for (solicitud of veterinariaSolicitudes().slice(0, 3); track solicitud.id) {
           <div class="list-row">
-            <div class="list-thumb">🐾</div>
+            <app-caso-miniatura
+              [fotoPrincipal]="solicitud.fotoPrincipal"
+              [foto]="solicitud.foto"
+              [alt]="'Foto principal de ' + solicitud.descripcion"
+            />
             <div class="list-info">
-              <p class="list-title">{{ paciente.nombre }} · Caso #{{ paciente.casoId }}</p>
-              <p class="list-meta">Próximo control el {{ paciente.proximoControl }}</p>
+              <p class="list-title">{{ solicitud.descripcion }} · {{ solicitud.municipio }}</p>
+              <p class="list-meta">Sin custodia · Caso #{{ solicitud.id }}</p>
             </div>
+            <span class="badge" [ngClass]="getBadgeClass(solicitud.urgencia)">
+              <span class="badge-dot"></span>{{ getBadgeLabel(solicitud.urgencia) }}
+            </span>
             <div class="list-actions">
-              <button class="btn btn-secondary btn-sm">Abrir bitácora</button>
+              <button class="btn btn-primary btn-sm" type="button" (click)="irAlCaso(solicitud.id)">
+                Revisar caso
+              </button>
             </div>
           </div>
         }
       }
     </section>
   </div>
+  @if (errorPdf()) {
+    <p class="feedback-error" role="alert">{{ errorPdf() }}</p>
+  }
+  <section class="panel" id="altas">
+    <div class="panel-head"><h3>Altas recientes</h3></div>
+    @if (cargando()) {
+      <p style="padding: 1rem; color: var(--ink-soft)" role="status">Cargando altas...</p>
+    } @else if (altasRecientes().length === 0) {
+      <p class="list-empty">No hay altas registradas.</p>
+    } @else {
+      @for (alta of altasRecientes().slice(0, 2); track alta.id) {
+        <div class="list-row">
+          <app-caso-miniatura
+            [foto]="alta.foto"
+            [alt]="'Foto principal de ' + (alta.nombre || alta.descripcion || 'paciente')"
+          />
+          <div class="list-info">
+            <p class="list-title">
+              {{ alta.nombre || alta.descripcion || 'Paciente' }} · Caso #{{ alta.casoId }}
+            </p>
+            <p class="list-meta">Alta el {{ alta.fechaAlta | date: 'dd/MM' }}</p>
+          </div>
+          <span class="badge badge-resuelto"><span class="badge-dot"></span>Alta médica</span>
+          <div class="list-actions">
+            <button
+              class="btn btn-secondary btn-sm"
+              type="button"
+              [disabled]="descargandoPdf() !== null"
+              (click)="descargarHistoria(alta.casoId)"
+            >
+              {{ descargandoPdf() === alta.casoId ? 'Descargando...' : 'Descargar PDF' }}
+            </button>
+          </div>
+        </div>
+      }
+    }
+  </section>
 </main>

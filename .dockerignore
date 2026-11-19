@@ -1,0 +1,8 @@
+.git
+.env
+huellitas-frontend/node_modules
+huellitas-frontend/.angular
+huellitas-frontend/dist
+huellitas-frontend/coverage
+huellitas-frontend/.tsupgrader
+huellitas-backend/target

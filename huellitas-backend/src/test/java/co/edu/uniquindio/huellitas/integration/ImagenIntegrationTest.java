@@ -1,5 +1,6 @@
 package co.edu.uniquindio.huellitas.integration;
 
+import co.edu.uniquindio.huellitas.config.TestCloudinaryConfig;
 import co.edu.uniquindio.huellitas.dto.auth.LoginRequestDTO;
 import co.edu.uniquindio.huellitas.dto.auth.RegistroUsuarioDTO;
 import co.edu.uniquindio.huellitas.dto.reporte.AnimalReporteDTO;
@@ -49,6 +50,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
 @ActiveProfiles("test")
 @DisplayName("Imagen - Worker W-06 y Reglas de Fotografías")
+@org.springframework.context.annotation.Import(TestCloudinaryConfig.class)
 class ImagenIntegrationTest {
 
     private MockMvc mockMvc;

@@ -1,0 +1,18 @@
+@for (figura of figuras(); track figura.texto) {
+  <a
+    class="figure"
+    [class.is-urgent]="figura.urgente"
+    [routerLink]="figura.ruta"
+    [queryParams]="figura.queryParams"
+  >
+    <span class="figure-num">{{ figura.valor }}</span>
+    <span class="figure-label">{{ figura.texto }}</span>
+    @if (figura.maximo) {
+      <progress
+        [value]="figura.valor"
+        [max]="figura.maximo"
+        [attr.aria-label]="figura.texto"
+      ></progress>
+    }
+  </a>
+}

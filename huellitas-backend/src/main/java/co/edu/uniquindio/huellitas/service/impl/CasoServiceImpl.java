@@ -16,6 +16,7 @@ import co.edu.uniquindio.huellitas.specification.CasoSpecification;
 import co.edu.uniquindio.huellitas.worker.FiltroWorker;
 import co.edu.uniquindio.huellitas.worker.NotificacionWorker;
 import lombok.extern.slf4j.Slf4j;
+import org.hibernate.Hibernate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -107,8 +108,7 @@ public class CasoServiceImpl implements CasoService {
         this(casoRepository, usuarioRepository, barrioRepository, animalRepository,
                 historialEstadoRepository, seguimientoRepository, cierreCasoRepository,
                 notificacionRepository, cloudinaryService, casoMapper, aporteMapper,
-                notificacionWorker, filtroWorker, emailService,
-                new EstadoCasoValidator(), null);
+                notificacionWorker, filtroWorker, emailService, new EstadoCasoValidator(), null);
     }
 
     @Override
@@ -346,6 +346,37 @@ public class CasoServiceImpl implements CasoService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public Page<CasoListItemDTO> misReportes(String correoUsuario, EstadoCaso estado, Pageable pageable) {
+        if (estado == null) {
+            // Si no se proporciona estado, conservar comportamiento original
+            return misReportes(correoUsuario, pageable);
+        }
+        return casoRepository.findByReportanteCorreoAndEstadoOrderByFechaRegistroDesc(
+                correoUsuario.trim().toLowerCase(), estado, pageable)
+                .map(casoMapper::toListItemDTO);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<CasoListItemDTO> obtenerHistorialCasos(EstadoCaso estado, Pageable pageable) {
+        List<EstadoCaso> estadosHistorial;
+        
+        if (estado == null) {
+            // Por defecto, mostrar RESUELTO y ARCHIVADO
+            estadosHistorial = List.of(EstadoCaso.RESUELTO, EstadoCaso.ARCHIVADO);
+        } else if (estado == EstadoCaso.RESUELTO || estado == EstadoCaso.ARCHIVADO) {
+            estadosHistorial = List.of(estado);
+        } else {
+            // Solo permitir RESUELTO y ARCHIVADO en el historial
+            throw new IllegalArgumentException("El historial solo admite casos RESUELTO o ARCHIVADO");
+        }
+
+        return casoRepository.findByEstadoInOrderByFechaArchivadoDesc(estadosHistorial, pageable)
+                .map(casoMapper::toListItemDTO);
+    }
+
+    @Override
     public CasoResponseDTO cerrarCaso(Long id, CierreCasoRequestDTO dto, String correoUsuario) {
         Caso caso = casoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Caso", id));
@@ -481,6 +512,8 @@ public class CasoServiceImpl implements CasoService {
                 .build();
         seguimientoRepository.save(seguimiento);
 
+        notificacionWorker.notificarArchivadoCaso(caso, dto.motivo());
+
         return casoMapper.toResponseDTO(caso);
     }
 
@@ -573,7 +606,8 @@ public class CasoServiceImpl implements CasoService {
             throw new AccessDeniedException("Solo las fundaciones pueden gestionar la custodia");
         }
 
-        if (!(usuario.getOrganizacion() instanceof Fundacion fundacion)) {
+        Object organizacion = Hibernate.unproxy(usuario.getOrganizacion());
+        if (!(organizacion instanceof Fundacion fundacion)) {
             throw new AccessDeniedException("Solo las fundaciones pueden gestionar la custodia");
         }
 
@@ -642,6 +676,15 @@ public class CasoServiceImpl implements CasoService {
             seguimientoRepository.save(seguimiento);
 
             // Notificar al reportante (vía worker async)
+            if (caso.getReportante() != null) {
+                Hibernate.initialize(caso.getReportante());
+            }
+            if (caso.getAnimal() != null) {
+                Hibernate.initialize(caso.getAnimal());
+            }
+            if (caso.getBarrio() != null) {
+                Hibernate.initialize(caso.getBarrio());
+            }
             notificacionWorker.notificarAsuncionCustodia(caso, fundacion);
 
         } else if ("LIBERAR".equals(accion)) {
@@ -697,6 +740,8 @@ public class CasoServiceImpl implements CasoService {
                     .build();
             seguimientoRepository.save(seguimiento);
 
+            notificacionWorker.notificarLiberacionCustodia(caso, motivo);
+
         } else {
             throw new IllegalArgumentException("Acción inválida. Use ASUMIR o LIBERAR");
         }
@@ -725,7 +770,12 @@ public class CasoServiceImpl implements CasoService {
             usuario = usuarioRepository.save(usuario);
         }
 
-        if (usuario.getOrganizacion() == null || !(usuario.getOrganizacion() instanceof Fundacion fundacion)) {
+        if (usuario.getOrganizacion() == null) {
+            throw new AccessDeniedException("Solo las fundaciones pueden consultar sus casos en custodia");
+        }
+
+        Object organizacion = Hibernate.unproxy(usuario.getOrganizacion());
+        if (!(organizacion instanceof Fundacion fundacion)) {
             throw new AccessDeniedException("Solo las fundaciones pueden consultar sus casos en custodia");
         }
 

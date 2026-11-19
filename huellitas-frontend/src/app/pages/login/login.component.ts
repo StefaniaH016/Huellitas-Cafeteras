@@ -20,12 +20,7 @@ export class LoginComponent {
     mantenerSesion: [false],
   });
 
-  recoveryForm = this.fb.nonNullable.group({
-    recoveryEmail: ['', [Validators.required, Validators.email]],
-  });
-
   showError = signal(false);
-  showRecovery = signal(false);
   isLoading = signal(false);
 
   onSubmit(): void {
@@ -46,19 +41,5 @@ export class LoginComponent {
         this.showError.set(true);
       },
     });
-  }
-
-  toggleRecovery($event?: Event): void {
-    $event?.preventDefault();
-    this.showRecovery.update((v) => !v);
-  }
-
-  onRecovery(): void {
-    if (this.recoveryForm.invalid) {
-      this.recoveryForm.markAllAsTouched();
-      return;
-    }
-    // TODO: implementar endpoint de recuperación
-    alert('Si el correo existe, recibirás un enlace de recuperación.');
   }
 }

@@ -10,6 +10,7 @@ import co.edu.uniquindio.huellitas.mapper.AporteMapper;
 import co.edu.uniquindio.huellitas.repository.*;
 import co.edu.uniquindio.huellitas.service.impl.AporteServiceImpl;
 import co.edu.uniquindio.huellitas.worker.NotificacionWorker;
+import org.springframework.security.access.AccessDeniedException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -21,6 +22,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -100,6 +102,18 @@ class AporteServiceTest {
     }
 
     @Test
+    @DisplayName("Debe rechazar aporte cuando el caso ya está resuelto")
+    void debeRechazarAporteCasoResuelto() {
+        casoMock.setEstado(EstadoCaso.RESUELTO);
+        when(casoRepository.findById(1L)).thenReturn(Optional.of(casoMock));
+
+        assertThrows(ConflictException.class, () -> aporteService.crearAporte(
+                1L, new CrearAporteDTO("Información suficiente", null, null, null), "test@huellitas.com"));
+
+        verify(seguimientoRepository, never()).save(any(Seguimiento.class));
+    }
+
+    @Test
     @DisplayName("Debe rechazar descripción muy corta")
     void debeRechazarDescripcionMuyCorta() {
         when(casoRepository.findById(1L)).thenReturn(Optional.of(casoMock));
@@ -131,6 +145,60 @@ class AporteServiceTest {
     }
 
     @Test
+    @DisplayName("Debe permitir aportes de ciudadanos externos al caso")
+    void debePermitirAporteDeOtroCiudadano() {
+        Usuario otroCiudadano = Usuario.builder()
+                .id(2L)
+                .correo("otro@huellitas.com")
+                .rol(Rol.CIUDADANO_VOLUNTARIO)
+                .build();
+        when(casoRepository.findById(1L)).thenReturn(Optional.of(casoMock));
+        when(usuarioRepository.findByCorreo("otro@huellitas.com")).thenReturn(Optional.of(otroCiudadano));
+        when(seguimientoRepository.save(any(Seguimiento.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        AporteResponseDTO response = aporteService.crearAporte(
+                1L, new CrearAporteDTO("Información suficiente", null, null, null), "otro@huellitas.com");
+
+        assertNotNull(response);
+        verify(seguimientoRepository).save(any(Seguimiento.class));
+    }
+
+    @Test
+    @DisplayName("Debe permitir aportes de ciudadanos externos incluso cuando el caso tiene custodio")
+    void debePermitirAporteExternoConCustodio() {
+        Usuario otroCiudadano = Usuario.builder()
+                .id(2L)
+                .correo("otro@huellitas.com")
+                .rol(Rol.CIUDADANO_VOLUNTARIO)
+                .build();
+        casoMock.setFundacionCustodio(Fundacion.builder().id(5L).build());
+        when(casoRepository.findById(1L)).thenReturn(Optional.of(casoMock));
+        when(usuarioRepository.findByCorreo("otro@huellitas.com")).thenReturn(Optional.of(otroCiudadano));
+        when(seguimientoRepository.save(any(Seguimiento.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        AporteResponseDTO response = aporteService.crearAporte(
+                1L, new CrearAporteDTO("Información suficiente", null, null, null), "otro@huellitas.com");
+
+        assertNotNull(response);
+        verify(seguimientoRepository).save(any(Seguimiento.class));
+    }
+
+    @Test
+    @DisplayName("Debe rechazar aporte del reportante después de asignar custodia")
+    void debeRechazarAporteDelReportanteConCustodio() {
+        casoMock.setFundacionCustodio(Fundacion.builder().id(5L).build());
+        when(casoRepository.findById(1L)).thenReturn(Optional.of(casoMock));
+        when(usuarioRepository.findByCorreo("test@huellitas.com")).thenReturn(Optional.of(usuarioMock));
+
+        assertThrows(AccessDeniedException.class, () -> aporteService.crearAporte(
+                1L, new CrearAporteDTO("Información suficiente", null, null, null), "test@huellitas.com"));
+
+        verify(seguimientoRepository, never()).save(any(Seguimiento.class));
+    }
+
+    @Test
     @DisplayName("Debe rechazar barrio inexistente")
     void debeRechazarBarrioInexistente() {
         when(casoRepository.findById(1L)).thenReturn(Optional.of(casoMock));
@@ -144,6 +212,51 @@ class AporteServiceTest {
         });
 
         assertTrue(exception.getMessage().contains("Barrio"));
+    }
+
+    @Test
+    @DisplayName("Debe mover las fotos cargadas al seguimiento sin duplicarlas en el caso")
+    void debeAdjuntarFotosAlSeguimiento() {
+        String url = "https://example.test/aporte.jpg";
+        Foto fotoSubida = Foto.builder()
+                .id(10L)
+                .url(url)
+                .publicId("aporte")
+                .principal(true)
+                .caso(casoMock)
+                .build();
+        when(casoRepository.findById(1L)).thenReturn(Optional.of(casoMock));
+        when(usuarioRepository.findByCorreo("test@huellitas.com")).thenReturn(Optional.of(usuarioMock));
+        when(barrioRepository.findById(1L)).thenReturn(Optional.of(barrioMock));
+        when(seguimientoRepository.save(any(Seguimiento.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        when(fotoRepository.findFirstByCasoIdAndUrlAndSeguimientoIsNull(1L, url))
+                .thenReturn(Optional.of(fotoSubida));
+
+        AporteResponseDTO response = aporteService.crearAporte(
+                1L,
+                new CrearAporteDTO(
+                        "Información suficiente",
+                        "Parque Sucre, junto a la fuente",
+                        1L,
+                        List.of(url)),
+                "test@huellitas.com");
+
+        assertEquals(List.of(url), response.fotografias());
+        assertEquals("Parque Sucre, junto a la fuente", response.ubicacionTexto());
+        assertEquals(
+                "Centro · Armenia",
+                aporteMapper.toDetalleDTO(fotoSubida.getSeguimiento()).zona());
+        assertEquals(
+                "Parque Sucre, junto a la fuente",
+                aporteMapper.toDetalleDTO(fotoSubida.getSeguimiento()).ubicacionTexto());
+        assertNotNull(fotoSubida.getSeguimiento());
+        assertFalse(fotoSubida.isPrincipal());
+        assertTrue(fotoSubida.getSeguimiento().getFotografias().contains(fotoSubida));
+        assertEquals(
+                List.of(url),
+                aporteMapper.toDetalleDTO(fotoSubida.getSeguimiento()).fotografias());
+        verify(fotoRepository).save(fotoSubida);
     }
 
     @Test

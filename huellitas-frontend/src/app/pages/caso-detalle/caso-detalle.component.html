@@ -1,15 +1,59 @@
 <section id="caso-detalle">
   <div class="main-area wrap-1080">
     <div class="back-row">
-      <button class="icon-btn" (click)="goBack()">←</button>
+      <button class="icon-btn" (click)="goBack()" aria-label="Volver a casos">←</button>
       <div class="flex-1">
-        <h1 class="m-0">{{ caso()?.titulo || caso()?.descripcion }}</h1>
-        <p class="lead mt-2xs">Caso #{{ caso()?.id }} · Registrado el {{ caso()?.fechaReporte }}</p>
+        <div>
+          <h1 class="m-0">{{ caso()?.titulo || caso()?.descripcion }}</h1>
+          <p class="lead mt-2xs">
+            Caso #{{ caso()?.id }} · {{ getTipoLabel(caso()?.tipo) }} · Reportado el
+            {{ caso()?.fechaReporte }} por {{ caso()?.reportante }}
+          </p>
+        </div>
       </div>
-      <span class="badge" [ngClass]="getBadgeClass(caso()?.urgencia)">
-        <span class="badge-dot"></span>{{ getBadgeLabel(caso()?.urgencia) }}
-      </span>
+      <div class="badge-row">
+        <span class="badge" [ngClass]="getEstadoBadgeClass(caso()?.estado)">
+          <span class="badge-dot"></span>{{ getEstadoLabel(caso()?.estado) }}
+        </span>
+        <span class="badge" [ngClass]="getBadgeClass(caso()?.urgencia)">
+          <span class="badge-dot"></span>{{ getBadgeLabel(caso()?.urgencia) }}
+        </span>
+      </div>
     </div>
+
+    <!-- Banners -->
+    @if (caso()?.estado === 'RESUELTO' && resultadoCierre() !== 'REENCUENTRO') {
+      <div class="banner banner-ok">
+        <span class="banner-ico" aria-hidden="true">✅</span>
+        <p>
+          <strong>Caso resuelto · {{ resultadoCierreLabel() }}</strong>
+          El resultado quedó registrado en el historial. El caso ya no aparece entre los casos
+          activos y su historial se conserva.
+        </p>
+      </div>
+    }
+    @if (caso()?.estado === 'ARCHIVADO') {
+      <div class="banner banner-muted">
+        <span class="banner-ico" aria-hidden="true">🗄️</span>
+        <p>
+          <strong>Caso archivado · solo lectura</strong>Se archivó automáticamente, 7 días después
+          de resolverse. No admite aportes, cambios de estado ni entradas médicas.
+        </p>
+      </div>
+    }
+    @if (
+      caso()?.tipo === 'EXTRAVIADO' &&
+      ['RESUELTO', 'ARCHIVADO'].includes(caso()?.estado || '') &&
+      resultadoCierre() === 'REENCUENTRO'
+    ) {
+      <div class="banner banner-ok">
+        <span class="banner-ico" aria-hidden="true">🏡</span>
+        <p>
+          <strong>¡El animal volvió a casa!</strong> El reportante confirmó el reencuentro. Gracias
+          a todas las personas que colaboraron.
+        </p>
+      </div>
+    }
 
     <div class="two-col">
       <div>
@@ -29,7 +73,6 @@
             (click)="selectTab('seguimiento')"
             role="tab"
             [attr.aria-selected]="activeTab() === 'seguimiento'"
-            aria-disabled="true"
           >
             Seguimiento
           </button>
@@ -39,7 +82,6 @@
             (click)="selectTab('bitacora')"
             role="tab"
             [attr.aria-selected]="activeTab() === 'bitacora'"
-            aria-disabled="true"
           >
             Bitácora médica
           </button>
@@ -118,22 +160,46 @@
               <p class="v">{{ caso()?.tamanio }} · {{ caso()?.edad }}</p>
             </div>
             <div>
-              <p class="k">Color y señas</p>
+              <p class="k">Color y señales</p>
               <p class="v">{{ caso()?.color }}</p>
             </div>
             <div>
               <p class="k">Ubicación</p>
               <p class="v">{{ caso()?.municipio }} · {{ caso()?.barrio }}</p>
             </div>
+            <div>
+              <p class="k">Tipo de caso</p>
+              <p class="v">{{ caso()?.tipo }}</p>
+            </div>
+            <div>
+              <p class="k">Urgencia</p>
+              <p class="v">{{ caso()?.urgencia }}</p>
+            </div>
           </div>
         }
 
         @if (activeTab() === 'seguimiento') {
-          <p class="text-soft-md" style="padding: 1rem">Seguimiento próximamente disponible.</p>
+          <app-caso-seguimiento
+            [caso]="casoDet()!"
+            [usuarioId]="perfil()?.id ?? null"
+            [organizacionId]="perfil()?.organizacionId ?? null"
+            (actualizado)="loadDetalle(caso()!.id)"
+          />
         }
 
-        @if (activeTab() === 'bitacora') {
-          <p class="text-soft-md" style="padding: 1rem">Bitácora médica próximamente disponible.</p>
+        @if ((esVeterinaria() || activeTab() === 'bitacora') && casoDet(); as casoBitacora) {
+          <div [hidden]="activeTab() !== 'bitacora'">
+            <app-caso-bitacora
+              [caso]="casoBitacora"
+              [puedeConsultar]="puedeConsultarBitacora()"
+              [puedeGestionar]="puedeGestionarBitacora()"
+              [puedeDescargarPdf]="puedeDescargarBitacoraPdf()"
+              [formularioActivo]="formularioBitacora()"
+              (actualizado)="loadDetalle(caso()!.id)"
+              (sinBitacoraChange)="sinBitacoraMedica.set($event)"
+              (formularioCerrado)="formularioBitacora.set(null)"
+            />
+          </div>
         }
       </div>
 
@@ -142,20 +208,394 @@
           <div class="panel-head">
             <h3>Acciones</h3>
           </div>
-          <button class="btn btn-primary btn-block mb-sm">Asumir custodia</button>
-          <button class="btn btn-secondary btn-block mb-sm">Solicitar atención médica</button>
-          <button class="btn btn-secondary btn-block">Contactar al reportante</button>
+
+          @if (errorAccion() && !mostrandoCierre()) {
+            <p class="feedback-error" role="alert">{{ errorAccion() }}</p>
+          }
+          @if (mensajeAccion()) {
+            <p class="feedback-success" role="status">{{ mensajeAccion() }}</p>
+          }
+
+          <!-- CIUDADANO: Reportante -->
+          @if (!esAdministrador() && !esFundacion() && !esVeterinaria()) {
+            <!-- Registrado: Solo aporte -->
+            @if (
+              (caso()?.estado === 'REGISTRADO' || caso()?.estado === 'EN_ATENCION') &&
+              caso()?.tipo !== 'EXTRAVIADO'
+            ) {
+              @if (puedeAportarCaso()) {
+                <button
+                  class="btn btn-secondary btn-block"
+                  type="button"
+                  (click)="selectTab('seguimiento')"
+                >
+                  Agregar aporte
+                </button>
+                <p class="note">Te avisamos de cada cambio en la plataforma y por correo.</p>
+              } @else {
+                <button class="btn btn-secondary btn-block" type="button" disabled>
+                  Agregar aporte
+                </button>
+                <p class="note">
+                  La fundación asumió la custodia; el reportante no puede agregar aportes mientras
+                  esté a su cargo.
+                </p>
+              }
+            }
+            <!-- Extraviado: Confirmación de reencuentro -->
+            @if (
+              caso()?.tipo === 'EXTRAVIADO' &&
+              caso()?.estado !== 'RESUELTO' &&
+              caso()?.estado !== 'ARCHIVADO'
+            ) {
+              <button
+                class="btn btn-secondary btn-block"
+                type="button"
+                (click)="selectTab('seguimiento')"
+                [disabled]="!puedeAportarCaso()"
+              >
+                Agregar aporte
+              </button>
+              <p class="note">
+                El reportante puede confirmar el reencuentro si el caso no está bajo custodia.
+              </p>
+              @if (!puedeAportarCaso()) {
+                <p class="note">
+                  @if (caso()?.fundacionCustodioId) {
+                    La fundación asumió la custodia; el reportante no puede agregar aportes mientras
+                    esté a su cargo.
+                  } @else {
+                    Solo la persona que reportó el caso puede agregar aportes.
+                  }
+                </p>
+              }
+            }
+            <!-- Caso cerrado -->
+            @if (
+              (caso()?.estado === 'ARCHIVADO' || caso()?.estado === 'RESUELTO') &&
+              caso()?.tipo !== 'EXTRAVIADO'
+            ) {
+              <p class="note">
+                Este caso está cerrado. Puedes consultar su historial en cualquier momento.
+              </p>
+            }
+          }
+
+          @if (puedeCerrarCaso()) {
+            <button
+              class="btn btn-primary btn-block mb-sm"
+              type="button"
+              (click)="iniciarCierre()"
+              [disabled]="accionEnCurso()"
+            >
+              {{ puedeConfirmarReencuentro() ? 'Confirmar reencuentro' : 'Cerrar caso' }}
+            </button>
+            @if (mostrandoCierre()) {
+              <app-cierre-caso-dialog
+                [casoId]="caso()?.id ?? ''"
+                [puedeConfirmarReencuentro]="puedeConfirmarReencuentro()"
+                [esCasoExtraviado]="caso()?.tipo === 'EXTRAVIADO'"
+                [requiereResponsable]="
+                  !!(caso()?.fundacionCustodioId || motivoCierre === 'ENTREGADO_A_CUIDADOR')
+                "
+                [tieneAltaMedica]="caso()?.resumenMedico?.altaMedica === true"
+                [veterinariaNombre]="
+                  caso()?.resumenMedico?.veterinariaNombre || caso()?.veterinaria || ''
+                "
+                [fechaAlta]="formatearFecha(caso()?.resumenMedico?.fechaAlta ?? undefined)"
+                [tieneCustodia]="!!caso()?.fundacionCustodioId"
+                [fundacionNombre]="caso()?.fundacion || ''"
+                [accionEnCurso]="accionEnCurso()"
+                [error]="errorAccion()"
+                [(motivoCierre)]="motivoCierre"
+                [(entregadoA)]="entregadoA"
+                [(observacionCierre)]="observacionCierre"
+                (confirmar)="cerrarCaso()"
+                (cancelar)="cancelarCierre()"
+              />
+            }
+          }
+
+          <!-- FUNDACIÓN: Gestión de custodia y cierre -->
+          @if (esFundacion()) {
+            <!-- Registrado: Asumir custodia -->
+            @if (puedeAsumirCustodia()) {
+              <button
+                class="btn btn-primary btn-block"
+                type="button"
+                (click)="asumirCustodia()"
+                [disabled]="asumiendo()"
+              >
+                {{ asumiendo() ? 'Asumiendo...' : 'Asumir custodia' }}
+              </button>
+              <p class="note">El caso pasará a En atención.</p>
+            }
+            <!-- Extraviado: Sin acciones (reportante cierra) -->
+            @if (caso()?.tipo === 'EXTRAVIADO') {
+              <p class="note">
+                Los casos de mascotas extraviadas los cierra la reportante al confirmar el
+                reencuentro.
+              </p>
+            }
+            <!-- Caso cerrado -->
+            @if (
+              (caso()?.estado === 'ARCHIVADO' || caso()?.estado === 'RESUELTO') &&
+              caso()?.tipo !== 'EXTRAVIADO'
+            ) {
+              <p class="note">
+                Este caso está cerrado. Puedes consultar su historial en cualquier momento.
+              </p>
+            }
+          }
+
+          <!-- VETERINARIA: Gestión de bitácora y atención médica -->
+          @if (esVeterinaria()) {
+            <!-- En atención: Tomar atención -->
+            @if (puedeTomarAtencion()) {
+              <button
+                class="btn btn-primary btn-block"
+                type="button"
+                (click)="tomarAtencionMedica()"
+                [disabled]="tomandoAtencion()"
+              >
+                {{ tomandoAtencion() ? 'Tomando...' : 'Tomar atención médica' }}
+              </button>
+              <p class="note">
+                El caso debe estar en atención. Al abrir la bitácora quedas como veterinaria
+                responsable.
+              </p>
+            }
+            <!-- Bitácora: Registrar evolución -->
+            @if (
+              puedeGestionarBitacora() &&
+              caso()?.estado === 'EN_ATENCION' &&
+              caso()?.resumenMedico &&
+              !caso()?.resumenMedico?.altaMedica
+            ) {
+              <button
+                class="btn btn-primary btn-block mb-sm"
+                type="button"
+                (click)="abrirFormularioBitacora('entrada')"
+              >
+                Nueva entrada
+              </button>
+              <button
+                class="btn btn-secondary btn-block"
+                type="button"
+                (click)="abrirFormularioBitacora('alta')"
+              >
+                Emitir alta médica
+              </button>
+              <p class="note">Continúa registrando la evolución del caso en la bitácora médica.</p>
+            }
+            <!-- Alta o después: Descargar historia -->
+            @if (
+              (caso()?.estado === 'EN_ATENCION' ||
+                caso()?.estado === 'RESUELTO' ||
+                caso()?.estado === 'ARCHIVADO') &&
+              caso()?.resumenMedico?.altaMedica
+            ) {
+              <button
+                class="btn btn-secondary btn-block"
+                type="button"
+                (click)="selectTab('bitacora')"
+              >
+                Ver historia clínica
+              </button>
+              <p class="note">El alta ya fue emitida; la bitácora no admite más entradas.</p>
+            }
+            <!-- Extraviado: Sin bitácora -->
+            @if (caso()?.tipo === 'EXTRAVIADO') {
+              <p class="note">Este caso no tiene bitácora médica.</p>
+            }
+          }
+
+          <!-- ADMINISTRADOR: Moderación y archivo -->
+          @if (esAdministrador()) {
+            <!-- Moderación -->
+            @if (errorModeracion()) {
+              <p class="feedback-error" role="alert">{{ errorModeracion() }}</p>
+            }
+            @if (mensajeModeracion()) {
+              <p class="feedback-success" role="status">{{ mensajeModeracion() }}</p>
+            }
+            @if (cargandoModeracion()) {
+              <p class="panel-message" role="status">Cargando estado de moderación...</p>
+            } @else if (!errorModeracion()) {
+              @if (moderacionFinalizada()) {
+                <p class="note">La decisión de moderación quedó registrada.</p>
+              } @else if (!casoModeracion() && !marcacionModeracionLocal()) {
+                <div class="form-field">
+                  <label for="mod-motivo-marcar">Motivo para marcar el caso</label>
+                  <select
+                    id="mod-motivo-marcar"
+                    [(ngModel)]="motivoMarcaModeracion"
+                    name="motivoMarcaModeracion"
+                    required
+                  >
+                    <option value="" disabled>Selecciona un motivo</option>
+                    <option value="Duplicado de otro reporte">Duplicado de otro reporte</option>
+                    <option value="Contenido inapropiado">Contenido inapropiado</option>
+                    <option value="Información posiblemente falsa">
+                      Información posiblemente falsa
+                    </option>
+                  </select>
+                </div>
+                <button
+                  class="btn btn-primary btn-block"
+                  type="button"
+                  (click)="marcarParaModeracion()"
+                  [disabled]="moderacionEnCurso() || !motivoMarcaModeracion"
+                >
+                  {{ moderacionEnCurso() ? 'Marcando...' : 'Marcar para moderación' }}
+                </button>
+              } @else {
+                <p class="note">
+                  Motivo de marcación:
+                  {{ casoModeracion()?.motivo || motivoMarcaModeracion }}
+                </p>
+                <div class="form-field">
+                  <label for="mod-motivo-decision">Motivo de la decisión</label>
+                  <select
+                    id="mod-motivo-decision"
+                    [(ngModel)]="motivoDecisionModeracion"
+                    name="motivoDecisionModeracion"
+                    required
+                  >
+                    <option value="Duplicado de otro reporte">Duplicado de otro reporte</option>
+                    <option value="Contenido inapropiado">Contenido inapropiado</option>
+                    <option value="Información posiblemente falsa">
+                      Información posiblemente falsa
+                    </option>
+                  </select>
+                </div>
+                <button
+                  class="btn btn-secondary btn-block mb-sm"
+                  type="button"
+                  (click)="resolverModeracion('MANTENER')"
+                  [disabled]="moderacionEnCurso() || !motivoDecisionModeracion"
+                >
+                  Mantener publicado
+                </button>
+                <button
+                  class="btn btn-primary btn-block"
+                  type="button"
+                  (click)="resolverModeracion('OCULTAR')"
+                  [disabled]="moderacionEnCurso() || !motivoDecisionModeracion"
+                >
+                  Ocultar del feed
+                </button>
+                <p class="note">
+                  El motivo seleccionado se guardará con la decisión. Ocultar no elimina el caso;
+                  deja de aparecer en el feed.
+                </p>
+              }
+            }
+            <!-- Moderación de aportes -->
+            @if (['EN_ATENCION', 'RESUELTO'].includes(caso()?.estado || '')) {
+              <button
+                class="btn btn-secondary btn-block"
+                type="button"
+                (click)="selectTab('seguimiento')"
+              >
+                Moderar aportes
+              </button>
+              <p class="note">En Seguimiento puedes ocultar aportes inapropiados.</p>
+            }
+            <!-- Archivo -->
+            @if (puedeArchivarCaso()) {
+              <button
+                class="btn btn-primary btn-block mb-sm"
+                type="button"
+                (click)="mostrandoArchivo.set(true)"
+              >
+                Archivar ahora
+              </button>
+              @if (caso()?.estado === 'RESUELTO') {
+                <p class="note">Si no, el sistema lo archiva solo 7 días después del cierre.</p>
+              } @else {
+                <p class="note">
+                  El administrador puede archivar casos registrados o en atención cuando sea
+                  necesario.
+                </p>
+              }
+            }
+            @if (mostrandoArchivo()) {
+              <form class="form-field" (ngSubmit)="archivarCaso()">
+                <label for="motivo-archivo">Motivo del archivo</label>
+                <textarea
+                  id="motivo-archivo"
+                  name="motivoArchivo"
+                  [(ngModel)]="motivoArchivo"
+                  required
+                  maxlength="1000"
+                ></textarea>
+                <div class="step-actions">
+                  <button
+                    class="btn btn-primary"
+                    type="submit"
+                    [disabled]="accionEnCurso() || !motivoArchivo.trim()"
+                  >
+                    {{ accionEnCurso() ? 'Archivando...' : 'Confirmar archivo' }}
+                  </button>
+                  <button
+                    class="btn btn-secondary"
+                    type="button"
+                    [disabled]="accionEnCurso()"
+                    (click)="mostrandoArchivo.set(false)"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </form>
+            }
+          }
+
+          <!-- Caso cerrado: Mensaje genérico -->
+          @if (
+            caso()?.estado === 'ARCHIVADO' ||
+            (caso()?.estado === 'RESUELTO' && caso()?.tipo === 'EXTRAVIADO')
+          ) {
+            <p class="note">
+              Este caso está cerrado. Puedes consultar su historial en cualquier momento.
+            </p>
+          }
         </div>
 
         <div class="panel">
           <div class="panel-head">
             <h3>Responsables</h3>
           </div>
+          @if (caso()?.reportante) {
+            <div class="list-row">
+              <div class="avatar-dot">👤</div>
+              <div class="list-info">
+                <p class="list-title">{{ caso()?.reportante }}</p>
+                <p class="list-meta">Reportante</p>
+              </div>
+            </div>
+          } @else {
+            <div class="list-row">
+              <div class="avatar-dot">👤</div>
+              <div class="list-info">
+                <p class="list-title">Sin asignar</p>
+                <p class="list-meta">Reportante</p>
+              </div>
+            </div>
+          }
           @if (caso()?.fundacion) {
             <div class="list-row">
               <div class="avatar-dot">🏠</div>
               <div class="list-info">
                 <p class="list-title">{{ caso()?.fundacion }}</p>
+                <p class="list-meta">A cargo</p>
+              </div>
+            </div>
+          } @else {
+            <div class="list-row">
+              <div class="avatar-dot">🏠</div>
+              <div class="list-info">
+                <p class="list-title">Sin asignar</p>
                 <p class="list-meta">A cargo</p>
               </div>
             </div>
@@ -168,11 +608,14 @@
                 <p class="list-meta">Atención médica</p>
               </div>
             </div>
-          }
-          @if (!caso()?.fundacion && !caso()?.veterinaria) {
-            <p style="padding: 1rem; color: var(--ink-soft); font-size: 0.85rem">
-              Sin responsables asignados aún.
-            </p>
+          } @else {
+            <div class="list-row">
+              <div class="avatar-dot">🩺</div>
+              <div class="list-info">
+                <p class="list-title">Sin asignar</p>
+                <p class="list-meta">Atención médica</p>
+              </div>
+            </div>
           }
         </div>
       </aside>

@@ -10,15 +10,17 @@ import co.edu.uniquindio.huellitas.entity.Fundacion;
 import co.edu.uniquindio.huellitas.entity.Organizacion;
 import co.edu.uniquindio.huellitas.entity.Usuario;
 import co.edu.uniquindio.huellitas.entity.Veterinaria;
-import co.edu.uniquindio.huellitas.entity.enums.EstadoVerificacion;
 import co.edu.uniquindio.huellitas.entity.enums.Rol;
 import co.edu.uniquindio.huellitas.exception.ConflictException;
 import co.edu.uniquindio.huellitas.exception.ResourceNotFoundException;
 import co.edu.uniquindio.huellitas.mapper.UsuarioMapper;
 import co.edu.uniquindio.huellitas.repository.BarrioRepository;
+import co.edu.uniquindio.huellitas.repository.MunicipioRepository;
+import co.edu.uniquindio.huellitas.repository.OrganizacionRepository;
 import co.edu.uniquindio.huellitas.repository.UsuarioRepository;
 import co.edu.uniquindio.huellitas.security.JwtUtils;
 import co.edu.uniquindio.huellitas.service.AuthService;
+import co.edu.uniquindio.huellitas.util.DocumentoSoporteUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -27,6 +29,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -38,6 +41,8 @@ public class AuthServiceImpl implements AuthService {
 
     private final UsuarioRepository usuarioRepository;
     private final BarrioRepository barrioRepository;
+    private final MunicipioRepository municipioRepository;
+    private final OrganizacionRepository organizacionRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtUtils jwtUtils;
@@ -46,6 +51,11 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public RegistroResponseDTO registro(RegistroUsuarioDTO dto) {
+        return registro(dto, null);
+    }
+
+    @Override
+    public RegistroResponseDTO registro(RegistroUsuarioDTO dto, MultipartFile documentoSoporte) {
         if (usuarioRepository.existsByCorreo(dto.correo())) {
             throw new ConflictException("El correo ya se encuentra registrado: " + dto.correo());
         }
@@ -58,23 +68,26 @@ public class AuthServiceImpl implements AuthService {
                     .orElseThrow(() -> new ResourceNotFoundException("Barrio", dto.barrioId()));
         }
 
-        Organizacion organizacion = null;
-        if (rol == Rol.FUNDACION_REFUGIO) {
-            organizacion = Fundacion.builder()
-                    .nombre(dto.nombre().trim())
-                    .nit("NIT-" + UUID.randomUUID().toString().replace("-", "").substring(0, 14))
-                    .estadoVerificacion(EstadoVerificacion.PENDIENTE)
-                    .aceptaCustodia(true)
-                    .capacidadAlbergue(50)
-                    .municipio(barrio != null ? barrio.getMunicipio() : null)
-                    .build();
-        } else if (rol == Rol.VETERINARIA) {
-            organizacion = Veterinaria.builder()
-                    .nombre(dto.nombre().trim())
-                    .nit("NIT-" + UUID.randomUUID().toString().replace("-", "").substring(0, 14))
-                    .estadoVerificacion(EstadoVerificacion.PENDIENTE)
-                    .municipio(barrio != null ? barrio.getMunicipio() : null)
-                    .build();
+        boolean cuentaInstitucional = rol == Rol.FUNDACION_REFUGIO || rol == Rol.VETERINARIA;
+        boolean datosEntidadInstitucionales = dto.nombreEntidad() != null
+                && !dto.nombreEntidad().isBlank()
+                && dto.nit() != null
+                && !dto.nit().isBlank()
+                && dto.municipioOperacion() != null
+                && !dto.municipioOperacion().isBlank();
+        if (cuentaInstitucional && !datosEntidadInstitucionales) {
+            throw new IllegalArgumentException(
+                    "Nombre de entidad, NIT y municipio de operación son obligatorios para cuentas institucionales.");
+        }
+        Organizacion organizacion = datosEntidadInstitucionales
+                ? crearOrganizacionInstitucional(dto, rol)
+                : null;
+        if (documentoSoporte != null) {
+            if (organizacion == null) {
+                throw new ConflictException("El documento de soporte requiere una cuenta institucional.");
+            }
+            DocumentoSoporteUtils.adjuntar(organizacion, documentoSoporte);
+            organizacionRepository.save(organizacion);
         }
 
         Usuario usuario = Usuario.builder()
@@ -84,7 +97,8 @@ public class AuthServiceImpl implements AuthService {
                 .telefono(dto.telefono())
                 .rol(rol)
                 .barrio(barrio)
-                .municipioInteres(barrio != null ? barrio.getMunicipio() : null)
+                .municipioInteres(barrio != null ? barrio.getMunicipio()
+                        : organizacion != null ? organizacion.getMunicipio() : null)
                 .organizacion(organizacion)
                 .verificado(false)
                 .activo(true)
@@ -95,6 +109,45 @@ public class AuthServiceImpl implements AuthService {
         Usuario guardado = usuarioRepository.save(usuario);
 
         return usuarioMapper.toRegistroResponseDTO(guardado);
+    }
+
+    private Organizacion crearOrganizacionInstitucional(RegistroUsuarioDTO dto, Rol rol) {
+        if (rol != Rol.FUNDACION_REFUGIO && rol != Rol.VETERINARIA) {
+            return null;
+        }
+        if (dto.nombreEntidad() == null || dto.nombreEntidad().isBlank()
+                || dto.nit() == null || dto.nit().isBlank()
+                || dto.municipioOperacion() == null || dto.municipioOperacion().isBlank()) {
+            throw new IllegalArgumentException(
+                    "Nombre de entidad, NIT y municipio de operación son obligatorios para cuentas institucionales.");
+        }
+
+        String nit = dto.nit().trim();
+        if (organizacionRepository.existsByNit(nit)) {
+            throw new ConflictException("El NIT ya se encuentra registrado.");
+        }
+
+        var municipio = municipioRepository.findFirstByNombreIgnoreCase(dto.municipioOperacion().trim())
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "No se encontró el municipio de operación: " + dto.municipioOperacion().trim()));
+        Organizacion organizacion;
+        if (rol == Rol.FUNDACION_REFUGIO) {
+            organizacion = Fundacion.builder()
+                    .nombre(dto.nombreEntidad().trim())
+                    .nit(nit)
+                    .municipio(municipio)
+                    .capacidadAlbergue(0)
+                    .aceptaCustodia(false)
+                    .build();
+        } else {
+            organizacion = Veterinaria.builder()
+                    .nombre(dto.nombreEntidad().trim())
+                    .nit(nit)
+                    .municipio(municipio)
+                    .registroProfesional(dto.documentoLegal())
+                    .build();
+        }
+        return organizacionRepository.save(organizacion);
     }
 
     @Override

@@ -1,0 +1,40 @@
+/* Utilidades pequeñas. */
+
+.m-0 {
+  margin: 0;
+}
+
+.mt-sm {
+  margin-top: 0.75rem;
+}
+
+.mb-sm {
+  margin-bottom: 0.5rem;
+}
+
+.flex-1 {
+  flex: 1;
+  min-width: 0;
+}
+
+.text-soft-md {
+  color: var(--ink-soft);
+  line-height: 1.6;
+}
+
+.text-soft-sm {
+  font-size: 0.84rem;
+  color: var(--ink-soft);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}

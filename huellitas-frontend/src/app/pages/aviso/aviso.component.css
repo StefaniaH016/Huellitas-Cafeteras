@@ -1,0 +1,26 @@
+.aviso {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-height: calc(100vh - 300px);
+  padding: 3rem 1rem;
+}
+
+.aviso-icono {
+  font-size: 3.5rem;
+  margin-bottom: 1rem;
+}
+
+.aviso h1 {
+  font-size: 1.8rem;
+  color: var(--brown-900);
+  margin: 0 0 0.5rem;
+}
+
+.aviso p {
+  max-width: 420px;
+  color: var(--ink-soft);
+  margin: 0 0 2rem;
+}

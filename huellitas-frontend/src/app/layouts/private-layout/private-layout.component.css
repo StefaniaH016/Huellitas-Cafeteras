@@ -70,8 +70,9 @@
 .private-main {
   flex: 1;
   padding: 2rem 1.5rem;
-  max-width: 1200px;
+  max-width: 1328px;
   width: 100%;
+  min-width: 0;
   margin: 0 auto;
   position: relative;
   z-index: 1;
