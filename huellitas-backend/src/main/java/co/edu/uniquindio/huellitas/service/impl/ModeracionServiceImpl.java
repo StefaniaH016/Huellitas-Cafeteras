@@ -31,10 +31,19 @@ public class ModeracionServiceImpl implements ModeracionService {
     @Override
     @Transactional(readOnly = true)
     public List<CasoModeracionDTO> listarCasosReportados() {
-        List<Caso> casos = casoRepository.findByModeracionPendienteTrueOrVisibleFalse();
+        List<Caso> casos = casoRepository.findByModeracionPendienteTrue();
         return casos.stream()
                 .map(moderacionMapper::toCasoModeracionDTO)
                 .toList();
+    }
+
+    @Override
+    public void marcarCasoParaModeracion(Long casoId, String motivo) {
+        Caso caso = casoRepository.findById(casoId)
+                .orElseThrow(() -> new ResourceNotFoundException("Caso", casoId));
+        caso.setModeracionPendiente(true);
+        caso.setMotivoModeracion(motivo.trim());
+        casoRepository.save(caso);
     }
 
     @Override
@@ -44,15 +53,17 @@ public class ModeracionServiceImpl implements ModeracionService {
 
         boolean mantener = "MANTENER".equalsIgnoreCase(dto.decision());
         boolean ocultamientoNuevo = !mantener && caso.isVisible();
+        
         caso.setVisible(mantener);
         caso.setModeracionPendiente(false);
         caso.setMotivoModeracion(dto.motivo());
         caso.setFechaUltimaActividad(Instant.now());
 
-        casoRepository.save(caso);
+        Caso casoGuardado = casoRepository.save(caso);
 
         if (ocultamientoNuevo) {
-            notificacionWorker.notificarOcultamientoCaso(caso, dto.motivo());
+            notificacionWorker.notificarOcultamientoCaso(
+                    caso.getId(), caso.getReportante().getId(), dto.motivo());
         }
 
         return moderacionMapper.toModeracionResponseDTO(caso.getId(), mantener);

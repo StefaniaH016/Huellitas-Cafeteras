@@ -7,7 +7,7 @@ import { TokenService } from '../../../core/services/token.service';
 import { HeaderComponent } from './header.component';
 
 let notificacionService: Pick<NotificacionService, 'sinLeer' | 'actualizarContador'>;
-let authService: Pick<AuthService, 'getRol' | 'logout'>;
+let authService: Pick<AuthService, 'getRol' | 'getNombre' | 'logout'>;
 let nombreUsuario: string;
 let router: Router;
 
@@ -19,6 +19,7 @@ beforeEach(() => {
   };
   authService = {
     getRol: vi.fn().mockReturnValue('CIUDADANO_VOLUNTARIO'),
+    getNombre: vi.fn(() => nombreUsuario),
     logout: vi.fn(),
   };
 
@@ -127,6 +128,22 @@ it('shows the live unread count instead of a fixed badge', () => {
   fixture.detectChanges();
 
   expect(fixture.nativeElement.querySelector('.badge')).toBeNull();
+});
+
+it('refreshes the administrator unread count every 10 seconds', () => {
+  vi.useFakeTimers();
+  vi.mocked(authService.getRol).mockReturnValue('ADMINISTRADOR');
+  const fixture = TestBed.createComponent(HeaderComponent);
+  fixture.detectChanges();
+
+  try {
+    expect(notificacionService.actualizarContador).toHaveBeenCalledOnce();
+    vi.advanceTimersByTime(10_000);
+    expect(notificacionService.actualizarContador).toHaveBeenCalledTimes(2);
+  } finally {
+    fixture.destroy();
+    vi.useRealTimers();
+  }
 });
 
 it('refreshes the unread count when the window regains focus', () => {

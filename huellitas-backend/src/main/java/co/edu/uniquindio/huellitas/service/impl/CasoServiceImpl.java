@@ -254,6 +254,13 @@ public class CasoServiceImpl implements CasoService {
 
     @Override
     @Transactional(readOnly = true)
+    public Page<CasoListItemDTO> listarCasosOcultos(Pageable pageable) {
+        return casoRepository.findByVisibleFalse(pageable)
+                .map(casoMapper::toListItemDTO);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public CasoDetalleDTO obtenerDetalle(Long id) {
         Caso caso = casoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Caso", id));
@@ -341,7 +348,8 @@ public class CasoServiceImpl implements CasoService {
     @Override
     @Transactional(readOnly = true)
     public Page<CasoListItemDTO> misReportes(String correoUsuario, Pageable pageable) {
-        return casoRepository.findByReportanteCorreoOrderByFechaRegistroDesc(correoUsuario.trim().toLowerCase(), pageable)
+        return casoRepository.findByReportanteCorreoAndVisibleTrueOrderByFechaRegistroDesc(
+                correoUsuario.trim().toLowerCase(), pageable)
                 .map(casoMapper::toListItemDTO);
     }
 
@@ -352,7 +360,7 @@ public class CasoServiceImpl implements CasoService {
             // Si no se proporciona estado, conservar comportamiento original
             return misReportes(correoUsuario, pageable);
         }
-        return casoRepository.findByReportanteCorreoAndEstadoOrderByFechaRegistroDesc(
+        return casoRepository.findByReportanteCorreoAndEstadoAndVisibleTrueOrderByFechaRegistroDesc(
                 correoUsuario.trim().toLowerCase(), estado, pageable)
                 .map(casoMapper::toListItemDTO);
     }
@@ -389,13 +397,16 @@ public class CasoServiceImpl implements CasoService {
         // Validar permisos generales de cierre
         validarPermisoCierre(caso, usuario);
 
-        // Subtarea 16.2.A: REENCUENTRO solo para EXTRAVIADO y solo el reportante
+        // Subtarea 16.2.A: REENCUENTRO solo para EXTRAVIADO y solo reportante
         if (dto.motivoCierre() == ResultadoCierre.REENCUENTRO) {
             if (caso.getTipoCaso() != TipoCaso.EXTRAVIADO) {
                 throw new ConflictException("El resultado REENCUENTRO solo aplica para casos de tipo EXTRAVIADO.");
             }
+            
+            // Solo el reportante puede registrar reencuentro
             boolean esReportante = caso.getReportante() != null
                     && Objects.equals(caso.getReportante().getId(), usuario.getId());
+            
             if (!esReportante) {
                 throw new AccessDeniedException("Solo el ciudadano reportante del caso puede registrar el cierre por REENCUENTRO.");
             }
@@ -779,7 +790,10 @@ public class CasoServiceImpl implements CasoService {
             throw new AccessDeniedException("Solo las fundaciones pueden consultar sus casos en custodia");
         }
 
-        return casoRepository.findByFundacionCustodioAndVisibleTrue(fundacion, pageable)
+        return casoRepository.findByFundacionCustodioAndVisibleTrueAndEstadoIn(
+                fundacion, 
+                List.of(EstadoCaso.REGISTRADO, EstadoCaso.EN_ATENCION), 
+                pageable)
                 .map(casoMapper::toListItemDTO);
     }
 

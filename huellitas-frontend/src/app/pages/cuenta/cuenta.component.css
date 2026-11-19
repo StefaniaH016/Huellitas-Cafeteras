@@ -245,6 +245,7 @@
 }
 
 .feedback-success {
+  display: block;
   padding: 1rem;
   background: var(--mint-100);
   color: #16a34a;

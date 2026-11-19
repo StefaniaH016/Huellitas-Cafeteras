@@ -26,6 +26,7 @@ export class PanelAdminComponent implements OnInit, OnDestroy {
   adminValidaciones = signal<VerificacionPendiente[]>([]);
   casosReportados = signal<CasoReportado[]>([]);
   casosSistema = signal<CasoListItem[]>([]);
+  casosOcultos = signal<CasoListItem[]>([]);
   totalCasos = signal(0);
   paginaCasos = signal(0);
   cargandoCasos = signal(false);
@@ -168,6 +169,35 @@ export class PanelAdminComponent implements OnInit, OnDestroy {
 
   puedeResolverVerificacion(cuenta: VerificacionPendiente): boolean {
     return !!cuenta.nit?.trim();
+  }
+
+  restaurarCaso(casoId: number): void {
+    this.accionEnCurso.set(casoId);
+    this.moderacionService
+      .resolverModeracion(casoId, { decision: 'MANTENER', motivo: 'Restaurado por administrador' })
+      .subscribe({
+        next: () => {
+          this.accionEnCurso.set(null);
+          this.cargarCasos();
+          this.cargarCasosOcultos();
+        },
+        error: (error: unknown) => {
+          console.error('Error al restaurar:', error);
+          this.accionEnCurso.set(null);
+        },
+      });
+  }
+
+  cargarCasosOcultos(): void {
+    this.casoService.listarCasosOcultos({ page: 0, size: 100 }).subscribe({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      next: (response: any) => {
+        this.casosOcultos.set(response.content || []);
+      },
+      error: (error: unknown) => {
+        console.error('Error al cargar casos ocultos:', error);
+      },
+    });
   }
 
   getBadgeClass = getPanelBadgeClass;

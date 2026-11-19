@@ -351,7 +351,10 @@ class CustodiaServiceTest {
     void debeListarCasosEnCustodia() {
         // Arrange
         when(usuarioRepository.findByCorreo("fundacion@huellitas.com")).thenReturn(Optional.of(fundacionVerificada));
-        when(casoRepository.findByFundacionCustodioAndVisibleTrue(eq(fundacionEntity), any()))
+        when(casoRepository.findByFundacionCustodioAndVisibleTrueAndEstadoIn(
+                eq(fundacionEntity), 
+                eq(java.util.List.of(co.edu.uniquindio.huellitas.entity.enums.EstadoCaso.REGISTRADO, co.edu.uniquindio.huellitas.entity.enums.EstadoCaso.EN_ATENCION)), 
+                any()))
                 .thenReturn(org.springframework.data.domain.Page.empty());
 
         // Act
@@ -359,7 +362,10 @@ class CustodiaServiceTest {
                 org.springframework.data.domain.PageRequest.of(0, 10));
 
         // Assert
-        verify(casoRepository).findByFundacionCustodioAndVisibleTrue(eq(fundacionEntity), any());
+        verify(casoRepository).findByFundacionCustodioAndVisibleTrueAndEstadoIn(
+                eq(fundacionEntity), 
+                eq(java.util.List.of(co.edu.uniquindio.huellitas.entity.enums.EstadoCaso.REGISTRADO, co.edu.uniquindio.huellitas.entity.enums.EstadoCaso.EN_ATENCION)), 
+                any());
     }
 
     @Test

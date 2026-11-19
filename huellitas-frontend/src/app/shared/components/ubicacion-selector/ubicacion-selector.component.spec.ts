@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { SimpleChange } from '@angular/core';
-import { of, throwError } from 'rxjs';
-import { UbicacionService } from '../../../core/services/ubicacion.service';
+import { of, Subject, throwError } from 'rxjs';
+import { Municipio, UbicacionService } from '../../../core/services/ubicacion.service';
 import { UbicacionSelectorComponent } from './ubicacion-selector.component';
 
 let ubicacionService: Pick<UbicacionService, 'getBarrios' | 'getDepartamentos' | 'getMunicipios'>;
@@ -96,17 +96,79 @@ it('exposes loading errors for each location level', () => {
   );
   const component = TestBed.createComponent(UbicacionSelectorComponent).componentInstance;
   component.loadDepartamentos();
-  expect(component.error).toBe('Error al cargar departamentos');
+  expect(component.errorDepartamentos).toBe('Error al cargar departamentos');
 
   vi.mocked(ubicacionService.getMunicipios).mockReturnValue(
     throwError(() => new Error('municipalities')),
   );
   component.loadMunicipios(1);
-  expect(component.error).toBe('Error al cargar municipios');
+  expect(component.errorMunicipios).toBe('Error al cargar municipios');
 
   vi.mocked(ubicacionService.getBarrios).mockReturnValue(throwError(() => new Error('barrios')));
   component.loadBarrios(2);
-  expect(component.error).toBe('Error al cargar barrios');
+  expect(component.errorBarrios).toBe('Error al cargar barrios');
   expect(component.loading).toBe(false);
   expect(error).toHaveBeenCalledTimes(3);
+});
+
+it('shows loading and allows retrying after a department request fails', () => {
+  vi.mocked(ubicacionService.getDepartamentos)
+    .mockReturnValueOnce(throwError(() => new Error('network')))
+    .mockReturnValueOnce(of([{ id: 1, nombre: 'Quindío' }]));
+  vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  const fixture = TestBed.createComponent(UbicacionSelectorComponent);
+  fixture.detectChanges();
+
+  expect(fixture.nativeElement.textContent).toContain('No se pudieron cargar los departamentos');
+  fixture.nativeElement.querySelector('button').click();
+  fixture.detectChanges();
+
+  expect(fixture.componentInstance.departamentos).toEqual([{ id: 1, nombre: 'Quindío' }]);
+  expect(fixture.nativeElement.textContent).toContain('Selecciona el departamento');
+});
+
+it('unlocks the municipality selector after loading without editing the account name', async () => {
+  const departamentosResponse = new Subject<{ id: number; nombre: string }[]>();
+  const municipiosResponse = new Subject<Municipio[]>();
+  vi.mocked(ubicacionService.getDepartamentos).mockReturnValue(departamentosResponse);
+  vi.mocked(ubicacionService.getMunicipios).mockReturnValue(municipiosResponse);
+  const fixture = TestBed.createComponent(UbicacionSelectorComponent);
+  fixture.detectChanges();
+
+  departamentosResponse.next([{ id: 1, nombre: 'Quindío' }]);
+  departamentosResponse.complete();
+  await fixture.whenStable();
+
+  const component = fixture.componentInstance;
+  const departamentos = fixture.nativeElement.querySelector('#zona-depto-sel') as HTMLSelectElement;
+  const municipios = fixture.nativeElement.querySelector('#zona-mun-sel') as HTMLSelectElement;
+  expect(departamentos.textContent).toContain('Quindío');
+
+  component.onDeptoChange('1');
+  fixture.detectChanges();
+  expect(municipios.disabled).toBe(true);
+  expect(municipios.textContent).toContain('Cargando municipios...');
+
+  municipiosResponse.next([{ id: 2, nombre: 'Armenia', departamentoId: 1 }]);
+  municipiosResponse.complete();
+  await fixture.whenStable();
+
+  expect(municipios.disabled).toBe(false);
+  expect(municipios.textContent).toContain('Armenia');
+});
+
+it('ignores municipality responses from an earlier department selection', () => {
+  const olderResponse = new Subject<{ id: number; nombre: string; departamentoId: number }[]>();
+  const newerResponse = new Subject<{ id: number; nombre: string; departamentoId: number }[]>();
+  vi.mocked(ubicacionService.getMunicipios)
+    .mockReturnValueOnce(olderResponse)
+    .mockReturnValueOnce(newerResponse);
+  const component = TestBed.createComponent(UbicacionSelectorComponent).componentInstance;
+
+  component.loadMunicipios(1);
+  component.loadMunicipios(2);
+  newerResponse.next([{ id: 20, nombre: 'Armenia', departamentoId: 2 }]);
+  olderResponse.next([{ id: 10, nombre: 'Municipio viejo', departamentoId: 1 }]);
+
+  expect(component.municipios).toEqual([{ id: 20, nombre: 'Armenia', departamentoId: 2 }]);
 });
