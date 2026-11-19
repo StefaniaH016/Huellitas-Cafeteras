@@ -13,6 +13,7 @@ import {
 } from '../../core/utils/panel.utils';
 import { pageContent, pageTotal } from '../../core/utils/page.utils';
 import { getServerErrorMessage } from '../../core/utils/request.utils';
+import { ESTADO_LABELS, labelOf } from '../../core/utils/caso-display.utils';
 import { environment } from '../../../environments/environment';
 import { forkJoin } from 'rxjs';
 import { CasoMiniaturaComponent } from '../../shared/components/caso-miniatura/caso-miniatura.component';
@@ -107,10 +108,18 @@ export class PanelFundacionComponent implements OnInit {
       sinCustodia: this.casoService.listarCasosSinCustodia(municipioId, { page: 0, size: 50 }),
     }).subscribe({
       next: ({ enCustodia, sinCustodia }) => {
-        this.fundacionAnimales.set(pageContent<CasoListItem>(enCustodia));
+        const casosEnCustodia = pageContent<CasoListItem>(enCustodia).filter((caso) =>
+          this.esCasoActivo(caso),
+        );
+        this.fundacionAnimales.set(
+          [...casosEnCustodia].sort(
+            (left, right) =>
+              Number(this.esCasoFinalizado(left)) - Number(this.esCasoFinalizado(right)),
+          ),
+        );
         this.fundacionAlertas.set(pageContent<CasoListItem>(sinCustodia));
         this.fundacionStats.set({
-          enCustodia: pageTotal(enCustodia),
+          enCustodia: casosEnCustodia.length,
           casosSinCustodia: pageTotal(sinCustodia),
         });
         this.cargando.set(false);
@@ -180,6 +189,16 @@ export class PanelFundacionComponent implements OnInit {
     void this.router.navigate(['/caso-detalle', casoId]);
   }
 
+  cerrarDesdePanel(casoId: number): void {
+    void this.router.navigate(['/caso-detalle', casoId], {
+      queryParams: { accion: 'cerrar' },
+    });
+  }
+
+  scrollToSection(sectionId: string): void {
+    document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth' });
+  }
+
   abrirBitacora(casoId: number): void {
     void this.router.navigate(['/caso-detalle', casoId], {
       queryParams: { tab: 'bitacora' },
@@ -190,8 +209,32 @@ export class PanelFundacionComponent implements OnInit {
   getBadgeLabel = getPanelBadgeLabel;
   scrollToPanel = scrollToDashboardPanel;
 
+  getEstadoBadgeClass(estado?: string): string {
+    switch (estado?.trim().toUpperCase()) {
+      case 'REGISTRADO':
+        return 'badge-registrado';
+      case 'EN_ATENCION':
+        return 'badge-atencion';
+      case 'RESUELTO':
+        return 'badge-resuelto';
+      case 'ARCHIVADO':
+        return 'badge-archivado';
+      default:
+        return 'badge-atencion';
+    }
+  }
+
+  getEstadoLabel(estado?: string): string {
+    return labelOf(ESTADO_LABELS, estado?.trim() ?? '');
+  }
+
   esCasoFinalizado(caso: Pick<PanelCaso, 'estado'>): boolean {
     const estado = caso.estado?.trim().toUpperCase();
     return estado === 'RESUELTO' || estado === 'ARCHIVADO';
+  }
+
+  esCasoActivo(caso: Pick<PanelCaso, 'estado'>): boolean {
+    const estado = caso.estado?.trim().toUpperCase();
+    return estado === 'REGISTRADO' || estado === 'EN_ATENCION';
   }
 }

@@ -86,6 +86,14 @@ public class ReporteController {
         return ResponseEntity.ok(list);
     }
 
+    @GetMapping("/ocultos")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @Operation(summary = "Casos ocultos", description = "Lista casos ocultos (solo para admin)")
+    public ResponseEntity<Page<CasoListItemDTO>> listarCasosOcultos(Pageable pageable) {
+        Page<CasoListItemDTO> list = casoService.listarCasosOcultos(pageable);
+        return ResponseEntity.ok(list);
+    }
+
     @GetMapping("/mis-reportes")
     @PreAuthorize("hasRole('CIUDADANO_VOLUNTARIO')")
     @Operation(summary = "Mis reportes", description = "Lista los casos reportados por el usuario autenticado. Acepta filtro opcional por estado.")

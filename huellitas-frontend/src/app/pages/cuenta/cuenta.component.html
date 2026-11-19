@@ -22,7 +22,7 @@
             <h2 id="verificacion-organizacion">Verificación de la organización</h2>
           </div>
           @if (!puedeSolicitarRevision()) {
-            <p class="feedback-success" role="status">Tu organización ya está verificada.</p>
+            <output class="feedback-success">Tu organización ya está verificada.</output>
           } @else {
             <p class="note">
               Adjunta el soporte actualizado para que el administrador pueda revisar nuevamente los
@@ -88,7 +88,7 @@
                 <p class="feedback-error" role="alert">{{ errorDocumento() }}</p>
               }
               @if (mensajeSolicitud()) {
-                <p class="feedback-success" role="status">{{ mensajeSolicitud() }}</p>
+                <output class="feedback-success">{{ mensajeSolicitud() }}</output>
               }
               @if (errorSolicitud()) {
                 <p class="feedback-error" role="alert">{{ errorSolicitud() }}</p>
@@ -154,7 +154,7 @@
           </label>
         </div>
         @if (guardado.exito()) {
-          <p class="feedback-success" role="status">{{ guardado.exito() }}</p>
+          <output class="feedback-success">{{ guardado.exito() }}</output>
         }
         @if (guardado.error()) {
           <p class="feedback-error" role="alert">{{ guardado.error() }}</p>
@@ -169,7 +169,6 @@
       </form>
 
       <div class="row-gap-md">
-        <button class="btn btn-secondary" type="button">Cambiar contraseña</button>
         <button class="btn btn-ghost" type="button" (click)="salir()">Cerrar sesión</button>
       </div>
     }

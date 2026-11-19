@@ -12,7 +12,20 @@
   }
 
   @if (cargando()) {
-    <p class="message">Cargando tus reportes...</p>
+    <output class="sr-only">Cargando tus reportes</output>
+    <section class="report-list report-skeleton-list" aria-hidden="true">
+      @for (skeleton of skeletonCards; track skeleton) {
+        <article class="report-card report-skeleton" aria-hidden="true">
+          <div class="report-photo skeleton"></div>
+          <div class="report-content skeleton-text-stack">
+            <span class="skeleton skeleton-pill"></span>
+            <span class="skeleton skeleton-line"></span>
+            <span class="skeleton skeleton-line is-short"></span>
+            <span class="skeleton skeleton-button"></span>
+          </div>
+        </article>
+      }
+    </section>
   } @else {
     <div class="report-tabs" role="tablist" aria-label="Filtrar mis reportes">
       <button
@@ -63,8 +76,13 @@
         <section class="report-list" aria-label="Lista de mis reportes">
           @for (caso of reportesVisibles(); track caso.id) {
             <article class="report-card">
-              @if (caso.fotoPrincipal) {
-                <img class="report-photo" [src]="caso.fotoPrincipal" alt="Foto del caso" />
+              @if (caso.fotoPrincipal && !fotosRotas().has(caso.id)) {
+                <img
+                  class="report-photo"
+                  [src]="caso.fotoPrincipal"
+                  alt="Foto del caso"
+                  (error)="onFotoError(caso.id)"
+                />
               } @else {
                 <div class="report-photo placeholder" aria-hidden="true">🐾</div>
               }

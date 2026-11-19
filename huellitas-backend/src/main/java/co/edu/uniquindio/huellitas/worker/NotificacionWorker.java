@@ -8,8 +8,10 @@ import co.edu.uniquindio.huellitas.entity.RegistroMedico;
 import co.edu.uniquindio.huellitas.entity.Seguimiento;
 import co.edu.uniquindio.huellitas.entity.Usuario;
 import co.edu.uniquindio.huellitas.entity.enums.EstadoCaso;
+import co.edu.uniquindio.huellitas.entity.enums.Rol;
 import co.edu.uniquindio.huellitas.entity.enums.TipoNotificacion;
 import co.edu.uniquindio.huellitas.entity.enums.Urgencia;
+import co.edu.uniquindio.huellitas.repository.CasoRepository;
 import co.edu.uniquindio.huellitas.repository.MunicipioRepository;
 import co.edu.uniquindio.huellitas.repository.NotificacionRepository;
 import co.edu.uniquindio.huellitas.repository.UsuarioRepository;
@@ -41,6 +43,7 @@ import java.util.List;
 public class NotificacionWorker {
 
     private final NotificacionRepository notificacionRepository;
+    private final CasoRepository casoRepository;
     private final UsuarioRepository usuarioRepository;
     private final MunicipioRepository municipioRepository;
     private final EmailService emailService;
@@ -67,6 +70,7 @@ public class NotificacionWorker {
      * Notifica al reportante cuando el estado de su caso cambia.
      */
     @Async
+    @Transactional
     public void notificarCambioEstado(Caso caso, EstadoCaso estadoAnterior, EstadoCaso estadoNuevo, Usuario actor) {
         if (caso.getReportante() == null) return;
 
@@ -90,6 +94,7 @@ public class NotificacionWorker {
      * Notifica al reportante cuando su caso es cerrado/resuelto.
      */
     @Async
+    @Transactional
     public void notificarCierreCaso(Caso caso, String resultado) {
         if (caso.getReportante() == null) return;
 
@@ -105,6 +110,7 @@ public class NotificacionWorker {
      * Subtarea 17.3: También envía correo electrónico.
      */
     @Async
+    @Transactional
     public void notificarRecordatorio(Caso caso, long diasInactividad) {
         if (caso.getReportante() == null) return;
 
@@ -128,6 +134,7 @@ public class NotificacionWorker {
      * 13.7: También envía correo electrónico.
      */
     @Async
+    @Transactional
     public void notificarAsuncionCustodia(Caso caso, Fundacion fundacion) {
         if (caso.getReportante() == null) return;
 
@@ -146,10 +153,38 @@ public class NotificacionWorker {
         }
     }
 
+        @Async
+        @Transactional
+        public void notificarLiberacionCustodia(Caso caso, String motivo) {
+        if (caso == null || caso.getReportante() == null) return;
+
+        String mensaje = String.format(
+            "🏠 La fundación liberó la custodia de tu caso #%d. Motivo: %s",
+            caso.getId(), motivo
+        );
+        guardar(caso.getReportante(), caso, TipoNotificacion.CUSTODIA, mensaje);
+        }
+
+        @Async
+        @Transactional
+        public void notificarSolicitudRevisionOrganizacion(Long contactoId, String nombreOrganizacion) {
+        Usuario contacto = usuarioRepository.findById(contactoId)
+                .orElseThrow(() -> new IllegalStateException(
+                        "No se encontró el usuario que solicitó la revisión: " + contactoId));
+
+        String mensajeAdmin = String.format(
+            "Nueva solicitud de revisión para %s, enviada por %s.",
+            nombreOrganizacion, contacto.getNombre()
+        );
+        usuarioRepository.findAllByRol(Rol.ADMINISTRADOR).forEach(admin ->
+            guardar(admin, null, TipoNotificacion.SOLICITUD_REVISION, mensajeAdmin));
+        }
+
     @Async
     @Transactional
     public void notificarVerificacionOrganizacion(Usuario usuario, boolean aprobada) {
-        if (usuario == null) {
+        if (usuario == null
+                || (usuario.getRol() != Rol.FUNDACION_REFUGIO && usuario.getRol() != Rol.VETERINARIA)) {
             return;
         }
         String mensaje = aprobada
@@ -158,11 +193,70 @@ public class NotificacionWorker {
         guardar(usuario, null, TipoNotificacion.VERIFICACION, mensaje);
     }
 
+    @Async
+    @Transactional
+    public void notificarInicioAtencionMedica(BitacoraMedica bitacora, Usuario veterinaria) {
+        if (bitacora == null || bitacora.getCaso() == null) {
+            log.warn("notificarInicioAtencionMedica: bitacora o caso nulo");
+            return;
+        }
+        Caso caso = bitacora.getCaso();
+        if (caso.getReportante() == null) {
+            log.warn("notificarInicioAtencionMedica: reportante nulo para caso {}", caso.getId());
+            return;
+        }
+
+        String mensaje = String.format(
+                "🩺 La atención médica de tu caso #%d fue iniciada por una veterinaria.",
+                caso.getId()
+        );
+
+        // Notificar siempre al reportante
+        guardar(caso.getReportante(), caso, TipoNotificacion.ATENCION_MEDICA, mensaje);
+
+        // Notificar a fundación si tiene custodia
+        if (caso.getFundacionCustodio() != null) {
+            usuarioRepository.findByOrganizacionId(caso.getFundacionCustodio().getId())
+                    .ifPresentOrElse(
+                        contacto -> guardar(contacto, caso, TipoNotificacion.ATENCION_MEDICA, mensaje),
+                        () -> log.warn("No se encontró usuario para fundación {}", caso.getFundacionCustodio().getId())
+                    );
+        }
+    }
+
+    @Async
+    @Transactional
+    public void notificarArchivadoCaso(Caso caso, String motivo) {
+        if (caso == null || caso.getReportante() == null) return;
+
+        String mensaje = String.format(
+                "El caso #%d fue archivado. Motivo: %s",
+                caso.getId(), motivo
+        );
+        guardar(caso.getReportante(), caso, TipoNotificacion.ARCHIVO, mensaje);
+    }
+
+    @Async
+    @Transactional
+    public void notificarOcultamientoCaso(Long casoId, Long reportanteId, String motivo) {
+        Usuario reportante = usuarioRepository.findById(reportanteId)
+                .orElseThrow(() -> new IllegalStateException(
+                        "No se encontró el reportante del caso: " + reportanteId));
+        Caso caso = casoRepository.getReferenceById(casoId);
+
+        String mensaje = String.format(
+                "Tu caso #%d fue ocultado del listado público durante una revisión de moderación. Motivo: %s",
+                caso.getId(), motivo
+        );
+        guardar(reportante, caso, TipoNotificacion.MODERACION, mensaje);
+    }
+
     /**
      * 13.5: Notifica a los involucrados (excepto el autor) cuando se crea un aporte.
      * Incluye al reportante y a la fundación si tiene custodia.
      */
     @Async
+    @Transactional
     public void notificarAporte(Seguimiento aporte) {
         if (aporte.getAutor() == null || aporte.getCaso() == null) return;
 
@@ -241,16 +335,13 @@ public class NotificacionWorker {
      * Notifica al reportante y a la fundación custodia (si no son el firmante).
      */
     @Async
+    @Transactional
     public void notificarEvolucionMedica(BitacoraMedica bitacora, RegistroMedico evolucion, Usuario firmante) {
         if (bitacora == null || bitacora.getCaso() == null) return;
         Caso caso = bitacora.getCaso();
         Long firmanteId = firmante != null ? firmante.getId() : null;
 
-        String diagnostico = (evolucion != null && evolucion.getDiagnostico() != null)
-                ? (evolucion.getDiagnostico().length() > 50
-                    ? evolucion.getDiagnostico().substring(0, 50) + "..."
-                    : evolucion.getDiagnostico())
-                : "Nueva evolución clínica";
+        String diagnostico = obtenerDiagnostico(evolucion);
 
         String mensajeReportante = String.format(
                 "🩺 Nueva evolución médica registrada en tu caso #%d: %s",
@@ -280,6 +371,7 @@ public class NotificacionWorker {
      * Notifica al reportante y a la fundación custodia (si no son el firmante).
      */
     @Async
+    @Transactional
     public void notificarAltaMedica(BitacoraMedica bitacora, Usuario firmante) {
         if (bitacora == null || bitacora.getCaso() == null) return;
         Caso caso = bitacora.getCaso();
@@ -306,6 +398,18 @@ public class NotificacionWorker {
     }
 
     // ── helper interno ────────────────────────────────────────────
+
+    private String obtenerDiagnostico(RegistroMedico evolucion) {
+        if (evolucion == null || evolucion.getDiagnostico() == null) {
+            return "Nueva evolución clínica";
+        }
+
+        String diagnostico = evolucion.getDiagnostico();
+        if (diagnostico.length() > 50) {
+            return diagnostico.substring(0, 50) + "...";
+        }
+        return diagnostico;
+    }
 
     private void guardar(Usuario destinatario, Caso caso, TipoNotificacion tipo, String mensaje) {
         try {

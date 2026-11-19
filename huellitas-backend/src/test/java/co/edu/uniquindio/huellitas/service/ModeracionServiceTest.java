@@ -3,11 +3,13 @@ package co.edu.uniquindio.huellitas.service;
 import co.edu.uniquindio.huellitas.dto.moderacion.DecisionModeracionDTO;
 import co.edu.uniquindio.huellitas.entity.Caso;
 import co.edu.uniquindio.huellitas.entity.Seguimiento;
+import co.edu.uniquindio.huellitas.entity.Usuario;
 import co.edu.uniquindio.huellitas.mapper.ModeracionMapper;
 import co.edu.uniquindio.huellitas.exception.ResourceNotFoundException;
 import co.edu.uniquindio.huellitas.repository.CasoRepository;
 import co.edu.uniquindio.huellitas.repository.SeguimientoRepository;
 import co.edu.uniquindio.huellitas.service.impl.ModeracionServiceImpl;
+import co.edu.uniquindio.huellitas.worker.NotificacionWorker;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,6 +17,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -27,18 +30,24 @@ class ModeracionServiceTest {
     private CasoRepository casoRepository;
     @Mock
     private SeguimientoRepository seguimientoRepository;
+    @Mock
+    private NotificacionWorker notificacionWorker;
     private ModeracionServiceImpl moderacionService;
     private Caso caso;
+    private Usuario reportante;
 
     @BeforeEach
     void setUp() {
         moderacionService = new ModeracionServiceImpl(
                 casoRepository,
                 seguimientoRepository,
-                new ModeracionMapper());
+            new ModeracionMapper(),
+            notificacionWorker);
+        reportante = Usuario.builder().id(3L).correo("reportante@test.com").build();
         caso = Caso.builder()
                 .id(5L)
                 .fechaRegistro(Instant.parse("2026-01-01T00:00:00Z"))
+            .reportante(reportante)
                 .visible(true)
                 .moderacionPendiente(true)
                 .build();
@@ -57,6 +66,32 @@ class ModeracionServiceTest {
         assertFalse(caso.isModeracionPendiente());
         assertEquals("Contenido duplicado", caso.getMotivoModeracion());
         verify(casoRepository).save(caso);
+        verify(notificacionWorker).notificarOcultamientoCaso(
+            caso.getId(), reportante.getId(), "Contenido duplicado");
+    }
+
+    @Test
+    void marcaCasoComoPendienteYGuardaElMotivoAntesDeLaDecision() {
+        when(casoRepository.findById(5L)).thenReturn(Optional.of(caso));
+        when(casoRepository.save(caso)).thenReturn(caso);
+
+        moderacionService.marcarCasoParaModeracion(5L, "  Contenido inapropiado  ");
+
+        assertTrue(caso.isModeracionPendiente());
+        assertEquals("Contenido inapropiado", caso.getMotivoModeracion());
+        verify(casoRepository).save(caso);
+        verifyNoInteractions(notificacionWorker);
+    }
+
+    @Test
+    void listarModeracionIncluyePendientesPeroNoCasosYaOcultos() {
+        when(casoRepository.findByModeracionPendienteTrue()).thenReturn(List.of(caso));
+
+        var pendientes = moderacionService.listarCasosReportados();
+
+        assertEquals(1, pendientes.size());
+        assertEquals("PENDIENTE", pendientes.get(0).estadoRevision());
+        verify(casoRepository).findByModeracionPendienteTrue();
     }
 
     @Test

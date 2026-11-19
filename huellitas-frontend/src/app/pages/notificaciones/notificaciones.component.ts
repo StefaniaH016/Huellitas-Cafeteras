@@ -1,6 +1,8 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { fromEvent, interval } from 'rxjs';
 import { Notificacion, NotificacionService } from '../../core/services/notificacion.service';
 import { AuthService } from '../../core/services/auth.service';
 import { UsuarioPerfil, UsuarioService } from '../../core/services/usuario.service';
@@ -15,8 +17,11 @@ const ICONOS: Record<string, string> = {
   CIERRE: '✅',
   RECORDATORIO: '⏰',
   CUSTODIA: '🏠',
+  SOLICITUD_REVISION: '📝',
+  ATENCION_MEDICA: '🩺',
   EVOLUCION_MEDICA: '🩺',
   ALTA_MEDICA: '🎉',
+  ARCHIVO: '🗄️',
   VERIFICACION: '✅',
   CUENTAS: '🏢',
   MODERACION: '⚑',
@@ -45,10 +50,12 @@ export class NotificacionesComponent implements OnInit {
   private usuarioService = inject(UsuarioService);
   private authService = inject(AuthService);
   private router = inject(Router);
+  private destroyRef = inject(DestroyRef);
 
   readonly carga = new EstadoCarga();
   readonly perfilCarga = new EstadoCarga();
   readonly guardandoPreferencia = signal(false);
+  readonly skeletonNotifications = [1, 2, 3, 4];
   readonly filtroActivo = signal<FiltroNotificaciones>('todas');
   readonly notificaciones = signal<Notificacion[]>([]);
   readonly notificacionesFiltradas = computed(() =>
@@ -88,6 +95,14 @@ export class NotificacionesComponent implements OnInit {
 
   ngOnInit(): void {
     this.cargar();
+    if (this.isAdmin()) {
+      interval(10_000)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe(() => this.cargar());
+      fromEvent(window, 'focus')
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe(() => this.cargar());
+    }
     if (!this.isAdmin()) {
       this.perfilCarga.ejecutar(
         this.usuarioService.getMiPerfil(),
@@ -97,6 +112,13 @@ export class NotificacionesComponent implements OnInit {
         },
         'No fue posible cargar tu preferencia de rescate.',
       );
+      interval(10_000)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe(() => {
+          if (this.disponibleRescate()) {
+            this.cargar();
+          }
+        });
     }
   }
 
@@ -165,7 +187,7 @@ export class NotificacionesComponent implements OnInit {
         return lista.filter((notificacion) => notificacion.tipo === 'RECORDATORIO');
       case 'cuentas':
         return lista.filter((notificacion) =>
-          ['VERIFICACION', 'CUENTAS'].includes(notificacion.tipo),
+          ['VERIFICACION', 'SOLICITUD_REVISION', 'CUENTAS'].includes(notificacion.tipo),
         );
       case 'moderacion':
         return lista.filter((notificacion) => {
@@ -230,6 +252,6 @@ export class NotificacionesComponent implements OnInit {
   }
 
   goBack(): void {
-    void this.router.navigate(['/']);
+    void this.router.navigate(['/home']);
   }
 }

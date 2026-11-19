@@ -105,6 +105,7 @@ class LimpiezaWorkerTest {
             assertEquals(EstadoCaso.ARCHIVADO, casoResuelto.getEstado());
             assertNotNull(casoResuelto.getFechaArchivado());
             assertTrue(casoResuelto.getMotivoModeracion().contains("7 días"));
+            verify(notificacionWorker).notificarArchivadoCaso(eq(casoResuelto), any());
         }
 
         @Test

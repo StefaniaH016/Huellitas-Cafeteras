@@ -171,6 +171,7 @@ public class LimpiezaWorker {
         caso.setFechaUltimaActividad(ahora);
         caso.setMotivoModeracion(motivo);
         casoRepository.save(caso);
+        notificacionWorker.notificarArchivadoCaso(caso, motivo);
         log.info("W-04 Caso #{} archivado: {}", caso.getId(), motivo);
     }
 }

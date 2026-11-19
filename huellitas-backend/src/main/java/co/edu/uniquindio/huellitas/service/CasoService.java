@@ -19,6 +19,8 @@ public interface CasoService {
 
     Page<CasoListItemDTO> listarCasos(FiltrosCasoDTO filtros, Pageable pageable);
 
+    Page<CasoListItemDTO> listarCasosOcultos(Pageable pageable);
+
     CasoDetalleDTO obtenerDetalle(Long id);
 
     CasoResponseDTO actualizarEstado(Long id, ActualizarEstadoDTO dto, String correoUsuario);

@@ -18,8 +18,15 @@ import java.util.List;
 @Repository
 public interface CasoRepository extends JpaRepository<Caso, Long>, JpaSpecificationExecutor<Caso> {
     Page<Caso> findByVisibleTrueAndEstado(EstadoCaso estado, Pageable pageable);
+    Page<Caso> findByVisibleFalse(Pageable pageable);
     Page<Caso> findByReportanteId(Long reportanteId, Pageable pageable);
     Page<Caso> findByReportanteCorreoOrderByFechaRegistroDesc(String correo, Pageable pageable);
+    
+    // Mis reportes (solo visibles)
+    Page<Caso> findByReportanteCorreoAndVisibleTrueOrderByFechaRegistroDesc(String correo, Pageable pageable);
+    
+    // Mis reportes con filtro por estado (solo visibles)
+    Page<Caso> findByReportanteCorreoAndEstadoAndVisibleTrueOrderByFechaRegistroDesc(String correo, EstadoCaso estado, Pageable pageable);
     
     // 17.5: Mis reportes con filtro por estado
     Page<Caso> findByReportanteCorreoAndEstadoOrderByFechaRegistroDesc(String correo, EstadoCaso estado, Pageable pageable);
@@ -28,11 +35,12 @@ public interface CasoRepository extends JpaRepository<Caso, Long>, JpaSpecificat
     Page<Caso> findByEstadoInOrderByFechaArchivadoDesc(List<EstadoCaso> estados, Pageable pageable);
     boolean existsByCasoOriginalId(Long casoOriginalId);
     boolean existsByAnimalIdAndIdNot(Long animalId, Long casoId);
+    List<Caso> findByModeracionPendienteTrue();
     List<Caso> findByModeracionPendienteTrueOrVisibleFalse();
     Page<Caso> findByUrgenciaInAndVisibleTrueOrderByFechaRegistroDesc(List<Urgencia> urgencias, Pageable pageable);
 
-    // 13.4: Casos bajo custodia de una fundación específica
-    Page<Caso> findByFundacionCustodioAndVisibleTrue(Fundacion fundacion, Pageable pageable);
+    // 13.4: Casos bajo custodia de una fundación específica (solo abiertos)
+    Page<Caso> findByFundacionCustodioAndVisibleTrueAndEstadoIn(Fundacion fundacion, List<EstadoCaso> estados, Pageable pageable);
 
     // 13.4: Casos sin custodia, visibles, de un municipio específico
     @Query("SELECT c FROM Caso c WHERE c.fundacionCustodio IS NULL AND c.visible = true AND c.barrio.municipio.id = :municipioId")

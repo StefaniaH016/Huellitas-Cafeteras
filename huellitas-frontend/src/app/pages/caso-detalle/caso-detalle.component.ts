@@ -133,6 +133,16 @@ interface CasoResponse {
   styleUrls: ['./caso-detalle.component.css'],
 })
 export class CasoDetalleComponent implements OnInit {
+  readonly motivosModeracion = [
+    'Duplicado de otro reporte',
+    'Contenido inapropiado u ofensivo',
+    'Información falsa o engañosa',
+    'Caso fuera de la temática de bienestar animal',
+    'Datos personales o información sensible',
+    'Spam o contenido promocional',
+    'Otro motivo',
+  ];
+
   private activatedRoute = inject(ActivatedRoute);
   private casoService = inject(CasoService);
   private bitacoraService = inject(BitacoraService);
@@ -165,9 +175,15 @@ export class CasoDetalleComponent implements OnInit {
   errorModeracion = signal('');
   mensajeModeracion = signal('');
   motivoMarcaModeracion = '';
+  detalleMotivoMarcaModeracion = '';
   motivoDecisionModeracion = 'Duplicado de otro reporte';
+  detalleMotivoDecisionModeracion = '';
+  private cierreSolicitadoDesdePanel = false;
   marcacionModeracionLocal = signal(false);
   moderacionFinalizada = signal(false);
+  mostrandoLiberacion = signal(false);
+  motivoLiberacion = '';
+  liberandoCustodia = signal(false);
   fotos = signal<string[]>([]);
   selectedFotoIndex = signal<number>(0);
   fotoActual = computed(() => {
@@ -240,6 +256,17 @@ export class CasoDetalleComponent implements OnInit {
       perfil?.estadoVerificacionOrganizacion === 'VERIFICADA' &&
       !!caso.fundacionCustodioId &&
       perfil.organizacionId === caso.fundacionCustodioId
+    );
+  });
+  puedeLiberarCustodia = computed(() => {
+    const caso = this.caso();
+    const perfil = this.perfil();
+    return (
+      this.esFundacion() &&
+      perfil?.estadoVerificacionOrganizacion === 'VERIFICADA' &&
+      !!caso?.fundacionCustodioId &&
+      perfil?.organizacionId === caso.fundacionCustodioId &&
+      ['REGISTRADO', 'EN_ATENCION'].includes(caso.estado ?? '')
     );
   });
   puedeConfirmarReencuentro = computed(
@@ -351,6 +378,10 @@ export class CasoDetalleComponent implements OnInit {
       if (params.get('tab') === 'bitacora') {
         this.selectTab('bitacora');
       }
+      if (params.get('accion') === 'cerrar') {
+        this.cierreSolicitadoDesdePanel = true;
+        this.intentarAbrirCierreSolicitado();
+      }
       const formulario = params.get('formulario');
       if (formulario === 'entrada' || formulario === 'alta') {
         this.formularioBitacora.set(formulario);
@@ -358,7 +389,10 @@ export class CasoDetalleComponent implements OnInit {
       }
     });
     this.usuarioService.getMiPerfil().subscribe({
-      next: (perfil) => this.perfil.set(perfil),
+      next: (perfil) => {
+        this.perfil.set(perfil);
+        this.intentarAbrirCierreSolicitado();
+      },
       error: (error: unknown) => {
         console.error('Error loading current user profile:', error);
         this.errorAccion.set(
@@ -401,7 +435,10 @@ export class CasoDetalleComponent implements OnInit {
 
   resolverModeracion(decision: DecisionModeracion): void {
     const caso = this.caso();
-    const motivo = this.motivoDecisionModeracion.trim();
+    const motivo = this.obtenerMotivoModeracion(
+      this.motivoDecisionModeracion,
+      this.detalleMotivoDecisionModeracion,
+    );
     if (!caso || !this.esAdministrador() || this.moderacionEnCurso()) {
       return;
     }
@@ -415,7 +452,8 @@ export class CasoDetalleComponent implements OnInit {
     }
 
     const motivoMarcacion =
-      this.motivoMarcaModeracion.trim() || this.casoModeracion()?.motivo.trim();
+      this.obtenerMotivoModeracion(this.motivoMarcaModeracion, this.detalleMotivoMarcaModeracion) ||
+      this.casoModeracion()?.motivo.trim();
     const motivoCompleto = motivoMarcacion
       ? `Motivo de marcación: ${motivoMarcacion}. Decisión: ${motivo}`
       : motivo;
@@ -424,7 +462,10 @@ export class CasoDetalleComponent implements OnInit {
 
   marcarParaModeracion(): void {
     const caso = this.caso();
-    const motivo = this.motivoMarcaModeracion.trim();
+    const motivo = this.obtenerMotivoModeracion(
+      this.motivoMarcaModeracion,
+      this.detalleMotivoMarcaModeracion,
+    );
     if (!caso || !this.esAdministrador() || this.casoModeracion() || this.moderacionEnCurso()) {
       return;
     }
@@ -435,8 +476,24 @@ export class CasoDetalleComponent implements OnInit {
 
     this.errorModeracion.set('');
     this.mensajeModeracion.set('');
-    this.marcacionModeracionLocal.set(true);
-    this.mensajeModeracion.set('Caso marcado para moderación. Selecciona la decisión final.');
+    this.moderacionEnCurso.set(true);
+    this.moderacionService.marcarCasoParaModeracion(Number(caso.id), motivo).subscribe({
+      next: () => {
+        this.moderacionEnCurso.set(false);
+        this.motivoMarcaModeracion = motivo;
+        this.marcacionModeracionLocal.set(true);
+        this.mensajeModeracion.set('Caso marcado para moderación. Selecciona la decisión final.');
+      },
+      error: (error: unknown) => {
+        console.error('Error al marcar el caso para moderación:', error);
+        this.moderacionEnCurso.set(false);
+        this.errorModeracion.set('No fue posible marcar el caso. Intenta nuevamente.');
+      },
+    });
+  }
+
+  private obtenerMotivoModeracion(seleccion: string, detalle: string): string {
+    return (seleccion === 'Otro motivo' ? detalle : seleccion).trim();
   }
 
   private guardarDecisionModeracion(
@@ -688,6 +745,7 @@ export class CasoDetalleComponent implements OnInit {
         mapped.aportes = response.aportes ?? [];
         mapped.historial = response.historial ?? [];
         this.caso.set(mapped);
+        this.intentarAbrirCierreSolicitado();
         this.fotos.set(mapped.fotos);
         this.selectedFotoIndex.set(0);
         this.cargando.set(false);
@@ -718,6 +776,13 @@ export class CasoDetalleComponent implements OnInit {
     this.mostrandoCierre.set(true);
   }
 
+  private intentarAbrirCierreSolicitado(): void {
+    if (this.cierreSolicitadoDesdePanel && this.puedeCerrarCaso()) {
+      this.cierreSolicitadoDesdePanel = false;
+      this.iniciarCierre();
+    }
+  }
+
   cancelarCierre(): void {
     if (!this.accionEnCurso()) {
       this.mostrandoCierre.set(false);
@@ -745,6 +810,10 @@ export class CasoDetalleComponent implements OnInit {
       return false;
     }
     if (this.motivoCierre === 'REENCUENTRO' && !this.puedeConfirmarReencuentro()) {
+      return false;
+    }
+    if (!this.observacionCierre.trim()) {
+      this.errorAccion.set('Las observaciones son obligatorias.');
       return false;
     }
     if (!caso.fundacionCustodioId && this.motivoCierre !== 'ENTREGADO_A_CUIDADOR') {
@@ -918,5 +987,48 @@ export class CasoDetalleComponent implements OnInit {
 
   getTipoLabel(tipo?: string): string {
     return tipo ? labelOf(TIPO_LABELS, tipo) : '';
+  }
+
+  iniciarLiberacionCustodia(): void {
+    if (!this.puedeLiberarCustodia()) {
+      return;
+    }
+    this.mostrandoLiberacion.set(true);
+    this.motivoLiberacion = '';
+    this.errorAccion.set('');
+  }
+
+  cancelarLiberacionCustodia(): void {
+    if (!this.liberandoCustodia()) {
+      this.mostrandoLiberacion.set(false);
+      this.motivoLiberacion = '';
+    }
+  }
+
+  liberarCustodia(): void {
+    const caso = this.caso();
+    const motivo = this.motivoLiberacion.trim();
+    if (!caso || !this.puedeLiberarCustodia() || !motivo || this.liberandoCustodia()) {
+      return;
+    }
+    this.liberandoCustodia.set(true);
+    this.errorAccion.set('');
+    this.mensajeAccion.set('');
+    this.casoService.gestionarCustodia(Number(caso.id), { accion: 'LIBERAR', motivo }).subscribe({
+      next: () => {
+        this.liberandoCustodia.set(false);
+        this.mostrandoLiberacion.set(false);
+        this.motivoLiberacion = '';
+        this.mensajeAccion.set('La custodia fue liberada correctamente.');
+        this.loadDetalle(caso.id);
+      },
+      error: (error: unknown) => {
+        console.error('Error al liberar custodia:', error);
+        this.liberandoCustodia.set(false);
+        this.errorAccion.set(
+          getServerErrorMessage(error) ?? 'No fue posible liberar la custodia. Intenta de nuevo.',
+        );
+      },
+    });
   }
 }

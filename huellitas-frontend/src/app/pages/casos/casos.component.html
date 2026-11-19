@@ -1,25 +1,10 @@
 <section id="casos">
   <div class="dash-layout">
-    <button
-      class="filters-toggle"
-      type="button"
-      (click)="toggleFiltros()"
-      [attr.aria-expanded]="mostrarFiltros()"
-      aria-controls="filtros"
-    >
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4" /></svg>Filtros
-    </button>
-
-    <aside
-      class="sidebar sidebar-250"
-      [class.is-open]="mostrarFiltros()"
-      id="filtros"
-      aria-label="Filtros de casos"
-    >
-      <h2 class="filters-title">Filtros</h2>
-      <div class="filter-group">
-        <h4>Urgencia</h4>
-        <div class="checklist">
+    <fieldset class="filters-bar">
+      <legend class="sr-only">Filtros de casos</legend>
+      <details class="filter-dropdown">
+        <summary>Urgencia</summary>
+        <div class="filter-options checklist">
           <label for="check-urgencia-emergencia">
             <input
               id="check-urgencia-emergencia"
@@ -57,11 +42,11 @@
             Baja
           </label>
         </div>
-      </div>
+      </details>
 
-      <div class="filter-group">
-        <h4>Tipo de caso</h4>
-        <div class="checklist">
+      <details class="filter-dropdown">
+        <summary>Tipo de caso</summary>
+        <div class="filter-options checklist">
           <label for="check-tipo-herido">
             <input
               id="check-tipo-herido"
@@ -99,26 +84,28 @@
             En adopción
           </label>
         </div>
-      </div>
+      </details>
 
-      <div class="filter-group">
-        <h4>Ubicación</h4>
-        <app-ubicacion-selector
-          [deptoId]="filtroDeptoId()"
-          [munId]="filtroMunId()"
-          [barrioId]="filtroBarrioId()"
-          (deptoChange)="onDeptoChange($event)"
-          (munChange)="onMunChange($event)"
-          (barrioChange)="onBarrioChange($event)"
-          idPrefix="casos-filtro"
-          leyenda="Zona"
-          [stacked]="true"
-        />
-      </div>
+      <details class="filter-dropdown location-filter">
+        <summary>Ubicación</summary>
+        <div class="filter-options">
+          <app-ubicacion-selector
+            [deptoId]="filtroDeptoId()"
+            [munId]="filtroMunId()"
+            [barrioId]="filtroBarrioId()"
+            (deptoChange)="onDeptoChange($event)"
+            (munChange)="onMunChange($event)"
+            (barrioChange)="onBarrioChange($event)"
+            idPrefix="casos-filtro"
+            leyenda="Zona"
+            [stacked]="true"
+          />
+        </div>
+      </details>
 
-      <div class="filter-group">
-        <h4>Estado</h4>
-        <div class="checklist">
+      <details class="filter-dropdown">
+        <summary>Estado</summary>
+        <div class="filter-options checklist">
           <label for="check-estado-registrado">
             <input
               id="check-estado-registrado"
@@ -137,27 +124,33 @@
             />
             En atención
           </label>
-          <label for="check-estado-resuelto">
-            <input
-              id="check-estado-resuelto"
-              type="checkbox"
-              [checked]="estadosSeleccionados().includes('RESUELTO')"
-              (change)="toggleEstado('RESUELTO')"
-            />
-            Resuelto
-          </label>
         </div>
-      </div>
+      </details>
 
-      <button class="btn btn-primary btn-block" (click)="aplicarFiltros()">Aplicar filtros</button>
-    </aside>
+      <button class="btn btn-primary btn-block" type="button" (click)="aplicarFiltros()">
+        Aplicar filtros
+      </button>
+    </fieldset>
 
     <div class="main-area">
       <h1>Casos activos</h1>
       <p class="lead">{{ casosFiltrados().length }} casos encontrados</p>
 
       @if (cargando()) {
-        <p class="note" role="status">Cargando casos...</p>
+        <output class="sr-only">Cargando casos</output>
+        <div class="panel skeleton-list" aria-hidden="true">
+          @for (skeleton of skeletonRows; track skeleton) {
+            <div class="list-row case-row skeleton-case-row" aria-hidden="true">
+              <span class="list-thumb skeleton skeleton-thumb"></span>
+              <span class="list-info skeleton-text-stack">
+                <span class="skeleton skeleton-line"></span>
+                <span class="skeleton skeleton-line is-short"></span>
+              </span>
+              <span class="skeleton skeleton-pill case-row-badge"></span>
+              <span class="list-actions"><span class="skeleton skeleton-button"></span></span>
+            </div>
+          }
+        </div>
       }
 
       @if (error()) {
@@ -167,7 +160,7 @@
       @if (!cargando() && casosFiltrados().length > 0) {
         <div class="panel">
           @for (caso of casosFiltrados(); track caso.id) {
-            <div class="list-row">
+            <div class="list-row case-row">
               <div class="list-thumb">
                 @if (caso.foto && !fotosRota().has(caso.id)) {
                   <img
@@ -186,7 +179,7 @@
                   {{ caso.municipio }} · {{ caso.barrio }} · {{ caso.fechaReporte }}
                 </p>
               </div>
-              <span class="badge" [ngClass]="getBadgeClass(caso.urgencia)">
+              <span class="badge case-row-badge" [ngClass]="getBadgeClass(caso.urgencia)">
                 <span class="badge-dot"></span>{{ caso.urgencia }}
               </span>
               <div class="list-actions">

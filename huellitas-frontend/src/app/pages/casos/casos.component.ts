@@ -57,12 +57,12 @@ export class CasosComponent implements OnInit {
   private router = inject(Router);
 
   casos = signal<Caso[]>([]);
+  readonly skeletonRows = [1, 2, 3, 4, 5];
   cargando = signal(false);
   error = signal('');
   total = signal(0);
   page = signal(0);
   pageSize = 10;
-  mostrarFiltros = signal(false);
 
   filtroDeptoId = signal<number | null>(null);
   filtroMunId = signal<number | null>(null);
@@ -112,6 +112,7 @@ export class CasosComponent implements OnInit {
       params['barrioId'] = currentBarrio;
     }
 
+    // Enviar filtros solo si no está todo seleccionado
     if (this.urgencias().length < 4) {
       params['urgencias'] = this.urgencias().join(',');
     }
@@ -119,6 +120,7 @@ export class CasosComponent implements OnInit {
       params['tiposCaso'] = this.tipos().join(',');
     }
     if (this.estados().length < 3) {
+      // Si hay menos de 3 estados (no están todos)
       params['estados'] = this.estados().join(',');
     }
 
@@ -216,10 +218,6 @@ export class CasosComponent implements OnInit {
 
   onVerCaso(id: string | number): void {
     void this.router.navigate(['/caso-detalle', id]);
-  }
-
-  toggleFiltros(): void {
-    this.mostrarFiltros.update((v) => !v);
   }
 
   aplicarFiltros(): void {

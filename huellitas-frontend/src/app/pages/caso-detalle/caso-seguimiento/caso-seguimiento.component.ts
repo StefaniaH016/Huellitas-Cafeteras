@@ -238,12 +238,17 @@ export class CasoSeguimientoComponent {
   readonly motivoOcultacion = signal('');
   readonly tipo = signal<'COMENTARIO' | 'AVISTAMIENTO'>('COMENTARIO');
   readonly fotos = signal<File[]>([]);
+  readonly fotosRotas = signal(new Set<string>());
   readonly deptoId = signal<number | null>(null);
   readonly munId = signal<number | null>(null);
   readonly barrioId = signal<number | null>(null);
   readonly publicado = signal(false);
   descripcion = '';
   ubicacionTexto = '';
+
+  onFotoError(foto: string): void {
+    this.fotosRotas.update((fotos) => new Set(fotos).add(foto));
+  }
 
   readonly puedeAportar = computed(() => {
     const caso = this.caso();

@@ -1,7 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { NEVER, of, throwError } from 'rxjs';
 import { CasoService } from '../../core/services/caso.service';
 import { MisReportesComponent } from './mis-reportes.component';
 
@@ -35,6 +35,47 @@ it('loads and displays the current user reports', () => {
 
   expect(casoService.getMisReportes).toHaveBeenCalledOnce();
   expect(fixture.nativeElement.textContent).toContain('Caso de prueba');
+});
+
+it('shows skeleton cards while reports are loading', () => {
+  vi.mocked(casoService.getMisReportes).mockReturnValue(NEVER);
+  const fixture = TestBed.createComponent(MisReportesComponent);
+  fixture.detectChanges();
+
+  expect(fixture.nativeElement.querySelectorAll('.report-skeleton')).toHaveLength(3);
+  expect(fixture.nativeElement.querySelector('output')?.textContent).toContain(
+    'Cargando tus reportes',
+  );
+  expect(
+    fixture.nativeElement.querySelector('.report-skeleton-list').getAttribute('aria-hidden'),
+  ).toBe('true');
+});
+
+it('shows a paw placeholder when a report photo fails to load', () => {
+  vi.mocked(casoService.getMisReportes).mockReturnValue(
+    of({
+      content: [
+        {
+          id: 10,
+          estado: 'REGISTRADO',
+          urgencia: 'ALTA',
+          descripcion: 'Caso con foto',
+          fotoPrincipal: 'https://example.test/animal.jpg',
+        },
+      ],
+    }),
+  );
+  const fixture = TestBed.createComponent(MisReportesComponent);
+  fixture.detectChanges();
+
+  const image = fixture.nativeElement.querySelector('.report-photo') as HTMLImageElement;
+  image.dispatchEvent(new Event('error'));
+  fixture.detectChanges();
+
+  expect(fixture.nativeElement.querySelector('img.report-photo')).toBeNull();
+  expect(fixture.nativeElement.querySelector('.report-photo.placeholder')?.textContent).toContain(
+    '🐾',
+  );
 });
 
 it('shows edit and delete actions for registered cases', () => {

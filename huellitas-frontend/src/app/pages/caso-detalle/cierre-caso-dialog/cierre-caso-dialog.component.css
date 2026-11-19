@@ -215,7 +215,7 @@
 .btn {
   min-height: 46px;
   border: 1px solid transparent;
-  border-radius: 999px;
+  border-radius: 12px;
   padding: 0.7rem 1.2rem;
   font: inherit;
   font-size: 0.88rem;

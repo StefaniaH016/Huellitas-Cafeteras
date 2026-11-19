@@ -1,36 +1,76 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { NotificacionService } from '../../../core/services/notificacion.service';
 import { TokenService } from '../../../core/services/token.service';
 import { HeaderComponent } from './header.component';
 
 let notificacionService: Pick<NotificacionService, 'sinLeer' | 'actualizarContador'>;
-let authService: Pick<AuthService, 'getRol' | 'logout'>;
+let authService: Pick<AuthService, 'getRol' | 'getNombre' | 'logout'>;
+let nombreUsuario: string;
+let router: Router;
 
 beforeEach(() => {
+  nombreUsuario = 'Ana';
   notificacionService = {
     sinLeer: signal(3),
     actualizarContador: vi.fn(),
   };
   authService = {
     getRol: vi.fn().mockReturnValue('CIUDADANO_VOLUNTARIO'),
+    getNombre: vi.fn(() => nombreUsuario),
     logout: vi.fn(),
   };
 
   TestBed.configureTestingModule({
     imports: [HeaderComponent],
     providers: [
-      provideRouter([]),
+      provideRouter([
+        { path: 'home', children: [] },
+        { path: 'mis-reportes', children: [] },
+      ]),
       { provide: AuthService, useValue: authService },
       {
         provide: TokenService,
-        useValue: { decodePayload: (): { nombre: string } => ({ nombre: 'Ana' }) },
+        useValue: { decodePayload: (): { nombre: string } => ({ nombre: nombreUsuario }) },
       },
       { provide: NotificacionService, useValue: notificacionService },
     ],
   });
+  router = TestBed.inject(Router);
+});
+
+it('shows only the first name and keeps initials from the full name', () => {
+  nombreUsuario = 'Jose Ramirez Montoya';
+  const fixture = TestBed.createComponent(HeaderComponent);
+  fixture.detectChanges();
+
+  expect(fixture.nativeElement.querySelector('.user-name')?.textContent?.trim()).toBe('Jose');
+  expect(fixture.nativeElement.querySelector('.avatar')?.textContent?.trim()).toBe('JR');
+});
+
+it('keeps the selected navigation item active after changing screens', async () => {
+  const fixture = TestBed.createComponent(HeaderComponent);
+  fixture.detectChanges();
+
+  await router.navigateByUrl('/mis-reportes');
+  fixture.detectChanges();
+
+  const reportLinks = Array.from(
+    fixture.nativeElement.querySelectorAll('a[href="/mis-reportes"]'),
+  ) as HTMLAnchorElement[];
+  expect(reportLinks.length).toBeGreaterThan(0);
+  expect(reportLinks.every((link) => link.classList.contains('active'))).toBe(true);
+
+  await router.navigateByUrl('/home');
+  fixture.detectChanges();
+
+  const homeLinks = Array.from(
+    fixture.nativeElement.querySelectorAll('nav.header-nav a[href="/home"]'),
+  ) as HTMLAnchorElement[];
+  expect(homeLinks.every((link) => link.classList.contains('active'))).toBe(true);
+  expect(reportLinks.every((link) => !link.classList.contains('active'))).toBe(true);
 });
 
 it('provides Inicio for administrators and links the user chip to the account page', () => {
@@ -88,6 +128,22 @@ it('shows the live unread count instead of a fixed badge', () => {
   fixture.detectChanges();
 
   expect(fixture.nativeElement.querySelector('.badge')).toBeNull();
+});
+
+it('refreshes the administrator unread count every 10 seconds', () => {
+  vi.useFakeTimers();
+  vi.mocked(authService.getRol).mockReturnValue('ADMINISTRADOR');
+  const fixture = TestBed.createComponent(HeaderComponent);
+  fixture.detectChanges();
+
+  try {
+    expect(notificacionService.actualizarContador).toHaveBeenCalledOnce();
+    vi.advanceTimersByTime(10_000);
+    expect(notificacionService.actualizarContador).toHaveBeenCalledTimes(2);
+  } finally {
+    fixture.destroy();
+    vi.useRealTimers();
+  }
 });
 
 it('refreshes the unread count when the window regains focus', () => {

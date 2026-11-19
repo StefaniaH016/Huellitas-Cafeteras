@@ -101,6 +101,15 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 .body(buildBody(HttpStatus.CONFLICT, ex.getMessage(), request));
     }
 
+    // ── 502 Bad Gateway (integración externa Cloudinary) ──────────
+
+    @ExceptionHandler(CloudinaryIntegrationException.class)
+    public ResponseEntity<Object> handleCloudinaryIntegration(
+            CloudinaryIntegrationException ex, WebRequest request) {
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                .body(buildBody(HttpStatus.BAD_GATEWAY, ex.getMessage(), request));
+    }
+
     // ── 500 Fallback ──────────────────────────────────────────────
 
     @ExceptionHandler(Exception.class)

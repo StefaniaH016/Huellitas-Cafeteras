@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { NEVER, of, throwError } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
 import { CasoService } from '../../core/services/caso.service';
 import { NotificacionService } from '../../core/services/notificacion.service';
@@ -129,6 +129,56 @@ it('loads the citizen dashboard, locations, feed, and personal reports', () => {
   expect(ubicacionService.getDepartamentos).toHaveBeenCalledOnce();
   expect(casoService.listarCasos).toHaveBeenCalledOnce();
   expect(fixture.nativeElement.textContent).toContain('4');
+});
+
+it('shows all API departments in the feed filter without a hardcoded selection', () => {
+  vi.mocked(ubicacionService.getDepartamentos).mockReturnValue(
+    of([
+      { id: 1, nombre: 'Quindío' },
+      { id: 2, nombre: 'Tolima' },
+    ]),
+  );
+  const fixture = TestBed.createComponent(HomeComponent);
+  fixture.detectChanges();
+
+  const departmentSelect = fixture.nativeElement.querySelector('#dep') as HTMLSelectElement;
+  const departmentOptions = Array.from(departmentSelect.options).map((option) => option.text);
+
+  expect(departmentOptions).toEqual(['Seleccionar departamento', 'Quindío', 'Tolima']);
+  expect(departmentSelect.value).toBe('');
+  expect(fixture.componentInstance.filtros.departamentoId).toBe('');
+});
+
+it('shows feed skeleton cards while the first feed request is pending', () => {
+  vi.mocked(casoService.listarCasos).mockReturnValue(NEVER);
+  const fixture = TestBed.createComponent(HomeComponent);
+  fixture.detectChanges();
+
+  expect(fixture.nativeElement.querySelectorAll('.case-skeleton')).toHaveLength(4);
+  expect(fixture.nativeElement.textContent).not.toContain('No hay casos disponibles.');
+});
+
+it('shows urgency below the feed photo and links to the case detail', () => {
+  vi.mocked(casoService.listarCasos).mockReturnValue(
+    of({
+      content: [
+        {
+          id: 21,
+          descripcion: 'Perro necesita atención',
+          urgencia: 'ALTA',
+          municipio: 'Armenia',
+          barrio: 'Centro',
+        },
+      ],
+    }),
+  );
+  const fixture = TestBed.createComponent(HomeComponent);
+  fixture.detectChanges();
+
+  const card = fixture.nativeElement.querySelector('.case-grid .case-card') as HTMLElement;
+  expect(card.querySelector('.case-photo .case-urgency')).toBeNull();
+  expect(card.querySelector('.case-body > .case-urgency')?.textContent).toContain('Alta');
+  expect(card.querySelector('.case-view')?.getAttribute('href')).toBe('/caso-detalle/21');
 });
 
 it('maps feed aliases, defaults, photo and role-specific computed values', () => {

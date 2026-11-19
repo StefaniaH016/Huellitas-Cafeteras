@@ -83,6 +83,7 @@ public class BitacoraServiceImpl implements BitacoraService {
 
         caso.setFechaUltimaActividad(Instant.now());
         casoRepository.save(caso);
+        notificacionWorker.notificarInicioAtencionMedica(guardada, veterinaria);
 
         return bitacoraMapper.toResponseDTO(guardada, caso.getId(), veterinaria.getId(), "ABIERTA");
     }
