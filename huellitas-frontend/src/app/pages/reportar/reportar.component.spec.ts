@@ -380,8 +380,8 @@ it('deletes the newly created case if the first photo cannot be uploaded', () =>
 it('shows the created case if cleanup also fails after an image upload error', () => {
   const component = createComponent();
   completeForm(component);
+  const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
   vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:photo');
-  vi.spyOn(console, 'error').mockImplementation(() => undefined);
   vi.mocked(casoService.subirImagen).mockReturnValue(throwError(() => new Error('upload')));
   vi.mocked(casoService.eliminarCaso).mockReturnValue(
     throwError(() => new Error('cleanup failed')),
@@ -396,13 +396,14 @@ it('shows the created case if cleanup also fails after an image upload error', (
   expect(casoService.crearReporte).toHaveBeenCalledOnce();
   expect(casoService.subirImagen).toHaveBeenCalledOnce();
   expect(casoService.eliminarCaso).toHaveBeenCalledWith(21);
-  expect(component.currentStep()).toBe(3);
-  expect(component.submitError()).toContain('el reporte se eliminó');
+  expect(component.currentStep()).toBe(4);
+  expect(component.createdCasoId()).toBe('21');
+  expect(component.submitWarning()).toContain('pudo quedar creado sin todas sus fotos');
   expect(component.enviando()).toBe(false);
   expect(error).toHaveBeenCalled();
 });
 
-it('shows the created case if cleanup also fails after an image upload error', () => {
+it('shows the created case if both image upload and cleanup fail', () => {
   const component = createComponent();
   completeForm(component);
   vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:photo');

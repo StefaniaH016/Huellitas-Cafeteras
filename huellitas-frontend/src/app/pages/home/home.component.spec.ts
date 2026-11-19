@@ -144,7 +144,7 @@ it('shows all API departments in the feed filter without a hardcoded selection',
   const departmentSelect = fixture.nativeElement.querySelector('#dep') as HTMLSelectElement;
   const departmentOptions = Array.from(departmentSelect.options).map((option) => option.text);
 
-  expect(departmentOptions).toEqual(['Todos los departamentos', 'Quindío', 'Tolima']);
+  expect(departmentOptions).toEqual(['Seleccionar departamento', 'Quindío', 'Tolima']);
   expect(departmentSelect.value).toBe('');
   expect(fixture.componentInstance.filtros.departamentoId).toBe('');
 });
