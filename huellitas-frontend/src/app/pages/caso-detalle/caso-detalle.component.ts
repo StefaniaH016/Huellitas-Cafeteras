@@ -812,6 +812,10 @@ export class CasoDetalleComponent implements OnInit {
     if (this.motivoCierre === 'REENCUENTRO' && !this.puedeConfirmarReencuentro()) {
       return false;
     }
+    if (!this.observacionCierre.trim()) {
+      this.errorAccion.set('Las observaciones son obligatorias.');
+      return false;
+    }
     if (!caso.fundacionCustodioId && this.motivoCierre !== 'ENTREGADO_A_CUIDADOR') {
       return true;
     }

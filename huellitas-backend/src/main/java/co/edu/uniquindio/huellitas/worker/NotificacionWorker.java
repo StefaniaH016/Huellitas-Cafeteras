@@ -196,22 +196,31 @@ public class NotificacionWorker {
     @Async
     @Transactional
     public void notificarInicioAtencionMedica(BitacoraMedica bitacora, Usuario veterinaria) {
-        if (bitacora == null || bitacora.getCaso() == null) return;
+        if (bitacora == null || bitacora.getCaso() == null) {
+            log.warn("notificarInicioAtencionMedica: bitacora o caso nulo");
+            return;
+        }
         Caso caso = bitacora.getCaso();
-        Long veterinariaId = veterinaria != null ? veterinaria.getId() : null;
+        if (caso.getReportante() == null) {
+            log.warn("notificarInicioAtencionMedica: reportante nulo para caso {}", caso.getId());
+            return;
+        }
+
         String mensaje = String.format(
                 "🩺 La atención médica de tu caso #%d fue iniciada por una veterinaria.",
                 caso.getId()
         );
 
-        if (caso.getReportante() != null && !caso.getReportante().getId().equals(veterinariaId)) {
-            guardar(caso.getReportante(), caso, TipoNotificacion.ATENCION_MEDICA, mensaje);
-        }
+        // Notificar siempre al reportante
+        guardar(caso.getReportante(), caso, TipoNotificacion.ATENCION_MEDICA, mensaje);
 
+        // Notificar a fundación si tiene custodia
         if (caso.getFundacionCustodio() != null) {
             usuarioRepository.findByOrganizacionId(caso.getFundacionCustodio().getId())
-                    .filter(contacto -> !contacto.getId().equals(veterinariaId))
-                    .ifPresent(contacto -> guardar(contacto, caso, TipoNotificacion.ATENCION_MEDICA, mensaje));
+                    .ifPresentOrElse(
+                        contacto -> guardar(contacto, caso, TipoNotificacion.ATENCION_MEDICA, mensaje),
+                        () -> log.warn("No se encontró usuario para fundación {}", caso.getFundacionCustodio().getId())
+                    );
         }
     }
 
