@@ -399,8 +399,8 @@
 }
 
 .entry-alta {
-  border-color: #2e8b63;
-  box-shadow: inset 4px 0 0 #2e8b63;
+  border-left: 3px solid #2e8b63;
+  border-color: var(--line);
 }
 
 /* Notificaciones */

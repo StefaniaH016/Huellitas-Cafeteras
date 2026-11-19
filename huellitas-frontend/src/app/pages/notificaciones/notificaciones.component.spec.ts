@@ -111,6 +111,47 @@ it('loads all notifications and can filter the unread ones', () => {
   expect(component.icono('OTRA')).toBe('🔔');
 });
 
+it('refreshes the admin notification list when the browser regains focus', () => {
+  const fixture = crearFixture(true);
+  expect(servicio['listar']).toHaveBeenCalledOnce();
+
+  window.dispatchEvent(new Event('focus'));
+
+  expect(servicio['listar']).toHaveBeenCalledTimes(2);
+  fixture.destroy();
+});
+
+it('refreshes the admin notification list every 10 seconds', () => {
+  vi.useFakeTimers();
+  const fixture = crearFixture(true);
+
+  try {
+    expect(servicio['listar']).toHaveBeenCalledOnce();
+    vi.advanceTimersByTime(10_000);
+    expect(servicio['listar']).toHaveBeenCalledTimes(2);
+  } finally {
+    fixture.destroy();
+    vi.useRealTimers();
+  }
+});
+
+it('refreshes rescue notifications every 10 seconds when available for rescue', () => {
+  vi.useFakeTimers();
+  usuarioService['getMiPerfil'] = vi
+    .fn()
+    .mockReturnValue(of({ ...perfil, disponibleRescate: true }));
+  const fixture = crearFixture();
+
+  try {
+    expect(servicio['listar']).toHaveBeenCalledOnce();
+    vi.advanceTimersByTime(10_000);
+    expect(servicio['listar']).toHaveBeenCalledTimes(2);
+  } finally {
+    fixture.destroy();
+    vi.useRealTimers();
+  }
+});
+
 it('filters organization review requests under accounts and assigns their icon', () => {
   const component = crear(true);
   const request: Notificacion = {

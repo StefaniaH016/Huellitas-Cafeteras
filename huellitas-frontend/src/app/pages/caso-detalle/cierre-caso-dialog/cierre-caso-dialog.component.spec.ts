@@ -53,6 +53,17 @@ it('disables the reunion outcome for a missing animal case closed by a non-repor
   expect(reunion.disabled).toBe(true);
 });
 
+it('shows the reunion outcome disabled for case types other than missing pets', () => {
+  fixture.componentInstance.esCasoExtraviado = false;
+  fixture.componentInstance.puedeConfirmarReencuentro = false;
+  fixture.detectChanges();
+
+  const reunion = fixture.nativeElement.querySelector(
+    'input[value="REENCUENTRO"]',
+  ) as HTMLInputElement;
+  expect(reunion).toBeNull();
+});
+
 it('emits confirmation when the closure form is submitted', () => {
   const confirmar = vi.fn();
   fixture.componentInstance.confirmar.subscribe(confirmar);

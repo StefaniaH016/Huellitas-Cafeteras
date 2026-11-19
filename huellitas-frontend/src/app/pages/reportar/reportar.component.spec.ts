@@ -393,6 +393,31 @@ it('shows the created case if cleanup also fails after an image upload error', (
 
   component.onPublicar();
 
+  expect(casoService.crearReporte).toHaveBeenCalledOnce();
+  expect(casoService.subirImagen).toHaveBeenCalledOnce();
+  expect(casoService.eliminarCaso).toHaveBeenCalledWith(21);
+  expect(component.currentStep()).toBe(3);
+  expect(component.submitError()).toContain('el reporte se eliminó');
+  expect(component.enviando()).toBe(false);
+  expect(error).toHaveBeenCalled();
+});
+
+it('shows the created case if cleanup also fails after an image upload error', () => {
+  const component = createComponent();
+  completeForm(component);
+  vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:photo');
+  vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  vi.mocked(casoService.subirImagen).mockReturnValue(throwError(() => new Error('upload')));
+  vi.mocked(casoService.eliminarCaso).mockReturnValue(
+    throwError(() => new Error('cleanup failed')),
+  );
+  component.onFileDrop({
+    preventDefault: vi.fn(),
+    dataTransfer: { files: [new File(['photo'], 'animal.jpg', { type: 'image/jpeg' })] },
+  } as unknown as DragEvent);
+
+  component.onPublicar();
+
   expect(casoService.eliminarCaso).toHaveBeenCalledWith(21);
   expect(component.currentStep()).toBe(4);
   expect(component.createdCasoId()).toBe('21');

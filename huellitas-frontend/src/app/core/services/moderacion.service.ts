@@ -34,6 +34,12 @@ export class ModeracionService {
     return this.httpClient.get<CasoReportado[]>(`${this.apiUrl}/moderacion/casos`);
   }
 
+  marcarCasoParaModeracion(casoId: number, motivo: string): Observable<void> {
+    return this.httpClient.patch<void>(`${this.apiUrl}/moderacion/casos/${casoId}/marcar`, {
+      motivo,
+    });
+  }
+
   resolverModeracion(casoId: number, dto: DecisionModeracionDTO): Observable<ModeracionResponse> {
     return this.httpClient.patch<ModeracionResponse>(
       `${this.apiUrl}/moderacion/casos/${casoId}`,

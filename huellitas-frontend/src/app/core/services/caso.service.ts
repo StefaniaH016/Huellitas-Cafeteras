@@ -87,6 +87,12 @@ export class CasoService {
     return this.httpClient.get<ApiResponse>(`${this.apiUrl}`, { params: filtros });
   }
 
+  listarCasosOcultos(
+    pageable?: Record<string, string | number | boolean>,
+  ): Observable<ApiResponse> {
+    return this.httpClient.get<ApiResponse>(`${this.apiUrl}/ocultos`, { params: pageable });
+  }
+
   getMisReportes(page = 0, size = 20): Observable<ApiResponse> {
     return this.httpClient.get<ApiResponse>(`${this.apiUrl}/mis-reportes`, {
       params: { page, size },

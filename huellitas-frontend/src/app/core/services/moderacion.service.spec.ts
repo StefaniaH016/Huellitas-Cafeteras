@@ -33,4 +33,12 @@ describe('ModeracionService', () => {
     expect(request.request.body).toEqual(dto);
     request.flush({ casoId: 7, decision: 'OCULTADO', fechaRevision: '2026-03-11' });
   });
+
+  it('persists a moderation mark and its reason', () => {
+    service.marcarCasoParaModeracion(7, 'Contenido inapropiado').subscribe();
+    const request = http.expectOne(`${environment.apiUrl}/moderacion/casos/7/marcar`);
+    expect(request.request.method).toBe('PATCH');
+    expect(request.request.body).toEqual({ motivo: 'Contenido inapropiado' });
+    request.flush(null);
+  });
 });

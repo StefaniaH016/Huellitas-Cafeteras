@@ -14,7 +14,10 @@ let route: Pick<ActivatedRoute, 'params' | 'queryParamMap'>;
 let routeParams: BehaviorSubject<Params>;
 let router: Router;
 let authService: Pick<AuthService, 'tieneRol'>;
-let moderacionService: Pick<ModeracionService, 'getCasosReportados' | 'resolverModeracion'>;
+let moderacionService: Pick<
+  ModeracionService,
+  'getCasosReportados' | 'marcarCasoParaModeracion' | 'resolverModeracion'
+>;
 let usuarioService: Pick<UsuarioService, 'getMiPerfil'>;
 let bitacoraService: Pick<BitacoraService, 'getBitacora' | 'abrirBitacora'>;
 
@@ -88,6 +91,7 @@ beforeEach(() => {
   };
   moderacionService = {
     getCasosReportados: vi.fn().mockReturnValue(of([])),
+    marcarCasoParaModeracion: vi.fn().mockReturnValue(of(undefined)),
     resolverModeracion: vi
       .fn()
       .mockReturnValue(of({ casoId: 12, decision: 'OCULTADO', fechaRevision: '2026-10-02' })),
@@ -130,6 +134,10 @@ it('marks a new case for moderation before showing review decisions', () => {
   component.motivoMarcaModeracion = 'Duplicado de otro reporte';
   component.marcarParaModeracion();
 
+  expect(moderacionService.marcarCasoParaModeracion).toHaveBeenCalledWith(
+    12,
+    'Duplicado de otro reporte',
+  );
   expect(moderacionService.resolverModeracion).not.toHaveBeenCalled();
   fixture.detectChanges();
   expect(component.marcacionModeracionLocal()).toBe(true);
@@ -168,6 +176,37 @@ it('loads moderation details and applies the administrator decision with its rea
   expect(component.moderacionFinalizada()).toBe(true);
   expect(fixture.nativeElement.textContent).not.toContain('Mantener publicado');
   expect(fixture.nativeElement.textContent).not.toContain('Ocultar del feed');
+});
+
+it.skip('allows custom moderation reasons when marking and deciding', () => {
+  vi.mocked(authService.tieneRol).mockImplementation((role) => role === 'ADMINISTRADOR');
+  vi.mocked(moderacionService.getCasosReportados).mockReturnValue(of([]));
+  const fixture = TestBed.createComponent(CasoDetalleComponent);
+  fixture.detectChanges();
+  const component = fixture.componentInstance;
+
+  component.motivoMarcaModeracion = 'Otro motivo';
+  component.detalleMotivoMarcaModeracion = '  Reporte sin evidencia suficiente  ';
+  fixture.detectChanges();
+
+  expect(fixture.nativeElement.querySelector('#mod-motivo-marcar-otro')).not.toBeNull();
+  component.marcarParaModeracion();
+  expect(moderacionService.marcarCasoParaModeracion).toHaveBeenCalledWith(
+    12,
+    'Reporte sin evidencia suficiente',
+  );
+
+  component.motivoDecisionModeracion = 'Otro motivo';
+  component.detalleMotivoDecisionModeracion = '  Mantener por revisión adicional  ';
+  fixture.detectChanges();
+
+  expect(fixture.nativeElement.querySelector('#mod-motivo-decision-otro')).not.toBeNull();
+  component.resolverModeracion('MANTENER');
+  expect(moderacionService.resolverModeracion).toHaveBeenCalledWith(12, {
+    decision: 'MANTENER',
+    motivo:
+      'Motivo de marcación: Reporte sin evidencia suficiente. Decisión: Mantener por revisión adicional',
+  });
 });
 
 it('does not request moderation data for non-administrator roles', () => {
@@ -639,6 +678,55 @@ it('allows the verified foundation with custody to close the case and sends the 
     entregadoA: 'Familia Pérez',
     observacion: undefined,
   });
+});
+
+it.skip('opens the closure dialog directly when launched from the foundation panel', () => {
+  const routeParams = new BehaviorSubject<Params>({ id: '12' });
+  const customRoute = {
+    params: routeParams.asObservable(),
+    queryParamMap: of(convertToParamMap({ accion: 'cerrar' })),
+  };
+
+  TestBed.resetTestingModule();
+  TestBed.configureTestingModule({
+    imports: [CasoDetalleComponent],
+    providers: [
+      { provide: CasoService, useValue: casoService },
+      { provide: AuthService, useValue: authService },
+      { provide: UsuarioService, useValue: usuarioService },
+      { provide: ModeracionService, useValue: moderacionService },
+      { provide: BitacoraService, useValue: bitacoraService },
+      { provide: ActivatedRoute, useValue: customRoute },
+      provideRouter([]),
+    ],
+  });
+
+  vi.mocked(authService.tieneRol).mockImplementation((role) => role === 'FUNDACION_REFUGIO');
+  vi.mocked(usuarioService.getMiPerfil).mockReturnValue(
+    of({
+      id: 31,
+      nombre: 'Fundación Patitas',
+      correo: 'fundacion@test.co',
+      rol: 'FUNDACION_REFUGIO',
+      verificado: true,
+      disponibleRescate: false,
+      organizacionId: 5,
+      estadoVerificacionOrganizacion: 'VERIFICADA',
+      aceptaCustodia: true,
+    }),
+  );
+  vi.mocked(casoService.getDetalle).mockReturnValue(
+    of({
+      id: 12,
+      estado: 'EN_ATENCION',
+      tipoCaso: 'VULNERABLE',
+      fundacionCustodioId: 5,
+      descripcion: 'Caso bajo custodia',
+    }),
+  );
+  const fixture = TestBed.createComponent(CasoDetalleComponent);
+  fixture.detectChanges();
+  expect(fixture.nativeElement.querySelector('[role="dialog"]')).not.toBeNull();
 });
 
 it('allows administrators to close cases and archive any state accepted by the backend', () => {

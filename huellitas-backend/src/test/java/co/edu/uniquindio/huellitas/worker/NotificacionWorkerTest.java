@@ -2,6 +2,7 @@ package co.edu.uniquindio.huellitas.worker;
 
 import co.edu.uniquindio.huellitas.entity.*;
 import co.edu.uniquindio.huellitas.entity.enums.*;
+import co.edu.uniquindio.huellitas.repository.CasoRepository;
 import co.edu.uniquindio.huellitas.repository.MunicipioRepository;
 import co.edu.uniquindio.huellitas.repository.NotificacionRepository;
 import co.edu.uniquindio.huellitas.repository.UsuarioRepository;
@@ -35,6 +36,9 @@ class NotificacionWorkerTest {
 
     @Mock
     private NotificacionRepository notificacionRepository;
+
+        @Mock
+        private CasoRepository casoRepository;
 
     @Mock
     private UsuarioRepository usuarioRepository;
@@ -301,24 +305,26 @@ class NotificacionWorkerTest {
     }
 
     @Test
-    @DisplayName("Notifica una solicitud de revisión a la organización y a los administradores")
+        @DisplayName("Notifica una solicitud de revisión a los administradores")
     void debeNotificarSolicitudDeRevision() {
         Usuario admin = Usuario.builder()
                 .id(4L)
                 .correo("admin@huellitas.com")
                 .rol(Rol.ADMINISTRADOR)
                 .build();
+        when(usuarioRepository.findById(reportante.getId())).thenReturn(Optional.of(reportante));
         when(usuarioRepository.findAllByRol(Rol.ADMINISTRADOR)).thenReturn(List.of(admin));
 
-        notificacionWorker.notificarSolicitudRevisionOrganizacion(reportante, "Fundación Patitas");
+        notificacionWorker.notificarSolicitudRevisionOrganizacion(reportante.getId(), "Fundación Patitas");
 
         org.mockito.ArgumentCaptor<Notificacion> captor = org.mockito.ArgumentCaptor.forClass(Notificacion.class);
-        verify(notificacionRepository, times(2)).save(captor.capture());
-        assertEquals(List.of(reportante, admin), captor.getAllValues().stream()
+        verify(notificacionRepository).save(captor.capture());
+        assertEquals(List.of(admin), captor.getAllValues().stream()
                 .map(Notificacion::getUsuario)
                 .toList());
         assertTrue(captor.getAllValues().stream()
                 .allMatch(n -> n.getTipo() == TipoNotificacion.SOLICITUD_REVISION));
+        verify(usuarioRepository).findById(reportante.getId());
     }
 
     @Test
@@ -340,7 +346,10 @@ class NotificacionWorkerTest {
     void debeNotificarAccionesAdministrativasYDeCustodia() {
         notificacionWorker.notificarLiberacionCustodia(casoUrgente, "Traslado coordinado");
         notificacionWorker.notificarArchivadoCaso(casoUrgente, "Caso resuelto");
-        notificacionWorker.notificarOcultamientoCaso(casoUrgente, "Información duplicada");
+        when(usuarioRepository.findById(reportante.getId())).thenReturn(Optional.of(reportante));
+        when(casoRepository.getReferenceById(casoUrgente.getId())).thenReturn(casoUrgente);
+        notificacionWorker.notificarOcultamientoCaso(
+                casoUrgente.getId(), reportante.getId(), "Información duplicada");
 
         org.mockito.ArgumentCaptor<Notificacion> captor = org.mockito.ArgumentCaptor.forClass(Notificacion.class);
         verify(notificacionRepository, times(3)).save(captor.capture());
@@ -349,5 +358,7 @@ class NotificacionWorkerTest {
                         TipoNotificacion.ARCHIVO,
                         TipoNotificacion.MODERACION),
                 captor.getAllValues().stream().map(Notificacion::getTipo).toList());
+        assertEquals(reportante, captor.getAllValues().get(2).getUsuario());
+        assertTrue(captor.getAllValues().get(2).getMensaje().contains("fue ocultado"));
     }
 }

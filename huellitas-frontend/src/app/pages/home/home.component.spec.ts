@@ -131,6 +131,24 @@ it('loads the citizen dashboard, locations, feed, and personal reports', () => {
   expect(fixture.nativeElement.textContent).toContain('4');
 });
 
+it('shows all API departments in the feed filter without a hardcoded selection', () => {
+  vi.mocked(ubicacionService.getDepartamentos).mockReturnValue(
+    of([
+      { id: 1, nombre: 'Quindío' },
+      { id: 2, nombre: 'Tolima' },
+    ]),
+  );
+  const fixture = TestBed.createComponent(HomeComponent);
+  fixture.detectChanges();
+
+  const departmentSelect = fixture.nativeElement.querySelector('#dep') as HTMLSelectElement;
+  const departmentOptions = Array.from(departmentSelect.options).map((option) => option.text);
+
+  expect(departmentOptions).toEqual(['Todos los departamentos', 'Quindío', 'Tolima']);
+  expect(departmentSelect.value).toBe('');
+  expect(fixture.componentInstance.filtros.departamentoId).toBe('');
+});
+
 it('shows feed skeleton cards while the first feed request is pending', () => {
   vi.mocked(casoService.listarCasos).mockReturnValue(NEVER);
   const fixture = TestBed.createComponent(HomeComponent);

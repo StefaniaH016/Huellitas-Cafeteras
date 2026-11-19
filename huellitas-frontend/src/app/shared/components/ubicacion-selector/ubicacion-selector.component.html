@@ -2,35 +2,63 @@
   <legend>Zona</legend>
   <div class="grid-3">
     <div class="form-field">
-      <label for="depto-sel">Departamento</label>
+      <label [for]="idPrefix + '-depto-sel'">Departamento</label>
       <select
         #deptoSelect
-        id="depto-sel"
+        [id]="idPrefix + '-depto-sel'"
         [ngModel]="selectedDeptoId()"
         (change)="onDeptoChange(deptoSelect.value)"
-        aria-describedby="depto-error"
+        [disabled]="cargandoDepartamentos || !!errorDepartamentos"
+        [attr.aria-describedby]="errorDepartamentos ? idPrefix + '-depto-error' : null"
       >
-        <option value="">Selecciona el departamento</option>
+        <option value="">
+          {{
+            cargandoDepartamentos
+              ? 'Cargando departamentos...'
+              : errorDepartamentos
+                ? 'No se pudieron cargar los departamentos'
+                : departamentos.length
+                  ? 'Selecciona el departamento'
+                  : 'No hay departamentos disponibles'
+          }}
+        </option>
         @for (depto of departamentos; track depto.id) {
           <option [value]="depto.id">
             {{ depto.nombre }}
           </option>
         }
       </select>
-      <p class="field-error" id="depto-error" hidden></p>
+      @if (errorDepartamentos) {
+        <p class="field-error" [id]="idPrefix + '-depto-error'" role="alert">
+          {{ errorDepartamentos }}
+          <button type="button" class="btn btn-ghost" (click)="loadDepartamentos()">
+            Reintentar
+          </button>
+        </p>
+      }
     </div>
     <div class="form-field">
-      <label for="mun-sel">Municipio</label>
+      <label [for]="idPrefix + '-mun-sel'">Municipio</label>
       <select
         #munSelect
-        id="mun-sel"
+        [id]="idPrefix + '-mun-sel'"
         [ngModel]="selectedMunId()"
         (change)="onMunChange(munSelect.value)"
-        [disabled]="!selectedDeptoId()"
-        aria-describedby="mun-error"
+        [disabled]="!selectedDeptoId() || cargandoMunicipios || !!errorMunicipios"
+        [attr.aria-describedby]="errorMunicipios ? idPrefix + '-mun-error' : null"
       >
         <option value="">
-          {{ selectedDeptoId() ? 'Selecciona el municipio' : 'Primero elige el departamento' }}
+          {{
+            !selectedDeptoId()
+              ? 'Primero elige el departamento'
+              : cargandoMunicipios
+                ? 'Cargando municipios...'
+                : errorMunicipios
+                  ? 'No se pudieron cargar los municipios'
+                  : municipios.length
+                    ? 'Selecciona el municipio'
+                    : 'No hay municipios disponibles'
+          }}
         </option>
         @for (mun of municipios; track mun.id) {
           <option [value]="mun.id">
@@ -38,20 +66,37 @@
           </option>
         }
       </select>
-      <p class="field-error" id="mun-error" hidden></p>
+      @if (errorMunicipios) {
+        <p class="field-error" [id]="idPrefix + '-mun-error'" role="alert">
+          {{ errorMunicipios }}
+          <button type="button" class="btn btn-ghost" (click)="reintentarMunicipios()">
+            Reintentar
+          </button>
+        </p>
+      }
     </div>
     <div class="form-field">
-      <label for="barrio-sel">Barrio</label>
+      <label [for]="idPrefix + '-barrio-sel'">Barrio</label>
       <select
         #barrioSelect
-        id="barrio-sel"
+        [id]="idPrefix + '-barrio-sel'"
         [ngModel]="selectedBarrioId()"
         (change)="onBarrioChange(barrioSelect.value)"
-        [disabled]="!selectedMunId()"
-        aria-describedby="barrio-error"
+        [disabled]="!selectedMunId() || cargandoBarrios || !!errorBarrios"
+        [attr.aria-describedby]="errorBarrios ? idPrefix + '-barrio-error' : null"
       >
         <option value="">
-          {{ selectedMunId() ? 'Selecciona el barrio' : 'Primero elige el municipio' }}
+          {{
+            !selectedMunId()
+              ? 'Primero elige el municipio'
+              : cargandoBarrios
+                ? 'Cargando barrios...'
+                : errorBarrios
+                  ? 'No se pudieron cargar los barrios'
+                  : barrios.length
+                    ? 'Selecciona el barrio'
+                    : 'No hay barrios disponibles'
+          }}
         </option>
         @for (barrio of barrios; track barrio.id) {
           <option [value]="barrio.id">
@@ -59,7 +104,14 @@
           </option>
         }
       </select>
-      <p class="field-error" id="barrio-error" hidden></p>
+      @if (errorBarrios) {
+        <p class="field-error" [id]="idPrefix + '-barrio-error'" role="alert">
+          {{ errorBarrios }}
+          <button type="button" class="btn btn-ghost" (click)="reintentarBarrios()">
+            Reintentar
+          </button>
+        </p>
+      }
     </div>
   </div>
 </fieldset>

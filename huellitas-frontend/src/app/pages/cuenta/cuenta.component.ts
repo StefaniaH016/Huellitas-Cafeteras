@@ -168,7 +168,7 @@ export class CuentaComponent implements OnInit {
     );
     this.documentoRevision.set(null);
     this.solicitudEnCurso.set(false);
-    this.mensajeSolicitud.set('La solicitud fue enviada al administrador para revisión.');
+    this.mensajeSolicitud.set('Tu solicitud de revisión se envió correctamente.');
     if (debeActualizarPerfil) {
       this.recargarPerfilAsociado();
     }
@@ -196,6 +196,7 @@ export class CuentaComponent implements OnInit {
 
   private aplicar(perfil: UsuarioPerfil): void {
     this.perfil.set(perfil);
+    this.authService.actualizarNombreUsuario(perfil.nombre);
     this.nombre = perfil.nombre;
     this.correo = perfil.correo;
     this.telefono = perfil.telefono ?? '';
