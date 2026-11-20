@@ -18,6 +18,7 @@ import co.edu.uniquindio.huellitas.mapper.AporteMapper;
 import co.edu.uniquindio.huellitas.repository.BarrioRepository;
 import co.edu.uniquindio.huellitas.repository.CasoRepository;
 import co.edu.uniquindio.huellitas.repository.FotoRepository;
+import org.hibernate.Hibernate;
 import co.edu.uniquindio.huellitas.repository.SeguimientoRepository;
 import co.edu.uniquindio.huellitas.repository.UsuarioRepository;
 import co.edu.uniquindio.huellitas.service.AporteService;
@@ -135,6 +136,16 @@ public class AporteServiceImpl implements AporteService {
 
         caso.setFechaUltimaActividad(Instant.now());
         casoRepository.save(caso);
+
+        // Inicializar propiedades lazy antes de disparar notificación @Async
+        Hibernate.initialize(guardado);
+        Hibernate.initialize(guardado.getCaso());
+        if (guardado.getCaso().getReportante() != null) {
+            Hibernate.initialize(guardado.getCaso().getReportante());
+        }
+        if (guardado.getCaso().getFundacionCustodio() != null) {
+            Hibernate.initialize(guardado.getCaso().getFundacionCustodio());
+        }
 
         // 13.5: Notificar a los involucrados (excepto el autor)
         try {

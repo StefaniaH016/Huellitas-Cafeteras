@@ -696,6 +696,10 @@ public class CasoServiceImpl implements CasoService {
             if (caso.getBarrio() != null) {
                 Hibernate.initialize(caso.getBarrio());
             }
+            
+            // Inicializar fundacion antes de disparar notificación @Async
+            Hibernate.initialize(fundacion);
+            
             notificacionWorker.notificarAsuncionCustodia(caso, fundacion);
 
         } else if ("LIBERAR".equals(accion)) {
@@ -751,6 +755,12 @@ public class CasoServiceImpl implements CasoService {
                     .build();
             seguimientoRepository.save(seguimiento);
 
+            // Inicializar propiedades lazy antes de disparar notificación @Async
+            Hibernate.initialize(caso);
+            if (caso.getReportante() != null) {
+                Hibernate.initialize(caso.getReportante());
+            }
+            
             notificacionWorker.notificarLiberacionCustodia(caso, motivo);
 
         } else {

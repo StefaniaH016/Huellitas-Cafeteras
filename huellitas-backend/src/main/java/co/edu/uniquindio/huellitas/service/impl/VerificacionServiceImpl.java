@@ -24,8 +24,6 @@ import lombok.RequiredArgsConstructor;
 import org.hibernate.Hibernate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Instant;
@@ -221,32 +219,11 @@ public class VerificacionServiceImpl implements VerificacionService {
     }
 
     private void notificarDespuesDeGuardar(Usuario usuario, boolean aprobada) {
-        Runnable notificar = () -> notificacionWorker.notificarVerificacionOrganizacion(usuario, aprobada);
-        if (TransactionSynchronizationManager.isSynchronizationActive()) {
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void afterCommit() {
-                    notificar.run();
-                }
-            });
-        } else {
-            notificar.run();
-        }
+        notificacionWorker.notificarVerificacionOrganizacion(usuario, aprobada);
     }
 
     private void notificarSolicitudRevisionDespuesDeGuardar(Long usuarioId, String nombreOrganizacion) {
-        Runnable notificar = () ->
-                notificacionWorker.notificarSolicitudRevisionOrganizacion(usuarioId, nombreOrganizacion);
-        if (TransactionSynchronizationManager.isSynchronizationActive()) {
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void afterCommit() {
-                    notificar.run();
-                }
-            });
-        } else {
-            notificar.run();
-        }
+        notificacionWorker.notificarSolicitudRevisionOrganizacion(usuarioId, nombreOrganizacion);
     }
 
 }

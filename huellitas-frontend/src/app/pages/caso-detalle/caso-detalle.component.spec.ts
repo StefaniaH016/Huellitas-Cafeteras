@@ -671,12 +671,13 @@ it('allows the verified foundation with custody to close the case and sends the 
 
   component.iniciarCierre();
   component.entregadoA = 'Familia Pérez';
+  component.observacionCierre = 'Recuperado exitosamente';
   component.cerrarCaso();
 
   expect(casoService.cerrarCaso).toHaveBeenCalledWith(12, {
     motivoCierre: 'RECUPERADO',
     entregadoA: 'Familia Pérez',
-    observacion: undefined,
+    observacion: 'Recuperado exitosamente',
   });
 });
 
@@ -744,11 +745,12 @@ it('allows administrators to close cases and archive any state accepted by the b
   expect(fixture.nativeElement.textContent).toContain('Archivar ahora');
 
   component.iniciarCierre();
+  component.observacionCierre = 'Caso archivado';
   component.cerrarCaso();
   expect(casoService.cerrarCaso).toHaveBeenCalledWith(12, {
     motivoCierre: 'RECUPERADO',
     entregadoA: undefined,
-    observacion: undefined,
+    observacion: 'Caso archivado',
   });
 });
 
