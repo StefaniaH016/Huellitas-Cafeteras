@@ -142,6 +142,22 @@ it('validates location fields in step two and advances when complete', () => {
   expect(component.currentStep()).toBe(3);
 });
 
+it('shows a zone validation message when continuing without a complete location', () => {
+  const fixture = TestBed.createComponent(ReportarComponent);
+  fixture.detectChanges();
+
+  fixture.componentInstance.stepTwoNext();
+  fixture.detectChanges();
+
+  const zoneError = fixture.nativeElement.querySelector('#error-zona') as HTMLElement | null;
+  const photoError = fixture.nativeElement.querySelector('#error-fotos') as HTMLElement | null;
+  expect(zoneError?.textContent).toContain(
+    'La zona es obligatoria. Selecciona el departamento, municipio y barrio.',
+  );
+  expect(zoneError?.getAttribute('role')).toBe('alert');
+  expect(photoError?.textContent).toContain('La foto es obligatoria');
+});
+
 it('builds report values, omitting blank optional fields', () => {
   const component = createComponent();
   completeForm(component);
