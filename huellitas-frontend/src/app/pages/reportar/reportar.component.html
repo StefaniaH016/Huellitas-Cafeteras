@@ -223,6 +223,11 @@
         (munChange)="onMunChange($event)"
         (barrioChange)="onBarrioChange($event)"
       ></app-ubicacion-selector>
+      @if (errors['departamento'] || errors['municipio'] || errors['barrio']) {
+        <p class="field-error" id="error-zona" role="alert">
+          La zona es obligatoria. Selecciona el departamento, municipio y barrio.
+        </p>
+      }
 
       <div class="field-group">
         <p class="group-label" id="etiqueta-fotos">
