@@ -13,6 +13,7 @@ import co.edu.uniquindio.huellitas.worker.NotificacionWorker;
 import co.edu.uniquindio.huellitas.worker.PdfWorker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.hibernate.Hibernate;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -83,6 +84,16 @@ public class BitacoraServiceImpl implements BitacoraService {
 
         caso.setFechaUltimaActividad(Instant.now());
         casoRepository.save(caso);
+        
+        // Inicializar propiedades lazy antes de disparar notificación @Async
+        Hibernate.initialize(guardada.getCaso());
+        if (guardada.getCaso().getReportante() != null) {
+            Hibernate.initialize(guardada.getCaso().getReportante());
+        }
+        if (guardada.getCaso().getFundacionCustodio() != null) {
+            Hibernate.initialize(guardada.getCaso().getFundacionCustodio());
+        }
+        
         notificacionWorker.notificarInicioAtencionMedica(guardada, veterinaria);
 
         return bitacoraMapper.toResponseDTO(guardada, caso.getId(), veterinaria.getId(), "ABIERTA");
@@ -154,6 +165,16 @@ public class BitacoraServiceImpl implements BitacoraService {
 
         bitacora.getCaso().setFechaUltimaActividad(Instant.now());
         casoRepository.save(bitacora.getCaso());
+
+        // Inicializar propiedades lazy antes de disparar notificación @Async
+        Hibernate.initialize(bitacora);
+        Hibernate.initialize(bitacora.getCaso());
+        if (bitacora.getCaso().getReportante() != null) {
+            Hibernate.initialize(bitacora.getCaso().getReportante());
+        }
+        if (bitacora.getCaso().getFundacionCustodio() != null) {
+            Hibernate.initialize(bitacora.getCaso().getFundacionCustodio());
+        }
 
         // 14.6: Disparar notificaciones de evolución médica con W-01
         try {

@@ -812,10 +812,21 @@ export class CasoDetalleComponent implements OnInit {
     if (this.motivoCierre === 'REENCUENTRO' && !this.puedeConfirmarReencuentro()) {
       return false;
     }
+    if (!this.validarObservaciones()) {
+      return false;
+    }
+    return this.validarEntrega(caso);
+  }
+
+  private validarObservaciones(): boolean {
     if (!this.observacionCierre.trim()) {
       this.errorAccion.set('Las observaciones son obligatorias.');
       return false;
     }
+    return true;
+  }
+
+  private validarEntrega(caso: Caso): boolean {
     if (!caso.fundacionCustodioId && this.motivoCierre !== 'ENTREGADO_A_CUIDADOR') {
       return true;
     }
