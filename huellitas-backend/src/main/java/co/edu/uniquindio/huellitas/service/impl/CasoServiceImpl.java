@@ -687,6 +687,8 @@ public class CasoServiceImpl implements CasoService {
             seguimientoRepository.save(seguimiento);
 
             // Notificar al reportante (vía worker async)
+            // Inicializar TODAS las entidades lazy-loaded antes de @Async
+            Hibernate.initialize(caso);
             if (caso.getReportante() != null) {
                 Hibernate.initialize(caso.getReportante());
             }
@@ -696,8 +698,6 @@ public class CasoServiceImpl implements CasoService {
             if (caso.getBarrio() != null) {
                 Hibernate.initialize(caso.getBarrio());
             }
-            
-            // Inicializar fundacion antes de disparar notificación @Async
             Hibernate.initialize(fundacion);
             
             notificacionWorker.notificarAsuncionCustodia(caso, fundacion);

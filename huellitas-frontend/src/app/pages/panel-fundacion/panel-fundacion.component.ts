@@ -5,6 +5,7 @@ import { Router, RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { CasoService, CasoListItem } from '../../core/services/caso.service';
 import { AuthService } from '../../core/services/auth.service';
+import { NotificacionService } from '../../core/services/notificacion.service';
 import {
   getPanelBadgeClass,
   getPanelBadgeLabel,
@@ -45,6 +46,7 @@ export class PanelFundacionComponent implements OnInit {
   private httpClient = inject(HttpClient);
   private router = inject(Router);
   authService = inject(AuthService);
+  private notificacionService = inject(NotificacionService);
 
   fundacionStats = signal({ enCustodia: 0, casosSinCustodia: 0 });
   fundacionAlertas = signal<PanelCaso[]>([]);
@@ -142,6 +144,7 @@ export class PanelFundacionComponent implements OnInit {
       next: () => {
         this.custodiaEnCursoId.set(null);
         this.cargarDatos();
+        this.notificacionService.actualizarContador();
       },
       error: (error: unknown) => {
         this.custodiaEnCursoId.set(null);
@@ -177,6 +180,7 @@ export class PanelFundacionComponent implements OnInit {
         this.custodiaEnCursoId.set(null);
         this.cancelarLiberacion();
         this.cargarDatos();
+        this.notificacionService.actualizarContador();
       },
       error: (error: unknown) => {
         this.custodiaEnCursoId.set(null);

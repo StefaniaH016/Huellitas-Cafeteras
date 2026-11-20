@@ -11,6 +11,7 @@ import {
 } from '../../core/services/caso.service';
 import { AuthService } from '../../core/services/auth.service';
 import { UsuarioPerfil, UsuarioService } from '../../core/services/usuario.service';
+import { NotificacionService } from '../../core/services/notificacion.service';
 import {
   ESTADO_LABELS,
   RESULTADO_LABELS,
@@ -149,6 +150,7 @@ export class CasoDetalleComponent implements OnInit {
   private authService = inject(AuthService);
   private usuarioService = inject(UsuarioService);
   private moderacionService = inject(ModeracionService);
+  private notificacionService = inject(NotificacionService);
   private router = inject(Router);
 
   caso = signal<Caso | null>(null);
@@ -895,6 +897,7 @@ export class CasoDetalleComponent implements OnInit {
           this.observacionInicialMedica = '';
           this.mensajeAccion.set('La atención médica quedó a tu cargo.');
           this.activeTab.set('bitacora');
+          this.notificacionService.actualizarContador();
           this.loadDetalle(caso.id);
         },
         error: (error: unknown) => {

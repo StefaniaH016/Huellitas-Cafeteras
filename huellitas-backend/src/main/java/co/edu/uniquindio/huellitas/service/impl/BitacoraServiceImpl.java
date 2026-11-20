@@ -228,6 +228,16 @@ public class BitacoraServiceImpl implements BitacoraService {
         casoRepository.save(bitacora.getCaso());
 
         // 14.6: Disparar notificaciones de alta médica con W-01
+        // Inicializar propiedades lazy antes de disparar notificación @Async
+        Hibernate.initialize(bitacora);
+        Hibernate.initialize(bitacora.getCaso());
+        if (bitacora.getCaso().getReportante() != null) {
+            Hibernate.initialize(bitacora.getCaso().getReportante());
+        }
+        if (bitacora.getCaso().getFundacionCustodio() != null) {
+            Hibernate.initialize(bitacora.getCaso().getFundacionCustodio());
+        }
+        
         try {
             notificacionWorker.notificarAltaMedica(bitacora, veterinaria);
         } catch (Exception e) {

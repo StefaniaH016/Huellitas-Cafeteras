@@ -133,10 +133,17 @@ public class NotificacionWorker {
      * Subtarea 13.3.
      * 13.7: También envía correo electrónico.
      */
+    /**
+     * Notifica al reportante cuando una fundación asume la custodia de su caso.
+     * Subtarea 13.3.
+     * 13.7: También envía correo electrónico.
+     */
     @Async
     @Transactional
     public void notificarAsuncionCustodia(Caso caso, Fundacion fundacion) {
-        if (caso.getReportante() == null) return;
+        if (caso == null || caso.getReportante() == null || fundacion == null) {
+            return;
+        }
 
         String mensaje = String.format(
                 "🏠 La fundación '%s' ha asumido la custodia de tu caso #%d. ¡Gracias por dar visibilidad a este animal!",
@@ -149,20 +156,22 @@ public class NotificacionWorker {
         try {
             emailService.enviarCorreoCustodia(caso, fundacion, caso.getReportante().getCorreo());
         } catch (Exception e) {
-            log.warn("Error al enviar correo de custodia: {}", e.getMessage());
+             log.warn("Error al enviar correo de custodia: {}", e.getMessage());
         }
     }
 
         @Async
         @Transactional
         public void notificarLiberacionCustodia(Caso caso, String motivo) {
-        if (caso == null || caso.getReportante() == null) return;
+            if (caso == null || caso.getReportante() == null) {
+                return;
+            }
 
-        String mensaje = String.format(
-            "🏠 La fundación liberó la custodia de tu caso #%d. Motivo: %s",
-            caso.getId(), motivo
-        );
-        guardar(caso.getReportante(), caso, TipoNotificacion.CUSTODIA, mensaje);
+            String mensaje = String.format(
+                "🏠 La fundación liberó la custodia de tu caso #%d. Motivo: %s",
+                caso.getId(), motivo
+            );
+            guardar(caso.getReportante(), caso, TipoNotificacion.CUSTODIA, mensaje);
         }
 
         @Async
@@ -258,7 +267,9 @@ public class NotificacionWorker {
     @Async
     @Transactional
     public void notificarAporte(Seguimiento aporte) {
-        if (aporte.getAutor() == null || aporte.getCaso() == null) return;
+        if (aporte == null || aporte.getAutor() == null || aporte.getCaso() == null) {
+            return;
+        }
 
         Caso caso = aporte.getCaso();
         Long autorId = aporte.getAutor().getId();
@@ -276,7 +287,6 @@ public class NotificacionWorker {
 
         // Notificar a la fundación custodia (si no es el autor)
         if (caso.getFundacionCustodio() != null) {
-            // Obtener el usuario de la fundación
             usuarioRepository.findByOrganizacionId(caso.getFundacionCustodio().getId())
                     .ifPresent(fundacionUsuario -> {
                         if (!fundacionUsuario.getId().equals(autorId)) {

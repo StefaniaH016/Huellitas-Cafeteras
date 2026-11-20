@@ -69,6 +69,10 @@ public class VerificacionServiceImpl implements VerificacionService {
         }
 
         usuarioRepository.save(usuario);
+        
+        // Inicializar propiedades del usuario antes de disparar notificación @Async
+        Hibernate.initialize(usuario);
+        
         notificarDespuesDeGuardar(usuario, aprobada);
 
         return verificacionMapper.toResponseDTO(usuario, aprobada);

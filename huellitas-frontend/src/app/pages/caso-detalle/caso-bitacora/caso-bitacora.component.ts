@@ -16,6 +16,7 @@ import {
   BitacoraService,
   NuevaEvolucion,
 } from '../../../core/services/bitacora.service';
+import { NotificacionService } from '../../../core/services/notificacion.service';
 import { CasoDetalle } from '../../../core/services/caso.service';
 import {
   esCasoAbierto,
@@ -33,6 +34,7 @@ import { EstadoAccion, EstadoCarga } from '../../../core/utils/request.utils';
 })
 export class CasoBitacoraComponent implements OnChanges {
   private bitacoraService = inject(BitacoraService);
+  private notificacionService = inject(NotificacionService);
 
   readonly caso = input.required<CasoDetalle>();
   readonly puedeConsultar = input(false);
@@ -165,6 +167,7 @@ export class CasoBitacoraComponent implements OnChanges {
       exito,
       () => {
         despues?.();
+        this.notificacionService.actualizarContador();
         this.cargar();
         this.actualizado.emit();
       },
